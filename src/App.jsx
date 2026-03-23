@@ -199,6 +199,7 @@ export default function NEPDashboard() {
   };
 
   const handleView = (record) => {
+    console.log('View clicked for record:', record);
     setViewingRecord(record);
   };
 
@@ -524,7 +525,16 @@ export default function NEPDashboard() {
                       <td style={{ padding: '15px', fontSize: '13px', color: '#666' }}>{record.word_count || '-'}</td>
                       <td style={{ padding: '15px', fontSize: '13px' }}>
                         <div style={{ display: 'flex', gap: '8px' }}>
-                          <button onClick={() => handleView(record)} style={{ padding: '6px 12px', background: '#4299e1', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <button 
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleView(record);
+                            }} 
+                            style={{ padding: '6px 12px', background: '#4299e1', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '4px', transition: 'all 0.2s ease' }}
+                            onMouseEnter={(e) => e.currentTarget.style.background = '#3182ce'}
+                            onMouseLeave={(e) => e.currentTarget.style.background = '#4299e1'}
+                          >
                             <Eye size={14} />
                             View
                           </button>
@@ -544,9 +554,9 @@ export default function NEPDashboard() {
       </div>
 
       {viewingRecord && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0, 0, 0, 0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
-          <div style={{ background: 'white', borderRadius: '12px', boxShadow: '0 20px 60px rgba(0,0,0,0.3)', maxWidth: '900px', width: '100%', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
-            <div style={{ padding: '20px', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0, 0, 0, 0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: '20px', overflowY: 'auto' }}>
+          <div style={{ background: 'white', borderRadius: '12px', boxShadow: '0 20px 60px rgba(0,0,0,0.3)', maxWidth: '900px', width: '100%', maxHeight: '85vh', minHeight: '400px', display: 'flex', flexDirection: 'column', margin: 'auto' }}>
+            <div style={{ padding: '20px', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
                 <FileText size={24} color="#1a9b8e" />
                 <div>
@@ -556,7 +566,13 @@ export default function NEPDashboard() {
                   </p>
                 </div>
               </div>
-              <button onClick={handleCloseView} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#999', padding: '8px' }}>
+              <button 
+                type="button"
+                onClick={handleCloseView} 
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#999', padding: '8px', transition: 'color 0.2s ease' }}
+                onMouseEnter={(e) => e.currentTarget.style.color = '#333'}
+                onMouseLeave={(e) => e.currentTarget.style.color = '#999'}
+              >
                 <X size={24} />
               </button>
             </div>
@@ -575,7 +591,7 @@ export default function NEPDashboard() {
               )}
             </div>
 
-            <div style={{ padding: '20px', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ padding: '20px', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
               <div style={{ fontSize: '13px', color: '#666', display: 'flex', alignItems: 'center', gap: '15px' }}>
                 <span>
                   <strong>{viewingRecord.word_count || 0} words</strong>
@@ -587,7 +603,13 @@ export default function NEPDashboard() {
                   {viewingRecord.status}
                 </span>
               </div>
-              <button onClick={handleCloseView} style={{ padding: '10px 20px', background: '#1a9b8e', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <button 
+                type="button"
+                onClick={handleCloseView} 
+                style={{ padding: '10px 20px', background: '#1a9b8e', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '8px', transition: 'all 0.2s ease' }}
+                onMouseEnter={(e) => e.currentTarget.style.background = '#158d7f'}
+                onMouseLeave={(e) => e.currentTarget.style.background = '#1a9b8e'}
+              >
                 <X size={16} />
                 Close
               </button>

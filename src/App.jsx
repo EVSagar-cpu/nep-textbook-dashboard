@@ -217,13 +217,82 @@ export default function NEPDashboard() {
     setSubTopicInput('');
   };
 
+  const handleExportPDF = () => {
+    if (!viewingRecord.ai_output) {
+      alert('No content to export');
+      return;
+    }
+
+    const element = document.getElementById('view-modal-content');
+    const opt = {
+      margin: 10,
+      filename: `${viewingRecord.class}_${viewingRecord.subject}_${viewingRecord.topic}.pdf`,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2 },
+      jsPDF: { orientation: 'portrait', unit: 'mm', format: 'a4' }
+    };
+
+    // Use html2pdf from CDN
+    const script = document.createElement('script');
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
+    script.onload = () => {
+      html2pdf().set(opt).from(element).save();
+    };
+    document.head.appendChild(script);
+  };
+
+  const handleExportWord = () => {
+    if (!viewingRecord.ai_output) {
+      alert('No content to export');
+      return;
+    }
+
+    const docContent = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    body { font-family: 'Segoe UI', Arial, sans-serif; line-height: 1.8; color: #333; }
+    h1 { font-size: 24px; font-weight: 700; color: #0f3d3e; margin-top: 20px; margin-bottom: 10px; }
+    h2 { font-size: 20px; font-weight: 600; color: #1a9b8e; margin-top: 15px; margin-bottom: 8px; }
+    h3 { font-size: 16px; font-weight: 600; color: #333; margin-top: 12px; margin-bottom: 6px; }
+    p { margin-bottom: 12px; }
+    table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+    td, th { border: 1px solid #ddd; padding: 10px; text-align: left; }
+    th { background-color: #f5f5f5; font-weight: 600; }
+    code { background-color: #f5f5f5; padding: 2px 6px; border-radius: 3px; font-family: 'Courier New'; }
+    pre { background-color: #f5f5f5; padding: 12px; border-radius: 4px; overflow-x: auto; }
+    ul, ol { margin-bottom: 12px; padding-left: 20px; }
+    .header { border-bottom: 3px solid #1a9b8e; padding-bottom: 15px; margin-bottom: 20px; }
+    .meta { color: #7a8d9f; font-size: 12px; margin-top: 5px; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>${viewingRecord.topic}</h1>
+    <p class="meta">Class ${viewingRecord.class} | ${viewingRecord.subject} | ${viewingRecord.sub_topic}</p>
+  </div>
+  ${viewingRecord.ai_output.replace(/\n/g, '<br/>')}
+</body>
+</html>
+    `;
+
+    const blob = new Blob([docContent], { type: 'application/msword' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${viewingRecord.class}_${viewingRecord.subject}_${viewingRecord.topic}.doc`;
+    a.click();
+  };
+
   const handleExport = () => {
     if (records.length === 0) {
       alert('No records to export');
       return;
     }
 
-    const headers = ['ID', 'Class', 'Subject', 'Topic', 'Sub-topic', 'Status', 'Word Count', 'Created At', 'AI Output'];
+    const headers = ['ID', 'Class', 'Subject', 'Topic', 'Sub-topic', 'Status', 'Word Count', 'Created At'];
     const rows = records.map((r) => [
       r.record_id,
       r.class,
@@ -233,7 +302,6 @@ export default function NEPDashboard() {
       r.status,
       r.word_count || 0,
       new Date(r.created_at).toLocaleDateString(),
-      r.ai_output ? `"${r.ai_output.replace(/"/g, '""')}"` : '',
     ]);
 
     const csv = [headers, ...rows].map((row) => row.map((cell) => `"${cell}"`).join(',')).join('\n');
@@ -241,7 +309,7 @@ export default function NEPDashboard() {
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `textbook_content_${new Date().toISOString().split('T')[0]}.csv`;
+    a.download = `textbook_records_${new Date().toISOString().split('T')[0]}.csv`;
     a.click();
   };
 
@@ -569,17 +637,18 @@ export default function NEPDashboard() {
       </div>
 
       {viewingRecord && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0, 0, 0, 0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: '20px', overflowY: 'auto' }}>
-          <div style={{ background: 'white', borderRadius: '12px', boxShadow: '0 20px 60px rgba(0,0,0,0.3)', maxWidth: '900px', width: '100%', maxHeight: '85vh', minHeight: '400px', display: 'flex', flexDirection: 'column', margin: 'auto' }}>
-            <div style={{ padding: '20px', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-                <FileText size={24} color="#1a9b8e" />
-                <div>
-                  <h2 style={{ margin: 0, fontSize: '20px', color: '#1a1a1a' }}>AI-Generated Content</h2>
-                  <p style={{ margin: '6px 0 0 0', fontSize: '13px', color: '#7a8d9f' }}>
-                    Class {viewingRecord.class} • {viewingRecord.subject} • {viewingRecord.topic}
-                  </p>
-                </div>
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0, 0, 0, 0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: '20px', overflowY: 'auto' }}>
+          <div style={{ background: 'white', borderRadius: '12px', boxShadow: '0 25px 80px rgba(0,0,0,0.4)', maxWidth: '950px', width: '100%', maxHeight: '90vh', minHeight: '500px', display: 'flex', flexDirection: 'column', margin: 'auto', overflow: 'hidden' }}>
+            
+            {/* Header with Close */}
+            <div style={{ padding: '25px 30px', borderBottom: '3px solid #1a9b8e', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f9f9f9', flexShrink: 0 }}>
+              <div>
+                <h2 style={{ margin: 0, fontSize: '22px', fontWeight: '700', color: '#0f3d3e' }}>
+                  {viewingRecord.topic}
+                </h2>
+                <p style={{ margin: '8px 0 0 0', fontSize: '13px', color: '#7a8d9f', fontWeight: '500' }}>
+                  Class {viewingRecord.class} • {viewingRecord.subject} • {viewingRecord.sub_topic}
+                </p>
               </div>
               <button 
                 type="button"
@@ -588,46 +657,147 @@ export default function NEPDashboard() {
                 onMouseEnter={(e) => e.currentTarget.style.color = '#333'}
                 onMouseLeave={(e) => e.currentTarget.style.color = '#999'}
               >
-                <X size={24} />
+                <X size={26} />
               </button>
             </div>
 
-            <div style={{ flex: 1, overflow: 'auto', padding: '30px', fontFamily: 'Georgia, serif', lineHeight: '1.8', color: '#333', fontSize: '15px' }}>
+            {/* Document Content */}
+            <div 
+              id="view-modal-content"
+              style={{ 
+                flex: 1, 
+                overflow: 'auto', 
+                padding: '40px', 
+                fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+                lineHeight: '1.8', 
+                color: '#333', 
+                fontSize: '15px',
+                background: '#ffffff'
+              }}
+            >
               {viewingRecord.ai_output ? (
-                <div style={{ whiteSpace: 'pre-wrap', wordWrap: 'break-word' }}>
-                  {viewingRecord.ai_output}
+                <div style={{ whiteSpace: 'pre-wrap', wordWrap: 'break-word', fontSize: '15px', lineHeight: '1.8' }}>
+                  {viewingRecord.ai_output.split('\n').map((line, idx) => (
+                    <div key={idx} style={{ marginBottom: '8px' }}>
+                      {line}
+                    </div>
+                  ))}
                 </div>
               ) : (
-                <div style={{ textAlign: 'center', color: '#999', padding: '40px' }}>
-                  <Clock size={32} style={{ margin: '0 auto 15px', opacity: 0.5 }} />
-                  <p style={{ fontSize: '16px', margin: '0 0 8px 0' }}>Content is being generated...</p>
-                  <p style={{ fontSize: '13px', margin: 0 }}>Status: {viewingRecord.status}</p>
+                <div style={{ textAlign: 'center', color: '#999', padding: '60px 20px' }}>
+                  <Clock size={40} style={{ margin: '0 auto 20px', opacity: 0.5 }} />
+                  <p style={{ fontSize: '16px', margin: '0 0 10px 0', fontWeight: '500' }}>Content is being generated...</p>
+                  <p style={{ fontSize: '14px', margin: 0 }}>Status: <span style={{ fontWeight: '600', color: '#1a9b8e' }}>{viewingRecord.status}</span></p>
                 </div>
               )}
             </div>
 
-            <div style={{ padding: '20px', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
-              <div style={{ fontSize: '13px', color: '#666', display: 'flex', alignItems: 'center', gap: '15px' }}>
-                <span>
-                  <strong>{viewingRecord.word_count || 0} words</strong>
+            {/* Footer with Export & Stats */}
+            <div style={{ padding: '20px 30px', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f9f9f9', flexShrink: 0, flexWrap: 'wrap', gap: '12px' }}>
+              
+              {/* Stats */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '15px', fontSize: '13px' }}>
+                <span style={{ color: '#666' }}>
+                  <strong style={{ color: '#1a1a1a' }}>{viewingRecord.word_count || 0}</strong> words
                 </span>
-                <span style={{ padding: '4px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: '600', display: 'inline-flex', alignItems: 'center', gap: '6px', background: viewingRecord.status === 'generated' ? '#d4edda' : viewingRecord.status === 'generating' ? '#fff3cd' : '#e2e3e5', color: viewingRecord.status === 'generated' ? '#155724' : viewingRecord.status === 'generating' ? '#856404' : '#383d41' }}>
+                <span
+                  style={{
+                    padding: '4px 12px',
+                    borderRadius: '20px',
+                    fontSize: '12px',
+                    fontWeight: '600',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    background: viewingRecord.status === 'generated' ? '#d4edda' : viewingRecord.status === 'generating' ? '#fff3cd' : '#e2e3e5',
+                    color: viewingRecord.status === 'generated' ? '#155724' : viewingRecord.status === 'generating' ? '#856404' : '#383d41',
+                  }}
+                >
                   {viewingRecord.status === 'generated' && <CheckCircle2 size={12} />}
                   {viewingRecord.status === 'generating' && <Clock size={12} />}
                   {viewingRecord.status === 'pending' && <AlertCircle size={12} />}
                   {viewingRecord.status}
                 </span>
               </div>
-              <button 
-                type="button"
-                onClick={handleCloseView} 
-                style={{ padding: '10px 20px', background: '#1a9b8e', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '8px', transition: 'all 0.2s ease' }}
-                onMouseEnter={(e) => e.currentTarget.style.background = '#158d7f'}
-                onMouseLeave={(e) => e.currentTarget.style.background = '#1a9b8e'}
-              >
-                <X size={16} />
-                Close
-              </button>
+
+              {/* Export Buttons */}
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <button 
+                  type="button"
+                  onClick={handleExportPDF}
+                  disabled={!viewingRecord.ai_output}
+                  style={{
+                    padding: '9px 14px',
+                    background: '#dc2626',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '6px',
+                    cursor: viewingRecord.ai_output ? 'pointer' : 'not-allowed',
+                    fontWeight: '600',
+                    fontSize: '13px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    opacity: viewingRecord.ai_output ? 1 : 0.5,
+                    transition: 'all 0.2s ease'
+                  }}
+                  onMouseEnter={(e) => viewingRecord.ai_output && (e.currentTarget.style.background = '#b91c1c')}
+                  onMouseLeave={(e) => viewingRecord.ai_output && (e.currentTarget.style.background = '#dc2626')}
+                >
+                  <Download size={13} />
+                  PDF
+                </button>
+
+                <button 
+                  type="button"
+                  onClick={handleExportWord}
+                  disabled={!viewingRecord.ai_output}
+                  style={{
+                    padding: '9px 14px',
+                    background: '#2563eb',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '6px',
+                    cursor: viewingRecord.ai_output ? 'pointer' : 'not-allowed',
+                    fontWeight: '600',
+                    fontSize: '13px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    opacity: viewingRecord.ai_output ? 1 : 0.5,
+                    transition: 'all 0.2s ease'
+                  }}
+                  onMouseEnter={(e) => viewingRecord.ai_output && (e.currentTarget.style.background = '#1d4ed8')}
+                  onMouseLeave={(e) => viewingRecord.ai_output && (e.currentTarget.style.background = '#2563eb')}
+                >
+                  <Download size={13} />
+                  Word
+                </button>
+
+                <button 
+                  type="button"
+                  onClick={handleCloseView}
+                  style={{
+                    padding: '9px 16px',
+                    background: '#1a9b8e',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    fontWeight: '600',
+                    fontSize: '13px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    transition: 'all 0.2s ease'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = '#158d7f'}
+                  onMouseLeave={(e) => e.currentTarget.style.background = '#1a9b8e'}
+                >
+                  <X size={13} />
+                  Close
+                </button>
+              </div>
             </div>
           </div>
         </div>

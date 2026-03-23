@@ -14,6 +14,9 @@ export default function NEPDashboard() {
   const [password, setPassword] = useState('');
   const [showAddForm, setShowAddForm] = useState(false);
   const [filterStatus, setFilterStatus] = useState('all');
+  const [filterClass, setFilterClass] = useState('all');
+  const [filterSubject, setFilterSubject] = useState('all');
+  const [searchTopic, setSearchTopic] = useState('');
   const [editingId, setEditingId] = useState(null);
   const [viewingRecord, setViewingRecord] = useState(null);
 
@@ -42,27 +45,54 @@ export default function NEPDashboard() {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Fetch textbook_content records
+  // Fetch and filter textbook_content records
   const fetchRecords = async () => {
     setLoading(true);
     try {
-      let query = supabase
+      const { data, error } = await supabase
         .from('textbook_content')
         .select('*')
         .order('created_at', { ascending: false });
 
+      if (error) throw error;
+
+      // Apply client-side filtering
+      let filtered = data || [];
+
       if (filterStatus !== 'all') {
-        query = query.eq('status', filterStatus);
+        filtered = filtered.filter((r) => r.status === filterStatus);
       }
 
-      const { data, error } = await query;
-      if (error) throw error;
-      setRecords(data || []);
+      if (filterClass !== 'all') {
+        filtered = filtered.filter((r) => r.class === filterClass);
+      }
+
+      if (filterSubject !== 'all') {
+        filtered = filtered.filter((r) => r.subject === filterSubject);
+      }
+
+      if (searchTopic.trim()) {
+        const searchLower = searchTopic.toLowerCase();
+        filtered = filtered.filter(
+          (r) =>
+            r.topic?.toLowerCase().includes(searchLower) ||
+            r.sub_topic?.toLowerCase().includes(searchLower)
+        );
+      }
+
+      setRecords(filtered);
     } catch (error) {
       alert('Error fetching records: ' + error.message);
     }
     setLoading(false);
   };
+
+  // Refetch when filters change
+  useEffect(() => {
+    if (session) {
+      fetchRecords();
+    }
+  }, [filterStatus, filterClass, filterSubject, searchTopic]);
 
   // Handle Email/Password Login
   const handleLogin = async (e) => {
@@ -200,9 +230,12 @@ export default function NEPDashboard() {
     setViewingRecord(record);
   };
 
-  // Handle Close View
-  const handleCloseView = () => {
-    setViewingRecord(null);
+  // Clear all filters
+  const handleClearFilters = () => {
+    setFilterStatus('all');
+    setFilterClass('all');
+    setFilterSubject('all');
+    setSearchTopic('');
   };
 
   // Export to CSV
@@ -212,7 +245,7 @@ export default function NEPDashboard() {
       return;
     }
 
-    const headers = ['ID', 'Class', 'Subject', 'Topic', 'Sub-topic', 'Status', 'Word Count', 'Created At'];
+    const headers = ['ID', 'Class', 'Subject', 'Topic', 'Sub-topic', 'Status', 'Word Count', 'Created At', 'AI Output'];
     const rows = records.map((r) => [
       r.record_id,
       r.class,
@@ -222,10 +255,11 @@ export default function NEPDashboard() {
       r.status,
       r.word_count || 0,
       new Date(r.created_at).toLocaleDateString(),
+      r.ai_output ? `"${r.ai_output.replace(/"/g, '""')}"` : '',
     ]);
 
     const csv = [headers, ...rows].map((row) => row.map((cell) => `"${cell}"`).join(',')).join('\n');
-    const blob = new Blob([csv], { type: 'text/csv' });
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -376,18 +410,21 @@ export default function NEPDashboard() {
   return (
     <div style={{ minHeight: '100vh', background: '#f5f7fa', fontFamily: 'Segoe UI, sans-serif' }}>
       {/* Header */}
-      <div style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: 'white', padding: '20px', boxShadow: '0 2px 10px rgba(0,0,0,0.1)' }}>
-        <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h1 style={{ margin: 0, fontSize: '24px' }}>📚 NEP Textbook Content</h1>
-          <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-            <span style={{ fontSize: '14px' }}>{session?.user?.email}</span>
+      <div style={{ background: '#0f3d3e', color: 'white', padding: '25px', boxShadow: '0 2px 10px rgba(0,0,0,0.1)' }}>
+        <div style={{ maxWidth: '1400px', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <h1 style={{ margin: 0, fontSize: '26px', fontWeight: '700', letterSpacing: '-0.5px' }}>📚 NEP Textbook Dashboard</h1>
+            <p style={{ margin: '8px 0 0 0', fontSize: '13px', opacity: 0.9 }}>Content Management & Generation System</p>
+          </div>
+          <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
+            <span style={{ fontSize: '14px', opacity: 0.9 }}>{session?.user?.email}</span>
             <button
               onClick={handleLogout}
               style={{
-                padding: '8px 16px',
+                padding: '10px 20px',
                 background: 'rgba(255,255,255,0.2)',
                 color: 'white',
-                border: '1px solid white',
+                border: '1px solid rgba(255,255,255,0.3)',
                 borderRadius: '6px',
                 cursor: 'pointer',
                 fontSize: '14px',
@@ -408,7 +445,7 @@ export default function NEPDashboard() {
             onClick={() => setShowAddForm(!showAddForm)}
             style={{
               padding: '10px 20px',
-              background: '#667eea',
+              background: '#1a9b8e',
               color: 'white',
               border: 'none',
               borderRadius: '8px',
@@ -420,19 +457,81 @@ export default function NEPDashboard() {
             {showAddForm ? '✕ Cancel' : '+ Add Record'}
           </button>
 
-          <select
-            value={filterStatus}
-            onChange={(e) => {
-              setFilterStatus(e.target.value);
-              fetchRecords();
-            }}
+          {/* Search by Topic */}
+          <input
+            type="text"
+            placeholder="Search Topic / Sub-topic..."
+            value={searchTopic}
+            onChange={(e) => setSearchTopic(e.target.value)}
             style={{
               padding: '10px 15px',
-              border: '1px solid #ddd',
+              border: '1px solid #e2e8f0',
+              borderRadius: '8px',
+              fontSize: '14px',
+              minWidth: '200px',
+              fontFamily: 'inherit',
+            }}
+          />
+
+          {/* Filter by Class */}
+          <select
+            value={filterClass}
+            onChange={(e) => setFilterClass(e.target.value)}
+            style={{
+              padding: '10px 15px',
+              border: '1px solid #e2e8f0',
               borderRadius: '8px',
               fontSize: '14px',
               cursor: 'pointer',
               background: 'white',
+              fontFamily: 'inherit',
+            }}
+          >
+            <option value="all">All Classes</option>
+            <option value="1">Class 1</option>
+            <option value="2">Class 2</option>
+            <option value="3">Class 3</option>
+            <option value="4">Class 4</option>
+            <option value="5">Class 5</option>
+          </select>
+
+          {/* Filter by Subject */}
+          <select
+            value={filterSubject}
+            onChange={(e) => setFilterSubject(e.target.value)}
+            style={{
+              padding: '10px 15px',
+              border: '1px solid #e2e8f0',
+              borderRadius: '8px',
+              fontSize: '14px',
+              cursor: 'pointer',
+              background: 'white',
+              fontFamily: 'inherit',
+            }}
+          >
+            <option value="all">All Subjects</option>
+            <option value="English">English</option>
+            <option value="Mathematics">Mathematics</option>
+            <option value="Science">Science</option>
+            <option value="Social Studies">Social Studies</option>
+            <option value="Hindi">Hindi</option>
+            <option value="Arts">Arts</option>
+            <option value="Physical Education">Physical Education</option>
+            <option value="Environmental Studies">Environmental Studies</option>
+          </select>
+
+          {/* Filter by Status */}
+          <select
+            value={filterStatus}
+            onChange={(e) => setFilterStatus(e.target.value)}
+            style={{
+              padding: '10px 15px',
+              border: '1px solid #e2e8f0',
+              borderRadius: '8px',
+              fontSize: '14px',
+              cursor: 'pointer',
+              background: 'white',
+              fontFamily: 'inherit',
             }}
           >
             <option value="all">All Status</option>
@@ -441,11 +540,12 @@ export default function NEPDashboard() {
             <option value="generated">Generated</option>
           </select>
 
+          {/* Action Buttons */}
           <button
             onClick={handleExport}
             style={{
               padding: '10px 20px',
-              background: '#764ba2',
+              background: '#805ad5',
               color: 'white',
               border: 'none',
               borderRadius: '8px',
@@ -461,7 +561,7 @@ export default function NEPDashboard() {
             onClick={fetchRecords}
             style={{
               padding: '10px 20px',
-              background: '#4facfe',
+              background: '#4299e1',
               color: 'white',
               border: 'none',
               borderRadius: '8px',
@@ -471,6 +571,22 @@ export default function NEPDashboard() {
             }}
           >
             🔄 Refresh
+          </button>
+
+          <button
+            onClick={handleClearFilters}
+            style={{
+              padding: '10px 20px',
+              background: '#cbd5e0',
+              color: '#2d3748',
+              border: 'none',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontWeight: '600',
+              fontSize: '14px',
+            }}
+          >
+            ✕ Clear Filters
           </button>
         </div>
 
@@ -596,8 +712,21 @@ export default function NEPDashboard() {
 
         {/* Records Table */}
         <div style={{ background: 'white', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)', overflow: 'hidden' }}>
-          <div style={{ padding: '20px', borderBottom: '1px solid #eee' }}>
-            <h2 style={{ margin: 0, fontSize: '18px', color: '#1a1a1a' }}>Records ({records.length})</h2>
+          <div style={{ padding: '20px', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <h2 style={{ margin: 0, fontSize: '18px', color: '#1a1a1a', fontWeight: '700' }}>
+              📋 Records 
+              <span style={{ fontSize: '14px', color: '#7a8d9f', fontWeight: '500', marginLeft: '8px' }}>
+                ({records.length} {records.length === 1 ? 'record' : 'records'})
+              </span>
+            </h2>
+            {(filterStatus !== 'all' || filterClass !== 'all' || filterSubject !== 'all' || searchTopic) && (
+              <span style={{ fontSize: '12px', color: '#1a9b8e', fontWeight: '600' }}>
+                ⚙️ {filterStatus !== 'all' ? `Status: ${filterStatus}` : ''} 
+                {filterClass !== 'all' ? ` • Class: ${filterClass}` : ''} 
+                {filterSubject !== 'all' ? ` • Subject: ${filterSubject}` : ''} 
+                {searchTopic ? ` • Search: "${searchTopic}"` : ''}
+              </span>
+            )}
           </div>
 
           {loading && <div style={{ padding: '40px', textAlign: 'center', color: '#666' }}>Loading...</div>}

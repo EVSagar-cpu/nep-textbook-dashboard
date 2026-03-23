@@ -385,8 +385,8 @@ export default function NEPDashboard() {
           <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
             <BookOpen size={32} strokeWidth={1.5} />
             <div>
-              <h1 style={{ margin: 0, fontSize: '26px', fontWeight: '700', letterSpacing: '-0.5px' }}>NEP Textbook Dashboard</h1>
-              <p style={{ margin: '4px 0 0 0', fontSize: '13px', opacity: 0.85 }}>Content Management & Generation System</p>
+              <h1 style={{ margin: 0, fontSize: '26px', fontWeight: '700', letterSpacing: '-0.5px' }}>AI TextBook Studio</h1>
+              <p style={{ margin: '4px 0 0 0', fontSize: '13px', opacity: 0.85 }}>AI Powered content creation</p>
             </div>
           </div>
           <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>

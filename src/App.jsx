@@ -214,15 +214,28 @@ export default function App() {
       element.style.padding = '40px';
       element.style.fontFamily = FONT_FAMILY;
       element.style.color = COLORS.darkText;
+      element.style.lineHeight = '1.8';
+      
+      // Use contentType to determine what to render
+      let contentHtml = '';
+      
+      if (contentType === 'markdown') {
+        // Render as markdown (convert markdown to HTML for PDF)
+        contentHtml = viewingRecord.ai_output;
+      } else {
+        // Render as HTML
+        contentHtml = viewingRecord.ai_output;
+      }
+      
       element.innerHTML = `
-        <h1 style="font-size: 32px; font-weight: 700; margin-bottom: 10px;">${viewingRecord.topic}</h1>
-        <p style="font-size: 14px; color: ${COLORS.lightText}; margin-bottom: 30px;">Class ${viewingRecord.class} • ${viewingRecord.subject} • ${viewingRecord.sub_topic}</p>
+        <h1 style="font-size: 32px; font-weight: 700; margin: 0 0 10px 0;">${viewingRecord.topic}</h1>
+        <p style="font-size: 14px; color: ${COLORS.lightText}; margin: 0 0 30px 0;">Class ${viewingRecord.class} • ${viewingRecord.subject} • ${viewingRecord.sub_topic}</p>
         <hr style="border: none; border-top: 2px solid ${COLORS.borderColor}; margin: 30px 0;">
         <div style="font-size: 14px; line-height: 1.8; color: ${COLORS.darkText};">
-          ${viewingRecord.ai_output}
+          ${contentType === 'markdown' ? `<pre style="font-family: ${FONT_FAMILY}; white-space: pre-wrap; word-wrap: break-word;">${escapeHtml(contentHtml)}</pre>` : contentHtml}
         </div>
         <hr style="border: none; border-top: 2px solid ${COLORS.borderColor}; margin: 30px 0;">
-        <p style="font-size: 12px; color: #9ca3af; text-align: center;">Generated: ${new Date().toLocaleDateString()} • ${viewingRecord.word_count || 0} words</p>
+        <p style="font-size: 12px; color: #9ca3af; text-align: center; margin: 0;">Generated: ${new Date().toLocaleDateString()} • ${viewingRecord.word_count || 0} words • Format: ${contentType === 'markdown' ? 'Markdown' : 'HTML'}</p>
       `;
 
       const opt = {
@@ -249,18 +262,28 @@ export default function App() {
     if (!viewingRecord || !viewingRecord.ai_output) return;
 
     try {
-      // Create a simple Word document using a blob with Office Open XML format
-      const content = `
-        ${viewingRecord.topic}
-        
+      // Create content based on selected type
+      let contentText = '';
+      
+      if (contentType === 'markdown') {
+        // Export raw markdown
+        contentText = viewingRecord.ai_output;
+      } else {
+        // Export HTML (convert to plain text)
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = viewingRecord.ai_output;
+        contentText = tempDiv.innerText || tempDiv.textContent || '';
+      }
+
+      const docContent = `${viewingRecord.topic}
+
 Class ${viewingRecord.class} • ${viewingRecord.subject} • ${viewingRecord.sub_topic}
 
-${viewingRecord.ai_output}
+${contentText}
 
-Generated: ${new Date().toLocaleDateString()} • ${viewingRecord.word_count || 0} words
-      `;
+Generated: ${new Date().toLocaleDateString()} • ${viewingRecord.word_count || 0} words • Format: ${contentType === 'markdown' ? 'Markdown' : 'HTML'}`;
 
-      const blob = new Blob([content], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+      const blob = new Blob([docContent], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
@@ -273,6 +296,13 @@ Generated: ${new Date().toLocaleDateString()} • ${viewingRecord.word_count || 
       console.error('Word export error:', error);
       alert('Failed to export Word. Please try again.');
     }
+  };
+
+  // Helper function to escape HTML
+  const escapeHtml = (text) => {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
   };
 
   const handleLogout = async () => {

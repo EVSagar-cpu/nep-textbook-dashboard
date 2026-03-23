@@ -31,6 +31,30 @@ const COLORS = {
   statusPending: '#9ca3af',
 };
 
+// AI Provider mapping - will auto-select best model
+const AI_PROVIDERS = {
+  claude: {
+    label: 'Claude Sonnet 4',
+    description: 'Balanced, recommended for textbooks',
+    icon: '●',
+  },
+  openai: {
+    label: 'GPT-4o',
+    description: 'Most advanced, excellent quality',
+    icon: '●',
+  },
+  deepseek: {
+    label: 'Deepseek V3.2',
+    description: 'Latest, budget-friendly',
+    icon: '●',
+  },
+  gemini: {
+    label: 'Google Gemini',
+    description: 'Advanced, good for analysis',
+    icon: '●',
+  },
+};
+
 export default function App() {
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -62,7 +86,7 @@ export default function App() {
     topic: '',
     sub_topic: '',
     prompt: '',
-    ai_model: 'claude-sonnet-4-20250514',
+    ai_provider: 'claude', // Just the provider, not specific model
   });
 
   // Load Lexend font
@@ -165,7 +189,7 @@ export default function App() {
         if (error) throw error;
       }
 
-      setFormData({ class: '', subject: '', topic: '', sub_topic: '', prompt: '', ai_model: 'claude-sonnet-4-20250514' });
+      setFormData({ class: '', subject: '', topic: '', sub_topic: '', prompt: '', ai_provider: 'claude' });
       setShowAddForm(false);
       fetchRecords();
     } catch (error) {
@@ -182,7 +206,7 @@ export default function App() {
       topic: record.topic || '',
       sub_topic: record.sub_topic || '',
       prompt: record.prompt || '',
-      ai_model: record.ai_model || 'claude-sonnet-4-20250514',
+      ai_provider: record.ai_provider || 'claude',
     });
     setShowAddForm(true);
   };
@@ -190,7 +214,7 @@ export default function App() {
   const handleCancel = () => {
     setShowAddForm(false);
     setEditingId(null);
-    setFormData({ class: '', subject: '', topic: '', sub_topic: '', prompt: '', ai_model: 'claude-sonnet-4-20250514' });
+    setFormData({ class: '', subject: '', topic: '', sub_topic: '', prompt: '', ai_provider: 'claude' });
   };
 
   const handleView = (record) => {
@@ -220,8 +244,8 @@ export default function App() {
 
   const handleExport = () => {
     const csv = [
-      ['ID', 'Class', 'Subject', 'Topic', 'Sub-Topic', 'Status', 'Words', 'AI Model'],
-      ...records.map(r => [r.record_id, r.class, r.subject, r.topic, r.sub_topic, r.status, r.word_count || 0, r.ai_model || 'unknown'])
+      ['ID', 'Class', 'Subject', 'Topic', 'Sub-Topic', 'Status', 'Words', 'AI Provider'],
+      ...records.map(r => [r.record_id, r.class, r.subject, r.topic, r.sub_topic, r.status, r.word_count || 0, r.ai_provider || 'unknown'])
     ].map(row => row.join(',')).join('\n');
 
     const blob = new Blob([csv], { type: 'text/csv' });
@@ -476,7 +500,7 @@ export default function App() {
                       <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: COLORS.darkText, textTransform: 'uppercase' }}>CLASS</th>
                       <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: COLORS.darkText, textTransform: 'uppercase' }}>SUBJECT</th>
                       <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: COLORS.darkText, textTransform: 'uppercase' }}>TOPIC</th>
-                      <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: COLORS.darkText, textTransform: 'uppercase' }}>AI MODEL</th>
+                      <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: COLORS.darkText, textTransform: 'uppercase' }}>AI PROVIDER</th>
                       <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: COLORS.darkText, textTransform: 'uppercase' }}>STATUS</th>
                       <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: COLORS.darkText, textTransform: 'uppercase' }}>WORDS</th>
                       <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: COLORS.darkText, textTransform: 'uppercase' }}>ACTION</th>
@@ -489,8 +513,8 @@ export default function App() {
                         <td style={{ padding: '12px', fontSize: '13px', fontWeight: '600', color: COLORS.darkText }}>Class {record.class}</td>
                         <td style={{ padding: '12px', fontSize: '13px', color: COLORS.darkText }}>{record.subject}</td>
                         <td style={{ padding: '12px', fontSize: '13px', color: COLORS.darkText }}>{record.topic}</td>
-                        <td style={{ padding: '12px', fontSize: '12px', color: COLORS.lightText, fontFamily: 'monospace' }}>
-                          {(record.ai_model || 'claude-sonnet-4-20250514').split('-').slice(1, 3).join(' ')}
+                        <td style={{ padding: '12px', fontSize: '13px', fontWeight: '600', color: COLORS.navActive }}>
+                          {record.ai_provider ? record.ai_provider.toUpperCase() : 'CLAUDE'}
                         </td>
                         <td style={{ padding: '12px', fontSize: '13px' }}>
                           <span style={{
@@ -582,38 +606,44 @@ export default function App() {
 
             <div>
               <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: COLORS.darkText, marginBottom: '8px', textTransform: 'uppercase' }}>AI PROMPT <span style={{ fontSize: '12px', color: COLORS.lightText, fontWeight: '400' }}>Max 2000 characters</span></label>
-              <textarea value={formData.prompt} onChange={(e) => setFormData({ ...formData, prompt: e.target.value.slice(0, 2000) })} placeholder="Enter detailed prompt for Claude AI..." required rows="6" style={{ width: '100%', padding: '12px', border: `1px solid ${COLORS.borderColor}`, borderRadius: '6px', fontSize: '14px', background: COLORS.white, fontFamily: FONT_FAMILY, resize: 'vertical', minHeight: '140px' }} />
+              <textarea value={formData.prompt} onChange={(e) => setFormData({ ...formData, prompt: e.target.value.slice(0, 2000) })} placeholder="Enter detailed prompt for AI..." required rows="6" style={{ width: '100%', padding: '12px', border: `1px solid ${COLORS.borderColor}`, borderRadius: '6px', fontSize: '14px', background: COLORS.white, fontFamily: FONT_FAMILY, resize: 'vertical', minHeight: '140px' }} />
               <div style={{ fontSize: '12px', color: COLORS.lightText, marginTop: '6px' }}>{formData.prompt.length}/2000 characters</div>
             </div>
 
+            {/* AI PROVIDER RADIO BUTTONS */}
             <div>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: COLORS.darkText, marginBottom: '8px', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                🤖 Select AI Model
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: COLORS.darkText, marginBottom: '12px', textTransform: 'uppercase' }}>
+                🤖 Select AI Provider
               </label>
-              <select value={formData.ai_model} onChange={(e) => setFormData({ ...formData, ai_model: e.target.value })} style={{ width: '100%', padding: '10px 12px', border: `1px solid ${COLORS.borderColor}`, borderRadius: '6px', fontSize: '14px', background: COLORS.white, fontFamily: FONT_FAMILY }}>
-                <optgroup label="Claude (Recommended)">
-                  <option value="claude-opus-4-20250514">Claude Opus 4 (Most Capable - $0.03/run)</option>
-                  <option value="claude-sonnet-4-20250514">Claude Sonnet 4 (Balanced - $0.003/run) ⭐</option>
-                  <option value="claude-haiku-4-5-20251001">Claude Haiku 4.5 (Fast & Cheap - $0.0008/run)</option>
-                </optgroup>
-                <optgroup label="OpenAI">
-                  <option value="gpt-4o">GPT-4o (Most Advanced - $0.015/run)</option>
-                  <option value="gpt-4-turbo">GPT-4 Turbo (Faster - $0.01/run)</option>
-                  <option value="gpt-3.5-turbo">GPT-3.5 (Cheapest - $0.0005/run)</option>
-                </optgroup>
-                <optgroup label="Deepseek">
-                  <option value="deepseek-v3.2">Deepseek V3.2 (Latest - $0.0014/run)</option>
-                  <option value="deepseek-v2">Deepseek V2 (Budget - $0.001/run)</option>
-                </optgroup>
-              </select>
-              <div style={{ fontSize: '12px', color: COLORS.lightText, marginTop: '6px', background: `${COLORS.navActive}10`, padding: '8px', borderRadius: '6px' }}>
-                ℹ️ Different models have different speeds and costs. Claude Sonnet 4 is recommended for textbooks.
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {Object.entries(AI_PROVIDERS).map(([key, provider]) => (
+                  <label key={key} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '10px', borderRadius: '6px', border: `1px solid ${formData.ai_provider === key ? COLORS.navActive : COLORS.borderColor}`, background: formData.ai_provider === key ? `${COLORS.navActive}10` : 'white', cursor: 'pointer', transition: 'all 0.2s' }}>
+                    <input
+                      type="radio"
+                      value={key}
+                      checked={formData.ai_provider === key}
+                      onChange={(e) => setFormData({ ...formData, ai_provider: e.target.value })}
+                      style={{ marginTop: '2px', cursor: 'pointer', accentColor: COLORS.navActive }}
+                    />
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: '13px', fontWeight: '600', color: COLORS.darkText }}>
+                        {provider.icon} {provider.label}
+                      </div>
+                      <div style={{ fontSize: '12px', color: COLORS.lightText, marginTop: '2px' }}>
+                        {provider.description}
+                      </div>
+                    </div>
+                  </label>
+                ))}
+              </div>
+              <div style={{ fontSize: '12px', color: COLORS.lightText, marginTop: '12px', background: `${COLORS.statusGenerating}15`, padding: '10px', borderRadius: '6px', borderLeft: `3px solid ${COLORS.statusGenerating}` }}>
+                ✨ <strong>Smart Model Selection:</strong> System will automatically choose the best model version (e.g., Sonnet 4, Haiku) based on your prompt and work complexity.
               </div>
             </div>
 
             <div style={{ background: `${COLORS.statusGenerating}15`, padding: '12px', borderRadius: '6px', borderLeft: `4px solid ${COLORS.statusGenerating}` }}>
               <p style={{ margin: 0, fontSize: '13px', color: COLORS.statusGenerating, fontWeight: '600' }}>AI Curator Ready</p>
-              <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: COLORS.darkText }}>Your prompt will be processed by the selected AI model to generate high-fidelity textbook content.</p>
+              <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: COLORS.darkText }}>Your prompt will be processed by the selected AI provider to generate high-fidelity textbook content.</p>
             </div>
 
             <div style={{ display: 'flex', gap: '12px', marginTop: 'auto' }}>
@@ -636,7 +666,7 @@ export default function App() {
             <div style={{ padding: '20px 24px', borderBottom: `1px solid ${COLORS.borderColor}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
                 <h2 style={{ margin: 0, fontSize: '20px', fontWeight: '700', color: COLORS.darkText }}>{viewingRecord.topic}</h2>
-                <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: COLORS.lightText }}>Class {viewingRecord.class} • {viewingRecord.subject} • {(viewingRecord.ai_model || 'claude-sonnet').split('-').slice(1, 3).join(' ')}</p>
+                <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: COLORS.lightText }}>Class {viewingRecord.class} • {viewingRecord.subject} • {(viewingRecord.ai_provider || 'claude').toUpperCase()}</p>
               </div>
               <button onClick={handleCloseView} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
                 <X size={24} color={COLORS.darkText} />

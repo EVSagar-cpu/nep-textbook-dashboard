@@ -169,7 +169,7 @@ export default function NEPDashboard() {
       if (editingId) {
         const { error } = await supabase
           .from('textbook_content')
-          .update({ ...formData, status: 'pending' })
+          .update({ ...formData, status: 'generating' })
           .eq('record_id', editingId);
 
         if (error) throw error;
@@ -177,7 +177,7 @@ export default function NEPDashboard() {
       } else {
         const { error } = await supabase
           .from('textbook_content')
-          .insert([{ ...formData, status: 'pending' }]);
+          .insert([{ ...formData, status: 'generating' }]);
 
         if (error) throw error;
       }

@@ -15,6 +15,7 @@ export default function NEPDashboard() {
   const [showAddForm, setShowAddForm] = useState(false);
   const [filterStatus, setFilterStatus] = useState('all');
   const [editingId, setEditingId] = useState(null);
+  const [viewingRecord, setViewingRecord] = useState(null);
 
   const [formData, setFormData] = useState({
     class: '',
@@ -63,7 +64,7 @@ export default function NEPDashboard() {
     setLoading(false);
   };
 
-  // Handle Login
+  // Handle Email/Password Login
   const handleLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -77,6 +78,40 @@ export default function NEPDashboard() {
       setPassword('');
     } catch (error) {
       alert('Login error: ' + error.message);
+    }
+    setLoading(false);
+  };
+
+  // Handle GitHub OAuth Login
+  const handleGitHubLogin = async () => {
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'github',
+        options: {
+          redirectTo: window.location.origin,
+        },
+      });
+      if (error) throw error;
+    } catch (error) {
+      alert('GitHub login error: ' + error.message);
+    }
+    setLoading(false);
+  };
+
+  // Handle Google OAuth Login
+  const handleGoogleLogin = async () => {
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: window.location.origin,
+        },
+      });
+      if (error) throw error;
+    } catch (error) {
+      alert('Google login error: ' + error.message);
     }
     setLoading(false);
   };
@@ -160,6 +195,16 @@ export default function NEPDashboard() {
     });
   };
 
+  // Handle View AI Output
+  const handleView = (record) => {
+    setViewingRecord(record);
+  };
+
+  // Handle Close View
+  const handleCloseView = () => {
+    setViewingRecord(null);
+  };
+
   // Export to CSV
   const handleExport = () => {
     if (records.length === 0) {
@@ -193,8 +238,73 @@ export default function NEPDashboard() {
     return (
       <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Segoe UI, sans-serif' }}>
         <div style={{ background: 'white', padding: '40px', borderRadius: '12px', boxShadow: '0 20px 60px rgba(0,0,0,0.3)', maxWidth: '400px', width: '100%' }}>
-          <h1 style={{ fontSize: '28px', marginBottom: '30px', textAlign: 'center', color: '#1a1a1a' }}>NEP Textbook Dashboard</h1>
+          <h1 style={{ fontSize: '28px', marginBottom: '30px', textAlign: 'center', color: '#1a1a1a' }}>📚 NEP Textbook Dashboard</h1>
 
+          {/* OAuth Login Options */}
+          <div style={{ marginBottom: '30px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <button
+              onClick={handleGoogleLogin}
+              disabled={loading}
+              style={{
+                width: '100%',
+                padding: '12px',
+                background: '#fff',
+                color: '#333',
+                border: '1px solid #ddd',
+                borderRadius: '8px',
+                fontSize: '15px',
+                fontWeight: '600',
+                cursor: loading ? 'not-allowed' : 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '10px',
+                opacity: loading ? 0.7 : 1,
+                transition: 'all 0.3s ease',
+              }}
+              onMouseEnter={(e) => e.target.style.background = '#f5f5f5'}
+              onMouseLeave={(e) => e.target.style.background = '#fff'}
+            >
+              <span style={{ fontSize: '18px' }}>🔍</span>
+              {loading ? 'Logging in...' : 'Login with Google'}
+            </button>
+
+            <button
+              onClick={handleGitHubLogin}
+              disabled={loading}
+              style={{
+                width: '100%',
+                padding: '12px',
+                background: '#fff',
+                color: '#333',
+                border: '1px solid #ddd',
+                borderRadius: '8px',
+                fontSize: '15px',
+                fontWeight: '600',
+                cursor: loading ? 'not-allowed' : 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '10px',
+                opacity: loading ? 0.7 : 1,
+                transition: 'all 0.3s ease',
+              }}
+              onMouseEnter={(e) => e.target.style.background = '#f5f5f5'}
+              onMouseLeave={(e) => e.target.style.background = '#fff'}
+            >
+              <span style={{ fontSize: '18px' }}>🐙</span>
+              {loading ? 'Logging in...' : 'Login with GitHub'}
+            </button>
+          </div>
+
+          {/* Divider */}
+          <div style={{ display: 'flex', alignItems: 'center', margin: '25px 0', gap: '10px' }}>
+            <div style={{ flex: 1, height: '1px', background: '#ddd' }}></div>
+            <span style={{ fontSize: '13px', color: '#999', fontWeight: '600' }}>OR</span>
+            <div style={{ flex: 1, height: '1px', background: '#ddd' }}></div>
+          </div>
+
+          {/* Email/Password Login */}
           <form onSubmit={handleLogin}>
             <div style={{ marginBottom: '20px' }}>
               <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600', color: '#333' }}>Email</label>
@@ -250,12 +360,12 @@ export default function NEPDashboard() {
                 opacity: loading ? 0.7 : 1,
               }}
             >
-              {loading ? 'Logging in...' : 'Login'}
+              {loading ? 'Logging in...' : 'Login with Email'}
             </button>
           </form>
 
-          <p style={{ marginTop: '20px', textAlign: 'center', fontSize: '12px', color: '#666' }}>
-            Use your Supabase account to login
+          <p style={{ marginTop: '20px', textAlign: 'center', fontSize: '12px', color: '#999' }}>
+            Use any method to sign in securely
           </p>
         </div>
       </div>
@@ -533,21 +643,38 @@ export default function NEPDashboard() {
                       </td>
                       <td style={{ padding: '15px', fontSize: '13px', color: '#666' }}>{record.word_count || '-'}</td>
                       <td style={{ padding: '15px', fontSize: '13px' }}>
-                        <button
-                          onClick={() => handleEdit(record)}
-                          style={{
-                            padding: '6px 12px',
-                            background: '#764ba2',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '4px',
-                            cursor: 'pointer',
-                            fontSize: '12px',
-                            fontWeight: '600',
-                          }}
-                        >
-                          Edit
-                        </button>
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          <button
+                            onClick={() => handleView(record)}
+                            style={{
+                              padding: '6px 12px',
+                              background: '#4facfe',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '4px',
+                              cursor: 'pointer',
+                              fontSize: '12px',
+                              fontWeight: '600',
+                            }}
+                          >
+                            View
+                          </button>
+                          <button
+                            onClick={() => handleEdit(record)}
+                            style={{
+                              padding: '6px 12px',
+                              background: '#764ba2',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '4px',
+                              cursor: 'pointer',
+                              fontSize: '12px',
+                              fontWeight: '600',
+                            }}
+                          >
+                            Edit
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -557,6 +684,120 @@ export default function NEPDashboard() {
           )}
         </div>
       </div>
+
+      {/* View AI Output Modal */}
+      {viewingRecord && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.7)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          padding: '20px',
+        }}>
+          <div style={{
+            background: 'white',
+            borderRadius: '12px',
+            boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
+            maxWidth: '900px',
+            width: '100%',
+            maxHeight: '90vh',
+            display: 'flex',
+            flexDirection: 'column',
+          }}>
+            {/* Modal Header */}
+            <div style={{
+              padding: '20px',
+              borderBottom: '1px solid #eee',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+            }}>
+              <div>
+                <h2 style={{ margin: 0, fontSize: '20px', color: '#1a1a1a' }}>
+                  📖 AI-Generated Content
+                </h2>
+                <p style={{ margin: '8px 0 0 0', fontSize: '13px', color: '#666' }}>
+                  Class {viewingRecord.class} • {viewingRecord.subject} • {viewingRecord.topic}
+                </p>
+              </div>
+              <button
+                onClick={handleCloseView}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  fontSize: '24px',
+                  cursor: 'pointer',
+                  color: '#999',
+                }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div style={{
+              flex: 1,
+              overflow: 'auto',
+              padding: '30px',
+              fontFamily: 'Georgia, serif',
+              lineHeight: '1.8',
+              color: '#333',
+            }}>
+              {viewingRecord.ai_output ? (
+                <div style={{ whiteSpace: 'pre-wrap', wordWrap: 'break-word' }}>
+                  {viewingRecord.ai_output}
+                </div>
+              ) : (
+                <div style={{ textAlign: 'center', color: '#999', padding: '40px' }}>
+                  <p style={{ fontSize: '16px' }}>⏳ Content is being generated...</p>
+                  <p style={{ fontSize: '13px' }}>Status: {viewingRecord.status}</p>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div style={{
+              padding: '20px',
+              borderTop: '1px solid #eee',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+            }}>
+              <div style={{ fontSize: '13px', color: '#666' }}>
+                <strong>📊 Stats:</strong> {viewingRecord.word_count || 0} words • Status: <span style={{
+                  padding: '4px 12px',
+                  borderRadius: '20px',
+                  fontSize: '12px',
+                  fontWeight: '600',
+                  background: viewingRecord.status === 'generated' ? '#d4edda' : viewingRecord.status === 'generating' ? '#fff3cd' : '#e2e3e5',
+                  color: viewingRecord.status === 'generated' ? '#155724' : viewingRecord.status === 'generating' ? '#856404' : '#383d41',
+                }}>{viewingRecord.status}</span>
+              </div>
+              <button
+                onClick={handleCloseView}
+                style={{
+                  padding: '10px 20px',
+                  background: '#667eea',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontWeight: '600',
+                  fontSize: '14px',
+                }}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

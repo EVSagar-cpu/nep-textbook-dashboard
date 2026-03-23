@@ -321,30 +321,34 @@ export default function NEPDashboard() {
       </div>
 
       <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '30px 20px' }}>
-        {/* Filters Panel */}
-        <div style={{ background: 'white', borderRadius: '12px', padding: '25px', marginBottom: '30px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
-          
-          {/* 1. Add Record Button */}
-          <div style={{ marginBottom: '20px' }}>
-            <button onClick={() => setShowAddForm(!showAddForm)} style={{ width: '100%', padding: '12px 20px', background: '#1a9b8e', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', fontSize: '15px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-              {showAddForm ? <X size={18} /> : <Plus size={18} />}
+        {/* Compact Filter Banner */}
+        <div style={{ background: '#1a9b8e', borderRadius: '8px', padding: '12px 20px', marginBottom: '25px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+          {/* Row 1: Add Record + Search */}
+          <div style={{ display: 'flex', gap: '12px', marginBottom: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+            <button onClick={() => setShowAddForm(!showAddForm)} style={{ padding: '10px 20px', background: 'white', color: '#1a9b8e', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}>
+              {showAddForm ? <X size={16} /> : <Plus size={16} />}
               {showAddForm ? 'Cancel' : 'Add Record'}
             </button>
-          </div>
 
-          {/* 2. Search Field */}
-          <div style={{ marginBottom: '20px' }}>
-            <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: '600', color: '#333', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Search</label>
-            <div style={{ position: 'relative' }}>
-              <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#a0aec0', pointerEvents: 'none' }} />
-              <input type="text" placeholder="Search by Topic or Sub-topic..." style={{ width: '100%', padding: '11px 15px 11px 40px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '14px', fontFamily: FONT_FAMILY, boxSizing: 'border-box' }} />
+            <div style={{ position: 'relative', flex: 1, minWidth: '180px' }}>
+              <Search size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#fff', pointerEvents: 'none', opacity: 0.7 }} />
+              <input 
+                type="text" 
+                placeholder="Search..." 
+                style={{ 
+                  width: '100%', 
+                  padding: '9px 12px 9px 35px', 
+                  border: 'none', 
+                  borderRadius: '6px', 
+                  fontSize: '13px', 
+                  fontFamily: FONT_FAMILY, 
+                  boxSizing: 'border-box',
+                  background: 'rgba(255,255,255,0.95)'
+                }} 
+              />
             </div>
-          </div>
 
-          {/* 3. Class - Multi Select */}
-          <div style={{ marginBottom: '20px' }}>
-            <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: '600', color: '#333', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Class (Grade)</label>
-            <select value={filterClass} onChange={(e) => setFilterClass(e.target.value)} style={{ width: '100%', padding: '11px 14px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '14px', cursor: 'pointer', background: 'white', fontFamily: FONT_FAMILY, boxSizing: 'border-box' }}>
+            <select value={filterClass} onChange={(e) => setFilterClass(e.target.value)} style={{ padding: '9px 12px', border: 'none', borderRadius: '6px', fontSize: '13px', cursor: 'pointer', background: 'white', fontFamily: FONT_FAMILY, minWidth: '110px' }}>
               <option value="all">All Classes</option>
               <option value="1">Class 1</option>
               <option value="2">Class 2</option>
@@ -352,12 +356,8 @@ export default function NEPDashboard() {
               <option value="4">Class 4</option>
               <option value="5">Class 5</option>
             </select>
-          </div>
 
-          {/* 4. Subject - Multi Select */}
-          <div style={{ marginBottom: '20px' }}>
-            <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: '600', color: '#333', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Subject</label>
-            <select value={filterSubject} onChange={(e) => setFilterSubject(e.target.value)} style={{ width: '100%', padding: '11px 14px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '14px', cursor: 'pointer', background: 'white', fontFamily: FONT_FAMILY, boxSizing: 'border-box' }}>
+            <select value={filterSubject} onChange={(e) => setFilterSubject(e.target.value)} style={{ padding: '9px 12px', border: 'none', borderRadius: '6px', fontSize: '13px', cursor: 'pointer', background: 'white', fontFamily: FONT_FAMILY, minWidth: '120px' }}>
               <option value="all">All Subjects</option>
               <option value="English">English</option>
               <option value="Mathematics">Mathematics</option>
@@ -365,52 +365,67 @@ export default function NEPDashboard() {
               <option value="Social Studies">Social Studies</option>
               <option value="Hindi">Hindi</option>
               <option value="Arts">Arts</option>
-              <option value="Physical Education">Physical Education</option>
-              <option value="Environmental Studies">Environmental Studies</option>
+              <option value="Physical Education">PE</option>
+              <option value="Environmental Studies">EVS</option>
             </select>
           </div>
 
-          {/* 5. Topic - Text Input */}
-          <div style={{ marginBottom: '20px' }}>
-            <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: '600', color: '#333', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Topic</label>
-            <input type="text" placeholder="e.g., Numbers, Alphabet, Photosynthesis..." value={topicInput} onChange={(e) => { setTopicInput(e.target.value); setSearchTopic(e.target.value); }} style={{ width: '100%', padding: '11px 14px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '14px', fontFamily: FONT_FAMILY, boxSizing: 'border-box' }} />
-          </div>
+          {/* Row 2: Topic + Sub-topic + Status + Buttons */}
+          <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+            <input 
+              type="text" 
+              placeholder="Topic..." 
+              value={topicInput} 
+              onChange={(e) => { setTopicInput(e.target.value); setSearchTopic(e.target.value); }} 
+              style={{ 
+                padding: '9px 12px', 
+                border: 'none', 
+                borderRadius: '6px', 
+                fontSize: '13px', 
+                fontFamily: FONT_FAMILY, 
+                minWidth: '130px',
+                background: 'white'
+              }} 
+            />
 
-          {/* 6. Sub-Topic - Text Input */}
-          <div style={{ marginBottom: '20px' }}>
-            <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: '600', color: '#333', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Sub-topic</label>
-            <input type="text" placeholder="e.g., Place Value, Phonetics, Leaf Structure..." value={subTopicInput} onChange={(e) => { setSubTopicInput(e.target.value); setSearchSubTopic(e.target.value); }} style={{ width: '100%', padding: '11px 14px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '14px', fontFamily: FONT_FAMILY, boxSizing: 'border-box' }} />
-          </div>
+            <input 
+              type="text" 
+              placeholder="Sub-topic..." 
+              value={subTopicInput} 
+              onChange={(e) => { setSubTopicInput(e.target.value); setSearchSubTopic(e.target.value); }} 
+              style={{ 
+                padding: '9px 12px', 
+                border: 'none', 
+                borderRadius: '6px', 
+                fontSize: '13px', 
+                fontFamily: FONT_FAMILY, 
+                minWidth: '130px',
+                background: 'white'
+              }} 
+            />
 
-          {/* Status Filter */}
-          <div style={{ marginBottom: '20px' }}>
-            <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: '600', color: '#333', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Status</label>
-            <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} style={{ width: '100%', padding: '11px 14px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '14px', cursor: 'pointer', background: 'white', fontFamily: FONT_FAMILY, boxSizing: 'border-box' }}>
+            <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} style={{ padding: '9px 12px', border: 'none', borderRadius: '6px', fontSize: '13px', cursor: 'pointer', background: 'white', fontFamily: FONT_FAMILY, minWidth: '110px' }}>
               <option value="all">All Status</option>
               <option value="pending">Pending</option>
               <option value="generating">Generating</option>
               <option value="generated">Generated</option>
             </select>
-          </div>
 
-          {/* Action Buttons */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '15px' }}>
-            <button onClick={handleExport} style={{ padding: '11px 20px', background: '#805ad5', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', fontSize: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-              <Download size={16} />
-              Export CSV
+            <button onClick={handleExport} style={{ padding: '9px 14px', background: 'white', color: '#1a9b8e', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}>
+              <Download size={14} />
+              Export
             </button>
 
-            <button onClick={fetchRecords} style={{ padding: '11px 20px', background: '#4299e1', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', fontSize: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-              <RefreshCw size={16} />
+            <button onClick={fetchRecords} style={{ padding: '9px 14px', background: 'white', color: '#1a9b8e', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}>
+              <RefreshCw size={14} />
               Refresh
             </button>
-          </div>
 
-          {/* 7. Clear Filters Button */}
-          <button onClick={handleClearFilters} style={{ width: '100%', padding: '11px 20px', background: '#cbd5e0', color: '#2d3748', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', fontSize: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-            <X size={16} />
-            Clear Filters
-          </button>
+            <button onClick={handleClearFilters} style={{ padding: '9px 14px', background: 'white', color: '#1a9b8e', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}>
+              <X size={14} />
+              Clear
+            </button>
+          </div>
         </div>
 
         {/* Add/Edit Form */}

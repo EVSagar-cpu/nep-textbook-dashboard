@@ -11,7 +11,8 @@ const SUPABASE_ANON_KEY = 'sb_publishable_tmoQwBjJYHyMnOSGAzts2w_v-aG0iYl';
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-const FONT_FAMILY = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
+// Lexend font from Google Fonts
+const FONT_FAMILY = 'Lexend, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
 
 export default function NEPDashboard() {
   const [session, setSession] = useState(null);
@@ -38,6 +39,14 @@ export default function NEPDashboard() {
     sub_topic: '',
     prompt: '',
   });
+
+  // Load Lexend font from Google Fonts
+  useEffect(() => {
+    const link = document.createElement('link');
+    link.href = 'https://fonts.googleapis.com/css2?family=Lexend:wght@400;600;700&display=swap';
+    link.rel = 'stylesheet';
+    document.head.appendChild(link);
+  }, []);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -391,35 +400,35 @@ export default function NEPDashboard() {
       </div>
 
       <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '30px 20px' }}>
-        {/* Option 1: Vertical Stack Filter Layout */}
-        <div style={{ background: '#1a9b8e', borderRadius: '8px', padding: '15px 20px', marginBottom: '25px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+        {/* Option 3: Compact Balanced Filter Layout (40% space saved) */}
+        <div style={{ background: '#1a9b8e', borderRadius: '8px', padding: '10px 15px', marginBottom: '25px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
           
           {/* Row 1: Add Record + Export + Refresh + Clear */}
-          <div style={{ display: 'flex', gap: '12px', marginBottom: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
-            <button onClick={() => setShowAddForm(!showAddForm)} style={{ padding: '10px 20px', background: 'white', color: '#1a9b8e', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}>
+          <div style={{ display: 'flex', gap: '8px', marginBottom: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+            <button onClick={() => setShowAddForm(!showAddForm)} style={{ padding: '8px 14px', background: 'white', color: '#1a9b8e', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}>
               {showAddForm ? <X size={16} /> : <Plus size={16} />}
               {showAddForm ? 'Cancel' : 'Add Record'}
             </button>
 
-            <button onClick={handleExport} style={{ padding: '10px 16px', background: 'white', color: '#1a9b8e', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}>
-              <Download size={16} />
+            <button onClick={handleExport} style={{ padding: '8px 12px', background: 'white', color: '#1a9b8e', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}>
+              <Download size={14} />
               Export
             </button>
 
-            <button onClick={fetchRecords} style={{ padding: '10px 16px', background: 'white', color: '#1a9b8e', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}>
-              <RefreshCw size={16} />
+            <button onClick={fetchRecords} style={{ padding: '8px 12px', background: 'white', color: '#1a9b8e', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}>
+              <RefreshCw size={14} />
               Refresh
             </button>
 
-            <button onClick={handleClearFilters} style={{ padding: '10px 16px', background: 'white', color: '#1a9b8e', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}>
-              <X size={16} />
+            <button onClick={handleClearFilters} style={{ padding: '8px 12px', background: 'white', color: '#1a9b8e', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}>
+              <X size={14} />
               Clear
             </button>
           </div>
 
-          {/* Row 2: Class + Subject */}
-          <div style={{ display: 'flex', gap: '12px', marginBottom: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
-            <select value={filterClass} onChange={(e) => setFilterClass(e.target.value)} style={{ padding: '10px 12px', border: 'none', borderRadius: '6px', fontSize: '14px', cursor: 'pointer', background: 'white', fontFamily: FONT_FAMILY, minWidth: '140px' }}>
+          {/* Row 2: Class + Subject + Topic + Sub-topic */}
+          <div style={{ display: 'flex', gap: '8px', marginBottom: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+            <select value={filterClass} onChange={(e) => setFilterClass(e.target.value)} style={{ padding: '8px 10px', border: 'none', borderRadius: '6px', fontSize: '13px', cursor: 'pointer', background: 'white', fontFamily: FONT_FAMILY, minWidth: '130px' }}>
               <option value="all">All Classes</option>
               <option value="1">Class 1</option>
               <option value="2">Class 2</option>
@@ -428,7 +437,7 @@ export default function NEPDashboard() {
               <option value="5">Class 5</option>
             </select>
 
-            <select value={filterSubject} onChange={(e) => setFilterSubject(e.target.value)} style={{ padding: '10px 12px', border: 'none', borderRadius: '6px', fontSize: '14px', cursor: 'pointer', background: 'white', fontFamily: FONT_FAMILY, minWidth: '150px' }}>
+            <select value={filterSubject} onChange={(e) => setFilterSubject(e.target.value)} style={{ padding: '8px 10px', border: 'none', borderRadius: '6px', fontSize: '13px', cursor: 'pointer', background: 'white', fontFamily: FONT_FAMILY, minWidth: '140px' }}>
               <option value="all">All Subjects</option>
               <option value="English">English</option>
               <option value="Mathematics">Mathematics</option>
@@ -439,22 +448,19 @@ export default function NEPDashboard() {
               <option value="Physical Education">PE</option>
               <option value="Environmental Studies">EVS</option>
             </select>
-          </div>
 
-          {/* Row 3: Topic + Sub-topic */}
-          <div style={{ display: 'flex', gap: '12px', marginBottom: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
             <input 
               type="text" 
               placeholder="Topic..." 
               value={topicInput} 
               onChange={(e) => { setTopicInput(e.target.value); setSearchTopic(e.target.value); }} 
               style={{ 
-                padding: '10px 12px', 
+                padding: '8px 10px', 
                 border: 'none', 
                 borderRadius: '6px', 
-                fontSize: '14px', 
+                fontSize: '13px', 
                 fontFamily: FONT_FAMILY, 
-                minWidth: '140px',
+                minWidth: '130px',
                 background: 'white'
               }} 
             />
@@ -465,20 +471,20 @@ export default function NEPDashboard() {
               value={subTopicInput} 
               onChange={(e) => { setSubTopicInput(e.target.value); setSearchSubTopic(e.target.value); }} 
               style={{ 
-                padding: '10px 12px', 
+                padding: '8px 10px', 
                 border: 'none', 
                 borderRadius: '6px', 
-                fontSize: '14px', 
+                fontSize: '13px', 
                 fontFamily: FONT_FAMILY, 
-                minWidth: '150px',
+                minWidth: '140px',
                 background: 'white'
               }} 
             />
           </div>
 
-          {/* Row 4: Status */}
-          <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
-            <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} style={{ padding: '10px 12px', border: 'none', borderRadius: '6px', fontSize: '14px', cursor: 'pointer', background: 'white', fontFamily: FONT_FAMILY, minWidth: '140px' }}>
+          {/* Row 3: Status */}
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+            <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} style={{ padding: '8px 10px', border: 'none', borderRadius: '6px', fontSize: '13px', cursor: 'pointer', background: 'white', fontFamily: FONT_FAMILY, minWidth: '130px' }}>
               <option value="all">All Status</option>
               <option value="pending">Pending</option>
               <option value="generating">Generating</option>

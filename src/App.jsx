@@ -560,10 +560,14 @@ Generated: ${new Date().toLocaleDateString()} • ${viewingRecord.word_count || 
                 <option value="Mathematics">Mathematics</option>
                 <option value="Science">Science</option>
                 <option value="Social Studies">Social Studies</option>
-                <option value="Hindi">Hindi</option>
+                <option value="Social Science">Social Science</option>
+                <option value="मधुबन सरल-SL">मधुबन सरल-SL</option>
+                <option value="तरंग-TL">तरंग-TL</option>
                 <option value="Arts">Arts</option>
                 <option value="Physical Education">PE</option>
                 <option value="Environmental Studies">EVS</option>
+                <option value="General Knowledge">GK</option>
+                <option value="Computers">Computers</option>
               </select>
             </div>
 
@@ -688,10 +692,14 @@ Generated: ${new Date().toLocaleDateString()} • ${viewingRecord.word_count || 
                 <option value="Mathematics">Mathematics</option>
                 <option value="Science">Science</option>
                 <option value="Social Studies">Social Studies</option>
-                <option value="Hindi">Hindi</option>
+                <option value="Social Science">Social Science</option>
+                <option value="मधुबन सरल-SL">मधुबन सरल-SL</option>
+                <option value="तरंग-TL">तरंग-TL</option>
                 <option value="Arts">Arts</option>
                 <option value="Physical Education">PE</option>
                 <option value="Environmental Studies">EVS</option>
+                <option value="General Knowledge">GK</option>
+                <option value="Computers">Computers</option>
               </select>
             </div>
 

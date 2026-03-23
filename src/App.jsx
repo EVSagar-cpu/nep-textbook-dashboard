@@ -6,6 +6,9 @@ const SUPABASE_ANON_KEY = 'sb_publishable_tmoQwBjJYHyMnOSGAzts2w_v-aG0iYl';
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+// Professional font family
+const FONT_FAMILY = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
+
 export default function NEPDashboard() {
   const [session, setSession] = useState(null);
   const [records, setRecords] = useState([]);
@@ -270,7 +273,7 @@ export default function NEPDashboard() {
   // LOGIN PAGE
   if (!session) {
     return (
-      <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Segoe UI, sans-serif' }}>
+      <div style={{ minHeight: '100vh', background: '#0f3d3e', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: FONT_FAMILY }}>
         <div style={{ background: 'white', padding: '40px', borderRadius: '12px', boxShadow: '0 20px 60px rgba(0,0,0,0.3)', maxWidth: '400px', width: '100%' }}>
           <h1 style={{ fontSize: '28px', marginBottom: '30px', textAlign: 'center', color: '#1a1a1a' }}>📚 NEP Textbook Dashboard</h1>
 
@@ -384,7 +387,7 @@ export default function NEPDashboard() {
               style={{
                 width: '100%',
                 padding: '12px',
-                background: '#667eea',
+                background: '#1a9b8e',
                 color: 'white',
                 border: 'none',
                 borderRadius: '8px',
@@ -408,7 +411,7 @@ export default function NEPDashboard() {
 
   // DASHBOARD PAGE
   return (
-    <div style={{ minHeight: '100vh', background: '#f5f7fa', fontFamily: 'Segoe UI, sans-serif' }}>
+    <div style={{ minHeight: '100vh', background: '#f5f7fa', fontFamily: FONT_FAMILY }}>
       {/* Header */}
       <div style={{ background: '#0f3d3e', color: 'white', padding: '25px', boxShadow: '0 2px 10px rgba(0,0,0,0.1)' }}>
         <div style={{ maxWidth: '1400px', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -677,7 +680,7 @@ export default function NEPDashboard() {
                   disabled={loading}
                   style={{
                     padding: '10px 20px',
-                    background: '#667eea',
+                    background: '#1a9b8e',
                     color: 'white',
                     border: 'none',
                     borderRadius: '6px',
@@ -792,7 +795,7 @@ export default function NEPDashboard() {
                             onClick={() => handleEdit(record)}
                             style={{
                               padding: '6px 12px',
-                              background: '#764ba2',
+                              background: '#0f3d3e',
                               color: 'white',
                               border: 'none',
                               borderRadius: '4px',
@@ -912,7 +915,7 @@ export default function NEPDashboard() {
                 onClick={handleCloseView}
                 style={{
                   padding: '10px 20px',
-                  background: '#667eea',
+                  background: '#1a9b8e',
                   color: 'white',
                   border: 'none',
                   borderRadius: '6px',

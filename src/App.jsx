@@ -70,6 +70,12 @@ export default function App() {
     link.href = 'https://fonts.googleapis.com/css2?family=Lexend:wght@400;600;700&display=swap';
     link.rel = 'stylesheet';
     document.head.appendChild(link);
+
+    // Load html2pdf library for PDF export
+    const script = document.createElement('script');
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
+    script.async = true;
+    document.head.appendChild(script);
   }, []);
 
   useEffect(() => {
@@ -197,6 +203,76 @@ export default function App() {
 
   const handleCloseView = () => {
     setViewingRecord(null);
+  };
+
+  // ===== EXPORT FUNCTIONS =====
+  const exportToPDF = () => {
+    if (!viewingRecord || !viewingRecord.ai_output) return;
+
+    try {
+      const element = document.createElement('div');
+      element.style.padding = '40px';
+      element.style.fontFamily = FONT_FAMILY;
+      element.style.color = COLORS.darkText;
+      element.innerHTML = `
+        <h1 style="font-size: 32px; font-weight: 700; margin-bottom: 10px;">${viewingRecord.topic}</h1>
+        <p style="font-size: 14px; color: ${COLORS.lightText}; margin-bottom: 30px;">Class ${viewingRecord.class} • ${viewingRecord.subject} • ${viewingRecord.sub_topic}</p>
+        <hr style="border: none; border-top: 2px solid ${COLORS.borderColor}; margin: 30px 0;">
+        <div style="font-size: 14px; line-height: 1.8; color: ${COLORS.darkText};">
+          ${viewingRecord.ai_output}
+        </div>
+        <hr style="border: none; border-top: 2px solid ${COLORS.borderColor}; margin: 30px 0;">
+        <p style="font-size: 12px; color: #9ca3af; text-align: center;">Generated: ${new Date().toLocaleDateString()} • ${viewingRecord.word_count || 0} words</p>
+      `;
+
+      const opt = {
+        margin: 10,
+        filename: `${viewingRecord.topic.replace(/\s+/g, '_')}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2 },
+        jsPDF: { orientation: 'portrait', unit: 'mm', format: 'a4' }
+      };
+
+      // Use html2pdf from window
+      if (window.html2pdf) {
+        window.html2pdf().set(opt).from(element).save();
+      } else {
+        alert('PDF library loading... Please try again in a moment.');
+      }
+    } catch (error) {
+      console.error('PDF export error:', error);
+      alert('Failed to export PDF. Please try again.');
+    }
+  };
+
+  const exportToWord = () => {
+    if (!viewingRecord || !viewingRecord.ai_output) return;
+
+    try {
+      // Create a simple Word document using a blob with Office Open XML format
+      const content = `
+        ${viewingRecord.topic}
+        
+Class ${viewingRecord.class} • ${viewingRecord.subject} • ${viewingRecord.sub_topic}
+
+${viewingRecord.ai_output}
+
+Generated: ${new Date().toLocaleDateString()} • ${viewingRecord.word_count || 0} words
+      `;
+
+      const blob = new Blob([content], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${viewingRecord.topic.replace(/\s+/g, '_')}.docx`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Word export error:', error);
+      alert('Failed to export Word. Please try again.');
+    }
   };
 
   const handleLogout = async () => {
@@ -612,24 +688,9 @@ export default function App() {
               </button>
             </div>
 
-            {/* Content Area with TOC */}
-            <div style={{ flex: 1, overflow: 'auto', display: 'flex' }}>
-              {/* Left: Table of Contents */}
-              <div style={{ width: '280px', borderRight: `1px solid ${COLORS.borderColor}`, background: COLORS.lightBg, padding: '20px', overflow: 'auto' }}>
-                <h3 style={{ margin: '0 0 16px 0', fontSize: '13px', fontWeight: '700', color: COLORS.darkText, textTransform: 'uppercase' }}>Table of Contents</h3>
-                <div style={{ fontSize: '13px', color: COLORS.darkText }}>
-                  <div style={{ padding: '8px', marginBottom: '8px', borderRadius: '4px', background: `${COLORS.navActive}20`, color: COLORS.navActive, fontWeight: '600' }}>
-                    {viewingRecord.sub_topic}
-                  </div>
-                  <div style={{ fontSize: '12px', color: COLORS.lightText, padding: '8px', lineHeight: '1.6' }}>
-                    <div>• Textbook Content</div>
-                    <div>• Workbook Exercises</div>
-                    <div>• Teacher Guide</div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Right: Content Display */}
+            {/* Content Area - Full Width */}
+            <div style={{ flex: 1, overflow: 'auto', display: 'flex', flexDirection: 'column' }}>
+              {/* Content Display - Full Width */}
               <div style={{ flex: 1, padding: '24px', overflow: 'auto' }}>
                 {/* Content Type Selector */}
                 <div style={{ display: 'flex', gap: '12px', marginBottom: '20px', borderBottom: `1px solid ${COLORS.borderColor}`, paddingBottom: '16px' }}>
@@ -684,6 +745,24 @@ export default function App() {
               <div style={{ borderTop: `1px solid ${COLORS.borderColor}`, padding: '16px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div style={{ fontSize: '13px', color: COLORS.lightText }}>
                   {viewingRecord.word_count || 0} words
+                </div>
+                <div style={{ display: 'flex', gap: '12px' }}>
+                  <button 
+                    onClick={exportToPDF}
+                    style={{ padding: '8px 16px', background: COLORS.filterBg, color: COLORS.darkText, border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px', transition: 'all 0.2s' }}
+                    onMouseEnter={(e) => e.target.style.background = '#e5e7eb'}
+                    onMouseLeave={(e) => e.target.style.background = COLORS.filterBg}
+                  >
+                    <Download size={16} /> PDF
+                  </button>
+                  <button 
+                    onClick={exportToWord}
+                    style={{ padding: '8px 16px', background: COLORS.filterBg, color: COLORS.darkText, border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px', transition: 'all 0.2s' }}
+                    onMouseEnter={(e) => e.target.style.background = '#e5e7eb'}
+                    onMouseLeave={(e) => e.target.style.background = COLORS.filterBg}
+                  >
+                    <FileText size={16} /> Word
+                  </button>
                 </div>
               </div>
             )}

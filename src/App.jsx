@@ -216,23 +216,51 @@ export default function App() {
       element.style.color = COLORS.darkText;
       element.style.lineHeight = '1.8';
       
-      // Use contentType to determine what to render
       let contentHtml = '';
       
       if (contentType === 'markdown') {
-        // Render as markdown (convert markdown to HTML for PDF)
-        contentHtml = viewingRecord.ai_output;
+        // Render markdown as formatted HTML for PDF
+        // Create a temporary container to render markdown
+        const tempDiv = document.createElement('div');
+        
+        // Render markdown using React Markdown (simulate the same rendering as display)
+        const markdownContent = viewingRecord.ai_output;
+        
+        // Convert markdown to HTML manually for PDF export
+        let html = markdownContent
+          // Headers
+          .replace(/^### (.*?)$/gm, '<h3 style="font-size: 18px; font-weight: 600; margin: 16px 0 8px 0; color: ' + COLORS.darkText + ';">$1</h3>')
+          .replace(/^## (.*?)$/gm, '<h2 style="font-size: 22px; font-weight: 600; margin: 20px 0 10px 0; color: ' + COLORS.darkText + ';">$1</h2>')
+          .replace(/^# (.*?)$/gm, '<h1 style="font-size: 28px; font-weight: 700; margin: 24px 0 12px 0; color: ' + COLORS.darkText + ';">$1</h1>')
+          // Bold
+          .replace(/\*\*(.*?)\*\*/g, '<strong style="font-weight: 600;">$1</strong>')
+          // Italic
+          .replace(/\*(.*?)\*/g, '<em style="font-style: italic;">$1</em>')
+          // Lists - unordered
+          .replace(/^\* (.*?)$/gm, '<li style="margin-left: 24px; margin-bottom: 6px;">$1</li>')
+          .replace(/^- (.*?)$/gm, '<li style="margin-left: 24px; margin-bottom: 6px;">$1</li>')
+          // Blockquotes
+          .replace(/^> (.*?)$/gm, '<blockquote style="border-left: 4px solid ' + COLORS.navActive + '; padding-left: 16px; margin-left: 0; background: ' + COLORS.navActive + '10; padding: 12px 16px; border-radius: 4px; font-style: italic; margin: 12px 0;">$1</blockquote>')
+          // Code blocks
+          .replace(/```([\s\S]*?)```/g, '<pre style="background: ' + COLORS.filterBg + '; padding: 12px; border-radius: 4px; overflow-x: auto; margin: 12px 0;">$1</pre>')
+          // Inline code
+          .replace(/`(.*?)`/g, '<code style="background: ' + COLORS.filterBg + '; padding: 2px 6px; border-radius: 4px; color: #d63384;">$1</code>')
+          // Paragraphs
+          .replace(/\n\n/g, '</p><p>')
+          .replace(/^([^<])/gm, '<p>$1');
+        
+        contentHtml = '<p>' + html + '</p>';
       } else {
-        // Render as HTML
+        // Render as HTML (already formatted)
         contentHtml = viewingRecord.ai_output;
       }
       
       element.innerHTML = `
-        <h1 style="font-size: 32px; font-weight: 700; margin: 0 0 10px 0;">${viewingRecord.topic}</h1>
+        <h1 style="font-size: 32px; font-weight: 700; margin: 0 0 10px 0; color: ${COLORS.darkText};">${viewingRecord.topic}</h1>
         <p style="font-size: 14px; color: ${COLORS.lightText}; margin: 0 0 30px 0;">Class ${viewingRecord.class} • ${viewingRecord.subject} • ${viewingRecord.sub_topic}</p>
         <hr style="border: none; border-top: 2px solid ${COLORS.borderColor}; margin: 30px 0;">
         <div style="font-size: 14px; line-height: 1.8; color: ${COLORS.darkText};">
-          ${contentType === 'markdown' ? `<pre style="font-family: ${FONT_FAMILY}; white-space: pre-wrap; word-wrap: break-word;">${escapeHtml(contentHtml)}</pre>` : contentHtml}
+          ${contentHtml}
         </div>
         <hr style="border: none; border-top: 2px solid ${COLORS.borderColor}; margin: 30px 0;">
         <p style="font-size: 12px; color: #9ca3af; text-align: center; margin: 0;">Generated: ${new Date().toLocaleDateString()} • ${viewingRecord.word_count || 0} words • Format: ${contentType === 'markdown' ? 'Markdown' : 'HTML'}</p>
@@ -266,7 +294,7 @@ export default function App() {
       let contentText = '';
       
       if (contentType === 'markdown') {
-        // Export raw markdown
+        // Export raw markdown for editing
         contentText = viewingRecord.ai_output;
       } else {
         // Export HTML (convert to plain text)
@@ -279,7 +307,11 @@ export default function App() {
 
 Class ${viewingRecord.class} • ${viewingRecord.subject} • ${viewingRecord.sub_topic}
 
+================================================================================
+
 ${contentText}
+
+================================================================================
 
 Generated: ${new Date().toLocaleDateString()} • ${viewingRecord.word_count || 0} words • Format: ${contentType === 'markdown' ? 'Markdown' : 'HTML'}`;
 
@@ -296,13 +328,6 @@ Generated: ${new Date().toLocaleDateString()} • ${viewingRecord.word_count || 
       console.error('Word export error:', error);
       alert('Failed to export Word. Please try again.');
     }
-  };
-
-  // Helper function to escape HTML
-  const escapeHtml = (text) => {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
   };
 
   const handleLogout = async () => {

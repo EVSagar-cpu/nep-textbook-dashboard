@@ -4,6 +4,7 @@ import {
   BookOpen, Plus, Download, RefreshCw, X, Eye, Edit2, LogOut, 
   Search, Filter, CheckCircle2, Clock, AlertCircle, LogIn, FileText
 } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
 
 const SUPABASE_URL = 'https://syacvhjmcgpgxvczassp.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_tmoQwBjJYHyMnOSGAzts2w_v-aG0iYl';
@@ -28,6 +29,7 @@ export default function NEPDashboard() {
   const [subTopicInput, setSubTopicInput] = useState('');
   const [editingId, setEditingId] = useState(null);
   const [viewingRecord, setViewingRecord] = useState(null);
+  const [contentType, setContentType] = useState('markdown'); // 'html' or 'markdown'
 
   const [formData, setFormData] = useState({
     class: '',
@@ -389,34 +391,35 @@ export default function NEPDashboard() {
       </div>
 
       <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '30px 20px' }}>
-        {/* Compact Filter Banner */}
-        <div style={{ background: '#1a9b8e', borderRadius: '8px', padding: '12px 20px', marginBottom: '25px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
-          {/* Row 1: Add Record + Search */}
+        {/* Option 1: Vertical Stack Filter Layout */}
+        <div style={{ background: '#1a9b8e', borderRadius: '8px', padding: '15px 20px', marginBottom: '25px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+          
+          {/* Row 1: Add Record + Export + Refresh + Clear */}
           <div style={{ display: 'flex', gap: '12px', marginBottom: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
             <button onClick={() => setShowAddForm(!showAddForm)} style={{ padding: '10px 20px', background: 'white', color: '#1a9b8e', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}>
               {showAddForm ? <X size={16} /> : <Plus size={16} />}
               {showAddForm ? 'Cancel' : 'Add Record'}
             </button>
 
-            <div style={{ position: 'relative', flex: 1, minWidth: '180px' }}>
-              <Search size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#fff', pointerEvents: 'none', opacity: 0.7 }} />
-              <input 
-                type="text" 
-                placeholder="Search..." 
-                style={{ 
-                  width: '100%', 
-                  padding: '9px 12px 9px 35px', 
-                  border: 'none', 
-                  borderRadius: '6px', 
-                  fontSize: '13px', 
-                  fontFamily: FONT_FAMILY, 
-                  boxSizing: 'border-box',
-                  background: 'rgba(255,255,255,0.95)'
-                }} 
-              />
-            </div>
+            <button onClick={handleExport} style={{ padding: '10px 16px', background: 'white', color: '#1a9b8e', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}>
+              <Download size={16} />
+              Export
+            </button>
 
-            <select value={filterClass} onChange={(e) => setFilterClass(e.target.value)} style={{ padding: '9px 12px', border: 'none', borderRadius: '6px', fontSize: '13px', cursor: 'pointer', background: 'white', fontFamily: FONT_FAMILY, minWidth: '110px' }}>
+            <button onClick={fetchRecords} style={{ padding: '10px 16px', background: 'white', color: '#1a9b8e', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}>
+              <RefreshCw size={16} />
+              Refresh
+            </button>
+
+            <button onClick={handleClearFilters} style={{ padding: '10px 16px', background: 'white', color: '#1a9b8e', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}>
+              <X size={16} />
+              Clear
+            </button>
+          </div>
+
+          {/* Row 2: Class + Subject */}
+          <div style={{ display: 'flex', gap: '12px', marginBottom: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+            <select value={filterClass} onChange={(e) => setFilterClass(e.target.value)} style={{ padding: '10px 12px', border: 'none', borderRadius: '6px', fontSize: '14px', cursor: 'pointer', background: 'white', fontFamily: FONT_FAMILY, minWidth: '140px' }}>
               <option value="all">All Classes</option>
               <option value="1">Class 1</option>
               <option value="2">Class 2</option>
@@ -425,7 +428,7 @@ export default function NEPDashboard() {
               <option value="5">Class 5</option>
             </select>
 
-            <select value={filterSubject} onChange={(e) => setFilterSubject(e.target.value)} style={{ padding: '9px 12px', border: 'none', borderRadius: '6px', fontSize: '13px', cursor: 'pointer', background: 'white', fontFamily: FONT_FAMILY, minWidth: '120px' }}>
+            <select value={filterSubject} onChange={(e) => setFilterSubject(e.target.value)} style={{ padding: '10px 12px', border: 'none', borderRadius: '6px', fontSize: '14px', cursor: 'pointer', background: 'white', fontFamily: FONT_FAMILY, minWidth: '150px' }}>
               <option value="all">All Subjects</option>
               <option value="English">English</option>
               <option value="Mathematics">Mathematics</option>
@@ -438,20 +441,20 @@ export default function NEPDashboard() {
             </select>
           </div>
 
-          {/* Row 2: Topic + Sub-topic + Status + Buttons */}
-          <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+          {/* Row 3: Topic + Sub-topic */}
+          <div style={{ display: 'flex', gap: '12px', marginBottom: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
             <input 
               type="text" 
               placeholder="Topic..." 
               value={topicInput} 
               onChange={(e) => { setTopicInput(e.target.value); setSearchTopic(e.target.value); }} 
               style={{ 
-                padding: '9px 12px', 
+                padding: '10px 12px', 
                 border: 'none', 
                 borderRadius: '6px', 
-                fontSize: '13px', 
+                fontSize: '14px', 
                 fontFamily: FONT_FAMILY, 
-                minWidth: '130px',
+                minWidth: '140px',
                 background: 'white'
               }} 
             />
@@ -462,37 +465,25 @@ export default function NEPDashboard() {
               value={subTopicInput} 
               onChange={(e) => { setSubTopicInput(e.target.value); setSearchSubTopic(e.target.value); }} 
               style={{ 
-                padding: '9px 12px', 
+                padding: '10px 12px', 
                 border: 'none', 
                 borderRadius: '6px', 
-                fontSize: '13px', 
+                fontSize: '14px', 
                 fontFamily: FONT_FAMILY, 
-                minWidth: '130px',
+                minWidth: '150px',
                 background: 'white'
               }} 
             />
+          </div>
 
-            <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} style={{ padding: '9px 12px', border: 'none', borderRadius: '6px', fontSize: '13px', cursor: 'pointer', background: 'white', fontFamily: FONT_FAMILY, minWidth: '110px' }}>
+          {/* Row 4: Status */}
+          <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+            <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} style={{ padding: '10px 12px', border: 'none', borderRadius: '6px', fontSize: '14px', cursor: 'pointer', background: 'white', fontFamily: FONT_FAMILY, minWidth: '140px' }}>
               <option value="all">All Status</option>
               <option value="pending">Pending</option>
               <option value="generating">Generating</option>
               <option value="generated">Generated</option>
             </select>
-
-            <button onClick={handleExport} style={{ padding: '9px 14px', background: 'white', color: '#1a9b8e', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}>
-              <Download size={14} />
-              Export
-            </button>
-
-            <button onClick={fetchRecords} style={{ padding: '9px 14px', background: 'white', color: '#1a9b8e', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}>
-              <RefreshCw size={14} />
-              Refresh
-            </button>
-
-            <button onClick={handleClearFilters} style={{ padding: '9px 14px', background: 'white', color: '#1a9b8e', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}>
-              <X size={14} />
-              Clear
-            </button>
           </div>
         </div>
 
@@ -640,35 +631,63 @@ export default function NEPDashboard() {
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0, 0, 0, 0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: '20px', overflowY: 'auto' }}>
           <div style={{ background: 'white', borderRadius: '12px', boxShadow: '0 25px 80px rgba(0,0,0,0.4)', maxWidth: '950px', width: '100%', maxHeight: '90vh', minHeight: '500px', display: 'flex', flexDirection: 'column', margin: 'auto', overflow: 'hidden' }}>
             
-            {/* Header with Close */}
-            <div style={{ padding: '25px 30px', borderBottom: '3px solid #1a9b8e', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f9f9f9', flexShrink: 0 }}>
-              <div>
-                <h2 style={{ margin: 0, fontSize: '22px', fontWeight: '700', color: '#0f3d3e' }}>
-                  {viewingRecord.topic}
-                </h2>
-                <p style={{ margin: '8px 0 0 0', fontSize: '13px', color: '#7a8d9f', fontWeight: '500' }}>
-                  Class {viewingRecord.class} • {viewingRecord.subject} • {viewingRecord.sub_topic}
-                </p>
+            {/* Header with Close and Content Type Selector */}
+            <div style={{ padding: '25px 30px', borderBottom: '3px solid #1a9b8e', background: '#f9f9f9', flexShrink: 0 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '15px' }}>
+                <div>
+                  <h2 style={{ margin: 0, fontSize: '22px', fontWeight: '700', color: '#0f3d3e' }}>
+                    {viewingRecord.topic}
+                  </h2>
+                  <p style={{ margin: '8px 0 0 0', fontSize: '13px', color: '#7a8d9f', fontWeight: '500' }}>
+                    Class {viewingRecord.class} • {viewingRecord.subject} • {viewingRecord.sub_topic}
+                  </p>
+                </div>
+                <button 
+                  type="button"
+                  onClick={handleCloseView} 
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#999', padding: '8px', transition: 'color 0.2s ease' }}
+                  onMouseEnter={(e) => e.currentTarget.style.color = '#333'}
+                  onMouseLeave={(e) => e.currentTarget.style.color = '#999'}
+                >
+                  <X size={26} />
+                </button>
               </div>
-              <button 
-                type="button"
-                onClick={handleCloseView} 
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#999', padding: '8px', transition: 'color 0.2s ease' }}
-                onMouseEnter={(e) => e.currentTarget.style.color = '#333'}
-                onMouseLeave={(e) => e.currentTarget.style.color = '#999'}
-              >
-                <X size={26} />
-              </button>
+              {/* Content Type Selector */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '20px', paddingTop: '10px', borderTop: '1px solid #e2e8f0' }}>
+                <span style={{ fontSize: '13px', fontWeight: '600', color: '#666' }}>Format:</span>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '13px', fontWeight: '500', color: '#333' }}>
+                  <input 
+                    type="radio" 
+                    name="contentType" 
+                    value="html" 
+                    checked={contentType === 'html'}
+                    onChange={(e) => setContentType(e.target.value)}
+                    style={{ cursor: 'pointer' }}
+                  />
+                  HTML
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '13px', fontWeight: '500', color: '#333' }}>
+                  <input 
+                    type="radio" 
+                    name="contentType" 
+                    value="markdown" 
+                    checked={contentType === 'markdown'}
+                    onChange={(e) => setContentType(e.target.value)}
+                    style={{ cursor: 'pointer' }}
+                  />
+                  Markdown
+                </label>
+              </div>
             </div>
 
-            {/* Document Content */}
+            {/* Document Content with Markdown Rendering */}
             <div 
               id="view-modal-content"
               style={{ 
                 flex: 1, 
                 overflow: 'auto', 
                 padding: '40px', 
-                fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+                fontFamily: FONT_FAMILY,
                 lineHeight: '1.8', 
                 color: '#333', 
                 fontSize: '15px',
@@ -676,13 +695,46 @@ export default function NEPDashboard() {
               }}
             >
               {viewingRecord.ai_output ? (
-                <div style={{ whiteSpace: 'pre-wrap', wordWrap: 'break-word', fontSize: '15px', lineHeight: '1.8' }}>
-                  {viewingRecord.ai_output.split('\n').map((line, idx) => (
-                    <div key={idx} style={{ marginBottom: '8px' }}>
-                      {line}
-                    </div>
-                  ))}
-                </div>
+                contentType === 'markdown' ? (
+                  <div style={{ fontSize: '15px', lineHeight: '1.8' }}>
+                    <ReactMarkdown
+                      children={viewingRecord.ai_output}
+                      components={{
+                        h1: ({node, ...props}) => <h1 style={{ fontSize: '28px', fontWeight: '700', color: '#0f3d3e', margin: '30px 0 15px 0', lineHeight: '1.3' }} {...props} />,
+                        h2: ({node, ...props}) => <h2 style={{ fontSize: '22px', fontWeight: '600', color: '#1a9b8e', margin: '20px 0 12px 0', lineHeight: '1.3' }} {...props} />,
+                        h3: ({node, ...props}) => <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#333', margin: '15px 0 10px 0', lineHeight: '1.3' }} {...props} />,
+                        p: ({node, ...props}) => <p style={{ margin: '12px 0', fontSize: '15px', lineHeight: '1.8' }} {...props} />,
+                        ul: ({node, ...props}) => <ul style={{ margin: '12px 0', paddingLeft: '24px', fontSize: '15px', lineHeight: '1.8' }} {...props} />,
+                        ol: ({node, ...props}) => <ol style={{ margin: '12px 0', paddingLeft: '24px', fontSize: '15px', lineHeight: '1.8' }} {...props} />,
+                        li: ({node, ...props}) => <li style={{ margin: '6px 0', fontSize: '15px', lineHeight: '1.8' }} {...props} />,
+                        blockquote: ({node, ...props}) => <blockquote style={{ borderLeft: '4px solid #1a9b8e', background: '#f0f8f7', padding: '12px 15px', margin: '15px 0', fontSize: '15px', lineHeight: '1.8', fontStyle: 'italic', color: '#555' }} {...props} />,
+                        code: ({node, inline, ...props}) => 
+                          inline ? (
+                            <code style={{ background: '#f5f5f5', padding: '2px 6px', borderRadius: '3px', fontFamily: "'Courier New', monospace", color: '#d63384', fontSize: '14px' }} {...props} />
+                          ) : (
+                            <code style={{ background: '#f5f5f5', padding: '12px', borderRadius: '4px', fontFamily: "'Courier New', monospace", color: '#333', fontSize: '13px', display: 'block', overflow: 'auto', margin: '12px 0', lineHeight: '1.5' }} {...props} />
+                          ),
+                        pre: ({node, ...props}) => <pre style={{ background: '#f5f5f5', padding: '12px', borderRadius: '4px', overflow: 'auto', margin: '12px 0', fontSize: '13px', fontFamily: "'Courier New', monospace" }} {...props} />,
+                        table: ({node, ...props}) => <table style={{ borderCollapse: 'collapse', width: '100%', margin: '15px 0', border: '1px solid #ddd' }} {...props} />,
+                        thead: ({node, ...props}) => <thead style={{ background: '#f5f5f5' }} {...props} />,
+                        tbody: ({node, ...props}) => <tbody {...props} />,
+                        tr: ({node, ...props}) => <tr style={{ borderBottom: '1px solid #ddd' }} {...props} />,
+                        td: ({node, ...props}) => <td style={{ padding: '10px', border: '1px solid #ddd', fontSize: '14px' }} {...props} />,
+                        th: ({node, ...props}) => <th style={{ padding: '10px', border: '1px solid #ddd', fontWeight: '600', textAlign: 'left', fontSize: '14px' }} {...props} />,
+                        hr: ({node, ...props}) => <hr style={{ height: '2px', backgroundColor: '#ddd', border: 'none', margin: '20px 0' }} {...props} />,
+                        a: ({node, ...props}) => <a style={{ color: '#1a9b8e', textDecoration: 'underline', cursor: 'pointer' }} {...props} />,
+                      }}
+                    />
+                  </div>
+                ) : (
+                  <div style={{ whiteSpace: 'pre-wrap', wordWrap: 'break-word', fontSize: '15px', lineHeight: '1.8' }}>
+                    {viewingRecord.ai_output.split('\n').map((line, idx) => (
+                      <div key={idx} style={{ marginBottom: '8px' }}>
+                        {line}
+                      </div>
+                    ))}
+                  </div>
+                )
               ) : (
                 <div style={{ textAlign: 'center', color: '#999', padding: '60px 20px' }}>
                   <Clock size={40} style={{ margin: '0 auto 20px', opacity: 0.5 }} />

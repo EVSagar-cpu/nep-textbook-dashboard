@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { 
-  BookOpen, Plus, Download, RefreshCw, X, Eye, Edit2, LogOut, Menu, ChevronDown,
-  CheckCircle2, Clock, AlertCircle, FileText, Home, HelpCircle, LogIn
+  BookOpen, Plus, Download, RefreshCw, X, Eye, Edit2, LogOut, Menu,
+  CheckCircle2, Clock, AlertCircle, FileText, Home, HelpCircle
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 
@@ -14,7 +14,7 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 // Lexend font
 const FONT_FAMILY = 'Lexend, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
 
-// Color scheme matching design
+// Color scheme
 const COLORS = {
   sidebarBg: '#f5f6f8',
   navActive: '#2563eb',
@@ -29,30 +29,6 @@ const COLORS = {
   statusGenerated: '#10b981',
   statusGenerating: '#8b5cf6',
   statusPending: '#9ca3af',
-};
-
-// AI Provider mapping - will auto-select best model
-const AI_PROVIDERS = {
-  claude: {
-    label: 'Claude Sonnet 4',
-    description: 'Balanced, recommended for textbooks',
-    icon: '●',
-  },
-  openai: {
-    label: 'GPT-4o',
-    description: 'Most advanced, excellent quality',
-    icon: '●',
-  },
-  deepseek: {
-    label: 'Deepseek V3.2',
-    description: 'Latest, budget-friendly',
-    icon: '●',
-  },
-  gemini: {
-    label: 'Google Gemini',
-    description: 'Advanced, good for analysis',
-    icon: '●',
-  },
 };
 
 export default function App() {
@@ -86,7 +62,6 @@ export default function App() {
     topic: '',
     sub_topic: '',
     prompt: '',
-    ai_provider: 'claude', // Just the provider, not specific model
   });
 
   // Load Lexend font
@@ -189,7 +164,7 @@ export default function App() {
         if (error) throw error;
       }
 
-      setFormData({ class: '', subject: '', topic: '', sub_topic: '', prompt: '', ai_provider: 'claude' });
+      setFormData({ class: '', subject: '', topic: '', sub_topic: '', prompt: '' });
       setShowAddForm(false);
       fetchRecords();
     } catch (error) {
@@ -206,7 +181,6 @@ export default function App() {
       topic: record.topic || '',
       sub_topic: record.sub_topic || '',
       prompt: record.prompt || '',
-      ai_provider: record.ai_provider || 'claude',
     });
     setShowAddForm(true);
   };
@@ -214,7 +188,7 @@ export default function App() {
   const handleCancel = () => {
     setShowAddForm(false);
     setEditingId(null);
-    setFormData({ class: '', subject: '', topic: '', sub_topic: '', prompt: '', ai_provider: 'claude' });
+    setFormData({ class: '', subject: '', topic: '', sub_topic: '', prompt: '' });
   };
 
   const handleView = (record) => {
@@ -244,8 +218,8 @@ export default function App() {
 
   const handleExport = () => {
     const csv = [
-      ['ID', 'Class', 'Subject', 'Topic', 'Sub-Topic', 'Status', 'Words', 'AI Provider'],
-      ...records.map(r => [r.record_id, r.class, r.subject, r.topic, r.sub_topic, r.status, r.word_count || 0, r.ai_provider || 'unknown'])
+      ['ID', 'Class', 'Subject', 'Topic', 'Sub-Topic', 'Status', 'Words'],
+      ...records.map(r => [r.record_id, r.class, r.subject, r.topic, r.sub_topic, r.status, r.word_count || 0])
     ].map(row => row.join(',')).join('\n');
 
     const blob = new Blob([csv], { type: 'text/csv' });
@@ -301,7 +275,7 @@ export default function App() {
             <button
               type="submit"
               disabled={loginLoading}
-              style={{ padding: '12px', background: COLORS.navActive, color: 'white', border: 'none', borderRadius: '6px', cursor: loginLoading ? 'not-allowed' : 'pointer', fontWeight: '600', fontSize: '14px', opacity: loginLoading ? 0.7 : 1, transition: 'all 0.3s' }}
+              style={{ padding: '12px', background: COLORS.navActive, color: 'white', border: 'none', borderRadius: '6px', cursor: loginLoading ? 'not-allowed' : 'pointer', fontWeight: '600', fontSize: '14px', opacity: loginLoading ? 0.7 : 1 }}
             >
               {loginLoading ? '⏳ Loading...' : isSignUp ? '✓ Create Account' : '🔓 Sign In'}
             </button>
@@ -319,12 +293,12 @@ export default function App() {
           </form>
 
           <div style={{ marginTop: '28px', paddingTop: '28px', borderTop: `1px solid ${COLORS.borderColor}`, textAlign: 'center' }}>
-            <p style={{ margin: '0 0 10px 0', fontSize: '12px', fontWeight: '600', color: COLORS.darkText }}>📋 Demo Credentials (for testing):</p>
+            <p style={{ margin: '0 0 10px 0', fontSize: '12px', fontWeight: '600', color: COLORS.darkText }}>📋 Demo Credentials:</p>
             <div style={{ background: COLORS.filterBg, padding: '12px', borderRadius: '6px', fontSize: '13px', fontFamily: 'monospace', color: COLORS.darkText, lineHeight: '1.6' }}>
               <div>Email: <strong>demo@example.com</strong></div>
               <div>Password: <strong>demo123456</strong></div>
             </div>
-            <p style={{ margin: '10px 0 0 0', fontSize: '11px', color: COLORS.lightText }}>✓ Create your own account with Sign Up</p>
+            <p style={{ margin: '10px 0 0 0', fontSize: '11px', color: COLORS.lightText }}>✓ Create your own account</p>
           </div>
         </div>
       </div>
@@ -500,7 +474,6 @@ export default function App() {
                       <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: COLORS.darkText, textTransform: 'uppercase' }}>CLASS</th>
                       <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: COLORS.darkText, textTransform: 'uppercase' }}>SUBJECT</th>
                       <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: COLORS.darkText, textTransform: 'uppercase' }}>TOPIC</th>
-                      <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: COLORS.darkText, textTransform: 'uppercase' }}>AI PROVIDER</th>
                       <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: COLORS.darkText, textTransform: 'uppercase' }}>STATUS</th>
                       <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: COLORS.darkText, textTransform: 'uppercase' }}>WORDS</th>
                       <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: COLORS.darkText, textTransform: 'uppercase' }}>ACTION</th>
@@ -513,9 +486,6 @@ export default function App() {
                         <td style={{ padding: '12px', fontSize: '13px', fontWeight: '600', color: COLORS.darkText }}>Class {record.class}</td>
                         <td style={{ padding: '12px', fontSize: '13px', color: COLORS.darkText }}>{record.subject}</td>
                         <td style={{ padding: '12px', fontSize: '13px', color: COLORS.darkText }}>{record.topic}</td>
-                        <td style={{ padding: '12px', fontSize: '13px', fontWeight: '600', color: COLORS.navActive }}>
-                          {record.ai_provider ? record.ai_provider.toUpperCase() : 'CLAUDE'}
-                        </td>
                         <td style={{ padding: '12px', fontSize: '13px' }}>
                           <span style={{
                             padding: '4px 12px',
@@ -606,44 +576,13 @@ export default function App() {
 
             <div>
               <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: COLORS.darkText, marginBottom: '8px', textTransform: 'uppercase' }}>AI PROMPT <span style={{ fontSize: '12px', color: COLORS.lightText, fontWeight: '400' }}>Max 2000 characters</span></label>
-              <textarea value={formData.prompt} onChange={(e) => setFormData({ ...formData, prompt: e.target.value.slice(0, 2000) })} placeholder="Enter detailed prompt for AI..." required rows="6" style={{ width: '100%', padding: '12px', border: `1px solid ${COLORS.borderColor}`, borderRadius: '6px', fontSize: '14px', background: COLORS.white, fontFamily: FONT_FAMILY, resize: 'vertical', minHeight: '140px' }} />
+              <textarea value={formData.prompt} onChange={(e) => setFormData({ ...formData, prompt: e.target.value.slice(0, 2000) })} placeholder="Enter detailed prompt for Claude..." required rows="6" style={{ width: '100%', padding: '12px', border: `1px solid ${COLORS.borderColor}`, borderRadius: '6px', fontSize: '14px', background: COLORS.white, fontFamily: FONT_FAMILY, resize: 'vertical', minHeight: '140px' }} />
               <div style={{ fontSize: '12px', color: COLORS.lightText, marginTop: '6px' }}>{formData.prompt.length}/2000 characters</div>
             </div>
 
-            {/* AI PROVIDER RADIO BUTTONS */}
-            <div>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: COLORS.darkText, marginBottom: '12px', textTransform: 'uppercase' }}>
-                🤖 Select AI Provider
-              </label>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                {Object.entries(AI_PROVIDERS).map(([key, provider]) => (
-                  <label key={key} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '10px', borderRadius: '6px', border: `1px solid ${formData.ai_provider === key ? COLORS.navActive : COLORS.borderColor}`, background: formData.ai_provider === key ? `${COLORS.navActive}10` : 'white', cursor: 'pointer', transition: 'all 0.2s' }}>
-                    <input
-                      type="radio"
-                      value={key}
-                      checked={formData.ai_provider === key}
-                      onChange={(e) => setFormData({ ...formData, ai_provider: e.target.value })}
-                      style={{ marginTop: '2px', cursor: 'pointer', accentColor: COLORS.navActive }}
-                    />
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: '13px', fontWeight: '600', color: COLORS.darkText }}>
-                        {provider.icon} {provider.label}
-                      </div>
-                      <div style={{ fontSize: '12px', color: COLORS.lightText, marginTop: '2px' }}>
-                        {provider.description}
-                      </div>
-                    </div>
-                  </label>
-                ))}
-              </div>
-              <div style={{ fontSize: '12px', color: COLORS.lightText, marginTop: '12px', background: `${COLORS.statusGenerating}15`, padding: '10px', borderRadius: '6px', borderLeft: `3px solid ${COLORS.statusGenerating}` }}>
-                ✨ <strong>Smart Model Selection:</strong> System will automatically choose the best model version (e.g., Sonnet 4, Haiku) based on your prompt and work complexity.
-              </div>
-            </div>
-
             <div style={{ background: `${COLORS.statusGenerating}15`, padding: '12px', borderRadius: '6px', borderLeft: `4px solid ${COLORS.statusGenerating}` }}>
-              <p style={{ margin: 0, fontSize: '13px', color: COLORS.statusGenerating, fontWeight: '600' }}>AI Curator Ready</p>
-              <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: COLORS.darkText }}>Your prompt will be processed by the selected AI provider to generate high-fidelity textbook content.</p>
+              <p style={{ margin: 0, fontSize: '13px', color: COLORS.statusGenerating, fontWeight: '600' }}>Claude AI Ready</p>
+              <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: COLORS.darkText }}>Your prompt will be processed by Claude to generate high-fidelity textbook content.</p>
             </div>
 
             <div style={{ display: 'flex', gap: '12px', marginTop: 'auto' }}>
@@ -658,7 +597,7 @@ export default function App() {
         </div>
       )}
 
-      {/* View Record Modal with Table of Contents */}
+      {/* View Record Modal */}
       {viewingRecord && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <div style={{ background: COLORS.white, borderRadius: '8px', maxHeight: '90vh', width: '90%', maxWidth: '1200px', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
@@ -666,7 +605,7 @@ export default function App() {
             <div style={{ padding: '20px 24px', borderBottom: `1px solid ${COLORS.borderColor}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
                 <h2 style={{ margin: 0, fontSize: '20px', fontWeight: '700', color: COLORS.darkText }}>{viewingRecord.topic}</h2>
-                <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: COLORS.lightText }}>Class {viewingRecord.class} • {viewingRecord.subject} • {(viewingRecord.ai_provider || 'claude').toUpperCase()}</p>
+                <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: COLORS.lightText }}>Class {viewingRecord.class} • {viewingRecord.subject}</p>
               </div>
               <button onClick={handleCloseView} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
                 <X size={24} color={COLORS.darkText} />
@@ -706,7 +645,7 @@ export default function App() {
 
                 {/* Content */}
                 {viewingRecord.ai_output ? (
-                  <div id="view-modal-content">
+                  <div>
                     {contentType === 'markdown' ? (
                       <div style={{ fontSize: '14px', lineHeight: '1.8', color: COLORS.darkText, fontFamily: FONT_FAMILY, fontWeight: '400' }}>
                         <ReactMarkdown
@@ -740,19 +679,11 @@ export default function App() {
               </div>
             </div>
 
-            {/* Footer with Export */}
+            {/* Footer */}
             {viewingRecord.ai_output && (
               <div style={{ borderTop: `1px solid ${COLORS.borderColor}`, padding: '16px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div style={{ fontSize: '13px', color: COLORS.lightText }}>
                   {viewingRecord.word_count || 0} words
-                </div>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <button style={{ padding: '8px 16px', background: COLORS.navActive, color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '13px' }}>
-                    <Download size={16} style={{ marginRight: '4px', display: 'inline' }} /> PDF
-                  </button>
-                  <button style={{ padding: '8px 16px', background: COLORS.navActive, color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '13px' }}>
-                    <Download size={16} style={{ marginRight: '4px', display: 'inline' }} /> Word
-                  </button>
                 </div>
               </div>
             )}

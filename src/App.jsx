@@ -41,6 +41,13 @@ export default function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [contentType, setContentType] = useState('markdown');
 
+  // Login states
+  const [loginEmail, setLoginEmail] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
+  const [isSignUp, setIsSignUp] = useState(false);
+  const [loginLoading, setLoginLoading] = useState(false);
+  const [loginError, setLoginError] = useState('');
+
   const [filterClass, setFilterClass] = useState('all');
   const [filterSubject, setFilterSubject] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
@@ -82,6 +89,38 @@ export default function App() {
     return () => subscription.unsubscribe();
   }, []);
 
+  // ===== LOGIN HANDLER =====
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    setLoginLoading(true);
+    setLoginError('');
+
+    try {
+      if (isSignUp) {
+        const { error } = await supabase.auth.signUp({
+          email: loginEmail,
+          password: loginPassword,
+          options: { emailRedirectTo: window.location.origin }
+        });
+        if (error) throw error;
+        alert('Account created! Check your email to confirm.');
+        setIsSignUp(false);
+        setLoginEmail('');
+        setLoginPassword('');
+      } else {
+        const { error } = await supabase.auth.signInWithPassword({
+          email: loginEmail,
+          password: loginPassword
+        });
+        if (error) throw error;
+      }
+    } catch (error) {
+      setLoginError(error.message || 'Login failed');
+    }
+    setLoginLoading(false);
+  };
+
+  // ===== FETCH RECORDS =====
   const fetchRecords = async () => {
     setLoading(true);
     try {
@@ -106,6 +145,7 @@ export default function App() {
     if (session) fetchRecords();
   }, [filterClass, filterSubject, filterStatus, searchTopic, searchSubTopic]);
 
+  // ===== SUBMIT FORM =====
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -164,6 +204,8 @@ export default function App() {
   const handleLogout = async () => {
     await supabase.auth.signOut();
     setSession(null);
+    setLoginEmail('');
+    setLoginPassword('');
   };
 
   const handleClearFilters = () => {
@@ -178,8 +220,8 @@ export default function App() {
 
   const handleExport = () => {
     const csv = [
-      ['ID', 'Class', 'Subject', 'Topic', 'Sub-Topic', 'Status', 'Words'],
-      ...records.map(r => [r.record_id, r.class, r.subject, r.topic, r.sub_topic, r.status, r.word_count || 0])
+      ['ID', 'Class', 'Subject', 'Topic', 'Sub-Topic', 'Status', 'Words', 'AI Model'],
+      ...records.map(r => [r.record_id, r.class, r.subject, r.topic, r.sub_topic, r.status, r.word_count || 0, r.ai_model || 'unknown'])
     ].map(row => row.join(',')).join('\n');
 
     const blob = new Blob([csv], { type: 'text/csv' });
@@ -190,16 +232,82 @@ export default function App() {
     a.click();
   };
 
+  // ===== LOGIN PAGE =====
   if (!session) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: COLORS.filterBg, fontFamily: FONT_FAMILY }}>
-        <button onClick={() => supabase.auth.signInWithOAuth({ provider: 'google' })} style={{ padding: '12px 24px', background: COLORS.navActive, color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', fontSize: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <LogIn size={20} /> Sign In with Google
-        </button>
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', background: 'linear-gradient(135deg, #2563eb 0%, #1e40af 100%)', fontFamily: FONT_FAMILY, padding: '20px' }}>
+        <div style={{ background: 'white', padding: '40px', borderRadius: '12px', boxShadow: '0 20px 60px rgba(0,0,0,0.3)', width: '100%', maxWidth: '420px' }}>
+          <div style={{ textAlign: 'center', marginBottom: '40px' }}>
+            <div style={{ fontSize: '36px', marginBottom: '12px' }}>📖</div>
+            <h1 style={{ margin: '0 0 8px 0', fontSize: '28px', fontWeight: '700', color: COLORS.darkText }}>AI Content Studio</h1>
+            <p style={{ margin: 0, fontSize: '14px', color: COLORS.lightText }}>Manage and create AI-generated curriculum</p>
+          </div>
+
+          <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: COLORS.darkText, marginBottom: '6px', textTransform: 'uppercase' }}>Email Address</label>
+              <input
+                type="email"
+                value={loginEmail}
+                onChange={(e) => setLoginEmail(e.target.value)}
+                placeholder="your@email.com"
+                required
+                style={{ width: '100%', padding: '12px', border: `1px solid ${COLORS.borderColor}`, borderRadius: '6px', fontSize: '14px', fontFamily: FONT_FAMILY, boxSizing: 'border-box' }}
+              />
+            </div>
+
+            <div>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: COLORS.darkText, marginBottom: '6px', textTransform: 'uppercase' }}>Password</label>
+              <input
+                type="password"
+                value={loginPassword}
+                onChange={(e) => setLoginPassword(e.target.value)}
+                placeholder="••••••••"
+                required
+                style={{ width: '100%', padding: '12px', border: `1px solid ${COLORS.borderColor}`, borderRadius: '6px', fontSize: '14px', fontFamily: FONT_FAMILY, boxSizing: 'border-box' }}
+              />
+            </div>
+
+            {loginError && (
+              <div style={{ padding: '12px', background: '#fee2e2', border: `1px solid #fca5a5`, borderRadius: '6px', fontSize: '13px', color: '#991b1b', textAlign: 'center' }}>
+                ❌ {loginError}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={loginLoading}
+              style={{ padding: '12px', background: COLORS.navActive, color: 'white', border: 'none', borderRadius: '6px', cursor: loginLoading ? 'not-allowed' : 'pointer', fontWeight: '600', fontSize: '14px', opacity: loginLoading ? 0.7 : 1, transition: 'all 0.3s' }}
+            >
+              {loginLoading ? '⏳ Loading...' : isSignUp ? '✓ Create Account' : '🔓 Sign In'}
+            </button>
+
+            <div style={{ textAlign: 'center', fontSize: '13px', color: COLORS.lightText }}>
+              {isSignUp ? 'Already have account? ' : 'Don\'t have account? '}
+              <button
+                type="button"
+                onClick={() => { setIsSignUp(!isSignUp); setLoginError(''); }}
+                style={{ background: 'none', border: 'none', color: COLORS.navActive, cursor: 'pointer', fontWeight: '600', fontSize: '13px', textDecoration: 'underline', padding: 0 }}
+              >
+                {isSignUp ? 'Sign In' : 'Sign Up'}
+              </button>
+            </div>
+          </form>
+
+          <div style={{ marginTop: '28px', paddingTop: '28px', borderTop: `1px solid ${COLORS.borderColor}`, textAlign: 'center' }}>
+            <p style={{ margin: '0 0 10px 0', fontSize: '12px', fontWeight: '600', color: COLORS.darkText }}>📋 Demo Credentials (for testing):</p>
+            <div style={{ background: COLORS.filterBg, padding: '12px', borderRadius: '6px', fontSize: '13px', fontFamily: 'monospace', color: COLORS.darkText, lineHeight: '1.6' }}>
+              <div>Email: <strong>demo@example.com</strong></div>
+              <div>Password: <strong>demo123456</strong></div>
+            </div>
+            <p style={{ margin: '10px 0 0 0', fontSize: '11px', color: COLORS.lightText }}>✓ Create your own account with Sign Up</p>
+          </div>
+        </div>
       </div>
     );
   }
 
+  // ===== MAIN APP =====
   return (
     <div style={{ display: 'flex', height: '100vh', fontFamily: FONT_FAMILY, background: COLORS.white }}>
       {/* Sidebar */}
@@ -226,8 +334,8 @@ export default function App() {
             { icon: <BookOpen size={20} />, label: 'Textbooks', active: true, disabled: false },
             { icon: <FileText size={20} />, label: 'Lesson Plan', active: false, disabled: true },
             { icon: <CheckCircle2 size={20} />, label: 'Practice Questions', active: false, disabled: true },
-            { icon: <ClipboardList size={20} />, label: 'Test', active: false, disabled: true },
-            { icon: <Lightbulb size={20} />, label: 'Projects', active: false, disabled: true },
+            { icon: <AlertCircle size={20} />, label: 'Test', active: false, disabled: true },
+            { icon: <Home size={20} />, label: 'Projects', active: false, disabled: true },
           ].map((item, idx) => (
             <div key={idx} style={{
               display: 'flex',
@@ -252,9 +360,9 @@ export default function App() {
             <HelpCircle size={20} color={COLORS.navText} />
             {sidebarOpen && <span style={{ fontSize: '14px', color: COLORS.navText }}>Help</span>}
           </div>
-          <div onClick={handleLogout} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', borderRadius: '8px', cursor: 'pointer' }}>
-            <LogOut size={20} color={COLORS.navText} />
-            {sidebarOpen && <span style={{ fontSize: '14px', color: COLORS.navText }}>Logout</span>}
+          <div onClick={handleLogout} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', borderRadius: '8px', cursor: 'pointer', color: COLORS.navText }}>
+            <LogOut size={20} />
+            {sidebarOpen && <span style={{ fontSize: '14px' }}>Logout</span>}
           </div>
         </div>
       </div>
@@ -271,7 +379,7 @@ export default function App() {
           <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
             <AlertCircle size={20} color={COLORS.navText} style={{ cursor: 'pointer' }} />
             <BookOpen size={20} color={COLORS.navText} style={{ cursor: 'pointer' }} />
-            <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#f4d4b8', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#8b5a3c', fontWeight: '600', cursor: 'pointer' }}>
+            <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#f4d4b8', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#8b5a3c', fontWeight: '600', cursor: 'pointer', fontSize: '14px' }}>
               {session.user.email[0].toUpperCase()}
             </div>
           </div>
@@ -368,6 +476,7 @@ export default function App() {
                       <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: COLORS.darkText, textTransform: 'uppercase' }}>CLASS</th>
                       <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: COLORS.darkText, textTransform: 'uppercase' }}>SUBJECT</th>
                       <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: COLORS.darkText, textTransform: 'uppercase' }}>TOPIC</th>
+                      <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: COLORS.darkText, textTransform: 'uppercase' }}>AI MODEL</th>
                       <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: COLORS.darkText, textTransform: 'uppercase' }}>STATUS</th>
                       <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: COLORS.darkText, textTransform: 'uppercase' }}>WORDS</th>
                       <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: COLORS.darkText, textTransform: 'uppercase' }}>ACTION</th>
@@ -380,6 +489,9 @@ export default function App() {
                         <td style={{ padding: '12px', fontSize: '13px', fontWeight: '600', color: COLORS.darkText }}>Class {record.class}</td>
                         <td style={{ padding: '12px', fontSize: '13px', color: COLORS.darkText }}>{record.subject}</td>
                         <td style={{ padding: '12px', fontSize: '13px', color: COLORS.darkText }}>{record.topic}</td>
+                        <td style={{ padding: '12px', fontSize: '12px', color: COLORS.lightText, fontFamily: 'monospace' }}>
+                          {(record.ai_model || 'claude-sonnet-4-20250514').split('-').slice(1, 3).join(' ')}
+                        </td>
                         <td style={{ padding: '12px', fontSize: '13px' }}>
                           <span style={{
                             padding: '4px 12px',
@@ -524,7 +636,7 @@ export default function App() {
             <div style={{ padding: '20px 24px', borderBottom: `1px solid ${COLORS.borderColor}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
                 <h2 style={{ margin: 0, fontSize: '20px', fontWeight: '700', color: COLORS.darkText }}>{viewingRecord.topic}</h2>
-                <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: COLORS.lightText }}>Class {viewingRecord.class} • {viewingRecord.subject}</p>
+                <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: COLORS.lightText }}>Class {viewingRecord.class} • {viewingRecord.subject} • {(viewingRecord.ai_model || 'claude-sonnet').split('-').slice(1, 3).join(' ')}</p>
               </div>
               <button onClick={handleCloseView} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
                 <X size={24} color={COLORS.darkText} />
@@ -566,11 +678,27 @@ export default function App() {
                 {viewingRecord.ai_output ? (
                   <div id="view-modal-content">
                     {contentType === 'markdown' ? (
-                      <ReactMarkdown style={{ fontSize: '14px', lineHeight: '1.8', color: COLORS.darkText }}>
-                        {viewingRecord.ai_output}
-                      </ReactMarkdown>
+                      <div style={{ fontSize: '14px', lineHeight: '1.8', color: COLORS.darkText, fontFamily: FONT_FAMILY, fontWeight: '400' }}>
+                        <ReactMarkdown
+                          components={{
+                            h1: ({node, ...props}) => <h1 style={{ fontSize: '24px', fontWeight: '600', margin: '20px 0 12px 0', color: COLORS.darkText, fontFamily: FONT_FAMILY }} {...props} />,
+                            h2: ({node, ...props}) => <h2 style={{ fontSize: '20px', fontWeight: '600', margin: '16px 0 10px 0', color: COLORS.darkText, fontFamily: FONT_FAMILY }} {...props} />,
+                            h3: ({node, ...props}) => <h3 style={{ fontSize: '16px', fontWeight: '600', margin: '14px 0 8px 0', color: COLORS.darkText, fontFamily: FONT_FAMILY }} {...props} />,
+                            p: ({node, ...props}) => <p style={{ margin: '12px 0', fontWeight: '400', fontFamily: FONT_FAMILY }} {...props} />,
+                            ul: ({node, ...props}) => <ul style={{ marginLeft: '24px', marginTop: '12px', marginBottom: '12px', fontWeight: '400', fontFamily: FONT_FAMILY }} {...props} />,
+                            ol: ({node, ...props}) => <ol style={{ marginLeft: '24px', marginTop: '12px', marginBottom: '12px', fontWeight: '400', fontFamily: FONT_FAMILY }} {...props} />,
+                            li: ({node, ...props}) => <li style={{ marginBottom: '6px', fontWeight: '400', fontFamily: FONT_FAMILY }} {...props} />,
+                            strong: ({node, ...props}) => <span style={{ fontWeight: '600', fontFamily: FONT_FAMILY }} {...props} />,
+                            em: ({node, ...props}) => <em style={{ fontStyle: 'italic', fontWeight: '400', fontFamily: FONT_FAMILY }} {...props} />,
+                            code: ({node, inline, ...props}) => <code style={{ fontFamily: 'monospace', background: inline ? COLORS.filterBg : 'transparent', padding: inline ? '2px 6px' : '12px', borderRadius: '4px', color: '#d63384', fontWeight: '400' }} {...props} />,
+                            blockquote: ({node, ...props}) => <blockquote style={{ borderLeft: `4px solid ${COLORS.navActive}`, paddingLeft: '16px', marginLeft: '0', background: `${COLORS.navActive}10`, padding: '12px 16px', borderRadius: '4px', fontStyle: 'italic', fontWeight: '400' }} {...props} />,
+                          }}
+                        >
+                          {viewingRecord.ai_output}
+                        </ReactMarkdown>
+                      </div>
                     ) : (
-                      <div dangerouslySetInnerHTML={{ __html: viewingRecord.ai_output }} style={{ fontSize: '14px', lineHeight: '1.8', color: COLORS.darkText }} />
+                      <div dangerouslySetInnerHTML={{ __html: viewingRecord.ai_output }} style={{ fontSize: '14px', lineHeight: '1.8', color: COLORS.darkText, fontFamily: FONT_FAMILY, fontWeight: '400' }} />
                     )}
                   </div>
                 ) : (
@@ -590,10 +718,10 @@ export default function App() {
                 </div>
                 <div style={{ display: 'flex', gap: '8px' }}>
                   <button style={{ padding: '8px 16px', background: COLORS.navActive, color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '13px' }}>
-                    <Download size={16} style={{ marginRight: '4px' }} /> PDF
+                    <Download size={16} style={{ marginRight: '4px', display: 'inline' }} /> PDF
                   </button>
                   <button style={{ padding: '8px 16px', background: COLORS.navActive, color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '13px' }}>
-                    <Download size={16} style={{ marginRight: '4px' }} /> Word
+                    <Download size={16} style={{ marginRight: '4px', display: 'inline' }} /> Word
                   </button>
                 </div>
               </div>
@@ -602,24 +730,5 @@ export default function App() {
         </div>
       )}
     </div>
-  );
-}
-
-// Icon for clipboard (not in lucide-react)
-function ClipboardList({ size = 24, color = 'currentColor' }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-      <line x1="9" y1="9" x2="15" y2="9"></line>
-      <line x1="9" y1="15" x2="15" y2="15"></line>
-    </svg>
-  );
-}
-
-function Lightbulb({ size = 24, color = 'currentColor' }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M9 18h6M12 2a7 7 0 1 0 0 14 7 7 0 0 0 0-14M12 16v2"></path>
-    </svg>
   );
 }

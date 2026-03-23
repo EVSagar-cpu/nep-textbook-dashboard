@@ -495,13 +495,14 @@ export default function NEPDashboard() {
 
         {/* Add/Edit Form */}
         {showAddForm && (
-          <div style={{ background: 'white', padding: '25px', borderRadius: '12px', marginBottom: '30px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
-            <h2 style={{ marginTop: 0, fontSize: '18px', color: '#1a1a1a' }}>{editingId ? 'Edit Record' : 'Add New Record'}</h2>
+          <div style={{ background: 'white', padding: '25px', borderRadius: '12px', marginBottom: '30px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)', maxHeight: '80vh', overflowY: 'auto', border: '2px solid #1a9b8e' }}>
+            <h2 style={{ marginTop: 0, fontSize: '18px', color: '#1a1a1a', marginBottom: '20px' }}>{editingId ? 'Edit Record' : 'Add New Record'}</h2>
 
             <form onSubmit={handleSubmit}>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px' }}>
+              {/* Row 1: Class, Subject */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px', marginBottom: '15px' }}>
                 <div>
-                  <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: '600', color: '#333' }}>Class</label>
+                  <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: '600', color: '#333' }}>Class *</label>
                   <select value={formData.class} onChange={(e) => setFormData({ ...formData, class: e.target.value })} required style={{ width: '100%', padding: '10px', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '14px', boxSizing: 'border-box', fontFamily: FONT_FAMILY }}>
                     <option value="">Select Class</option>
                     <option value="1">1</option>
@@ -513,7 +514,7 @@ export default function NEPDashboard() {
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: '600', color: '#333' }}>Subject</label>
+                  <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: '600', color: '#333' }}>Subject *</label>
                   <select value={formData.subject} onChange={(e) => setFormData({ ...formData, subject: e.target.value })} required style={{ width: '100%', padding: '10px', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '14px', boxSizing: 'border-box', fontFamily: FONT_FAMILY }}>
                     <option value="">Select Subject</option>
                     <option value="English">English</option>
@@ -526,28 +527,54 @@ export default function NEPDashboard() {
                     <option value="Environmental Studies">Environmental Studies</option>
                   </select>
                 </div>
+              </div>
 
+              {/* Row 2: Topic, Sub-topic */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px', marginBottom: '15px' }}>
                 <div>
-                  <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: '600', color: '#333' }}>Topic</label>
-                  <input type="text" value={formData.topic} onChange={(e) => setFormData({ ...formData, topic: e.target.value })} placeholder="e.g., Numbers" required style={{ width: '100%', padding: '10px', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '14px', boxSizing: 'border-box', fontFamily: FONT_FAMILY }} />
+                  <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: '600', color: '#333' }}>Topic *</label>
+                  <input type="text" value={formData.topic} onChange={(e) => setFormData({ ...formData, topic: e.target.value })} placeholder="e.g., Numbers, Photosynthesis" required style={{ width: '100%', padding: '10px', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '14px', boxSizing: 'border-box', fontFamily: FONT_FAMILY }} />
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: '600', color: '#333' }}>Sub-topic</label>
-                  <input type="text" value={formData.sub_topic} onChange={(e) => setFormData({ ...formData, sub_topic: e.target.value })} placeholder="e.g., Place Value" required style={{ width: '100%', padding: '10px', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '14px', boxSizing: 'border-box', fontFamily: FONT_FAMILY }} />
+                  <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: '600', color: '#333' }}>Sub-topic *</label>
+                  <input type="text" value={formData.sub_topic} onChange={(e) => setFormData({ ...formData, sub_topic: e.target.value })} placeholder="e.g., Place Value, Plant Growth" required style={{ width: '100%', padding: '10px', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '14px', boxSizing: 'border-box', fontFamily: FONT_FAMILY }} />
                 </div>
               </div>
 
-              <div style={{ marginTop: '15px' }}>
-                <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: '600', color: '#333' }}>Prompt</label>
-                <textarea value={formData.prompt} onChange={(e) => setFormData({ ...formData, prompt: e.target.value })} placeholder="Enter the prompt for Claude AI..." required rows="5" style={{ width: '100%', padding: '10px', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '14px', boxSizing: 'border-box', fontFamily: FONT_FAMILY }} />
+              {/* Row 3: Prompt (Full Width) */}
+              <div style={{ marginBottom: '15px' }}>
+                <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: '600', color: '#333', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  📝 Prompt *
+                  <span style={{ fontSize: '11px', color: '#999' }}>(This will be sent to Claude AI to generate content)</span>
+                </label>
+                <textarea 
+                  value={formData.prompt} 
+                  onChange={(e) => setFormData({ ...formData, prompt: e.target.value })} 
+                  placeholder="Enter detailed prompt for Claude AI. Example: Create a Grade 2 English textbook about Alphabet with visual descriptions, exercises, and teacher guide..."
+                  required 
+                  rows="6" 
+                  style={{ width: '100%', padding: '12px', border: '2px solid #e2e8f0', borderRadius: '6px', fontSize: '14px', boxSizing: 'border-box', fontFamily: FONT_FAMILY, resize: 'vertical', minHeight: '150px' }} 
+                />
+                <div style={{ fontSize: '12px', color: '#999', marginTop: '6px' }}>
+                  ℹ️ Include details about: grade level, content focus, examples needed, pedagogical approach, etc.
+                </div>
               </div>
 
-              <div style={{ marginTop: '15px', display: 'flex', gap: '10px' }}>
-                <button type="submit" disabled={loading} style={{ padding: '10px 20px', background: '#1a9b8e', color: 'white', border: 'none', borderRadius: '6px', cursor: loading ? 'not-allowed' : 'pointer', fontWeight: '600', fontSize: '14px', opacity: loading ? 0.7 : 1 }}>
-                  {loading ? 'Saving...' : 'Save Record'}
+              {/* Buttons */}
+              <div style={{ marginTop: '20px', display: 'flex', gap: '10px', borderTop: '1px solid #e2e8f0', paddingTop: '15px' }}>
+                <button 
+                  type="submit" 
+                  disabled={loading} 
+                  style={{ padding: '12px 24px', background: '#1a9b8e', color: 'white', border: 'none', borderRadius: '6px', cursor: loading ? 'not-allowed' : 'pointer', fontWeight: '600', fontSize: '14px', opacity: loading ? 0.7 : 1, flex: 1 }}
+                >
+                  {loading ? '⏳ Generating...' : '✓ Save & Generate'}
                 </button>
-                <button type="button" onClick={handleCancel} style={{ padding: '10px 20px', background: '#cbd5e0', color: '#2d3748', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '14px' }}>
+                <button 
+                  type="button" 
+                  onClick={handleCancel} 
+                  style={{ padding: '12px 24px', background: '#cbd5e0', color: '#2d3748', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '14px' }}
+                >
                   Cancel
                 </button>
               </div>

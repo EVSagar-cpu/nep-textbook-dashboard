@@ -119,7 +119,22 @@ export default function App() {
   const checkAuth = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (user) {
-      setCurrentUser(user);
+      // Fetch user role
+      const { data: roleData } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id)
+        .single();
+      
+      const userWithRole = {
+        ...user,
+        user_metadata: {
+          ...user.user_metadata,
+          role: roleData?.role || 'content_developer'
+        }
+      };
+      
+      setCurrentUser(userWithRole);
       setAuthPage('dashboard');
       fetchRecords();
     }
@@ -140,7 +155,23 @@ export default function App() {
       if (error) throw error;
 
       const { data: { user } } = await supabase.auth.getUser();
-      setCurrentUser(user);
+      
+      // Fetch user role
+      const { data: roleData } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id)
+        .single();
+      
+      const userWithRole = {
+        ...user,
+        user_metadata: {
+          ...user.user_metadata,
+          role: roleData?.role || 'content_developer'
+        }
+      };
+      
+      setCurrentUser(userWithRole);
       setAuthPage('dashboard');
       fetchRecords();
     } catch (err) {
@@ -213,7 +244,23 @@ export default function App() {
       });
 
       const { data: { user } } = await supabase.auth.getUser();
-      setCurrentUser(user);
+      
+      // Fetch user role
+      const { data: roleData } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id)
+        .single();
+      
+      const userWithRole = {
+        ...user,
+        user_metadata: {
+          ...user.user_metadata,
+          role: roleData?.role || 'content_developer'
+        }
+      };
+      
+      setCurrentUser(userWithRole);
       setAuthPage('dashboard');
       fetchRecords();
     } catch (err) {
@@ -719,21 +766,24 @@ export default function App() {
 
         <nav style={{ marginTop: '30px' }}>
           {[
-            { icon: <BookOpen size={20} />, label: 'Textbooks', active: true, disabled: false },
-            { icon: <Users size={20} />, label: 'Manage Users', active: false, disabled: true },
-            { icon: <Mail size={20} />, label: 'Invites', active: false, disabled: false }
+            { icon: <BookOpen size={20} />, label: 'Textbooks', action: 'textbooks', disabled: false },
+            { icon: <Users size={20} />, label: 'Manage Users', action: 'manage-users', disabled: true },
+            { icon: <Mail size={20} />, label: 'Invites', action: 'invites', disabled: false }
           ].map((item, i) => (
             <button
               key={i}
               onClick={() => {
-                if (item.label === 'Invites') setShowInvitePanel(!showInvitePanel);
+                if (item.action === 'invites') {
+                  setShowInvitePanel(!showInvitePanel);
+                  if (!showInvitePanel) fetchPendingInvites();
+                }
               }}
               disabled={item.disabled}
               style={{
                 width: '100%',
                 padding: '12px 16px',
-                background: item.active ? COLORS.navActive : 'transparent',
-                color: item.active ? COLORS.white : (item.disabled ? COLORS.navDisabled : COLORS.navText),
+                background: item.action === 'textbooks' ? COLORS.navActive : 'transparent',
+                color: item.action === 'textbooks' ? COLORS.white : (item.disabled ? COLORS.navDisabled : COLORS.navText),
                 border: 'none',
                 borderRadius: '6px',
                 cursor: item.disabled ? 'not-allowed' : 'pointer',
@@ -742,12 +792,12 @@ export default function App() {
                 alignItems: 'center',
                 gap: '12px',
                 fontSize: '14px',
-                fontWeight: item.active ? '600' : '500',
+                fontWeight: item.action === 'textbooks' ? '600' : '500',
                 opacity: item.disabled ? 0.5 : 1
               }}
             >
               {item.icon}
-              {sidebarOpen && <span style={{ fontSize: '14px', fontWeight: item.active ? '600' : '500', whiteSpace: 'nowrap' }}>{item.label}</span>}
+              {sidebarOpen && <span style={{ fontSize: '14px', fontWeight: item.action === 'textbooks' ? '600' : '500', whiteSpace: 'nowrap' }}>{item.label}</span>}
             </button>
           ))}
         </nav>
@@ -767,6 +817,10 @@ export default function App() {
           <div style={{ flex: 1 }}></div>
           <h1 style={{ margin: 0, fontSize: '20px', fontWeight: '700', color: COLORS.darkText }}>AI Content Studio</h1>
           <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end', gap: '16px', alignItems: 'center' }}>
+            <div style={{ textAlign: 'right', marginRight: '16px' }}>
+              <p style={{ margin: 0, fontSize: '13px', fontWeight: '600', color: COLORS.darkText }}>{currentUser?.email}</p>
+              <p style={{ margin: '4px 0 0 0', fontSize: '11px', fontWeight: '500', color: COLORS.lightText }}>Role: {currentUser?.user_metadata?.role || 'Loading...'}</p>
+            </div>
             <button
               onClick={handleLogout}
               style={{

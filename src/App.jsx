@@ -1054,10 +1054,10 @@ export default function App() {
                 <tbody>
                   {filteredRecords.map((record, idx) => (
                     <tr key={idx} style={{ borderBottom: `1px solid ${COLORS.borderColor}` }}>
-                      <td style={{ padding: '12px', fontSize: '13px', fontWeight: '500', color: COLORS.darkText }}>Class {record.class}</td>
+                      <td style={{ padding: '12px', fontSize: '13px', fontWeight: '500', color: COLORS.darkText }}>#{record.record_id}</td>
+                      <td style={{ padding: '12px', fontSize: '13px', color: COLORS.darkText }}>Class {record.class}</td>
                       <td style={{ padding: '12px', fontSize: '13px', color: COLORS.darkText }}>{record.subject}</td>
                       <td style={{ padding: '12px', fontSize: '13px', color: COLORS.darkText }}>{record.topic}</td>
-                      <td style={{ padding: '12px', fontSize: '13px', color: COLORS.darkText }}>{record.sub_topic || '-'}</td>
                       <td style={{ padding: '12px' }}>
                         <span style={{
                           padding: '4px 8px',

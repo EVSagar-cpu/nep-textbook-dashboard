@@ -235,11 +235,14 @@ export default function App() {
       const invitedEmail = inviteData.email;
       console.log('Creating user for email:', invitedEmail);
 
-      // Create user with email
+      // Create user with email (no confirmation required for invites)
       const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
         email: invitedEmail,
         password: setupPassword,
-        options: { emailRedirectTo: window.location.origin }
+        options: { 
+          emailRedirectTo: window.location.origin,
+          data: { auto_confirmed: true } // Skip email confirmation for invites
+        }
       });
 
       console.log('Sign up result:', { signUpData, signUpError });

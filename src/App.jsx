@@ -4,7 +4,6 @@ import {
   Menu, X, LogOut, Eye, Edit2, BookOpen, Plus, Download, RefreshCw,
   Mail, Check, AlertCircle, Copy, Users
 } from 'lucide-react';
-import html2pdf from 'html2pdf.js';
 
 // ===== SUPABASE CLIENT =====
 const supabaseUrl = 'https://syacvhjmcgpgxvczassp.supabase.co';
@@ -94,12 +93,17 @@ export default function App() {
     'Environmental Studies', 'General Knowledge', 'Computers'
   ];
 
-  // ===== LOAD FONT =====
+  // ===== LOAD FONT & LIBS =====
   useEffect(() => {
     const link = document.createElement('link');
     link.href = 'https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&display=swap';
     link.rel = 'stylesheet';
     document.head.appendChild(link);
+
+    // Load html2pdf from CDN
+    const script = document.createElement('script');
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
+    document.head.appendChild(script);
   }, []);
 
   // ===== CHECK INVITE TOKEN ON MOUNT =====
@@ -467,7 +471,11 @@ export default function App() {
         </div>
       `;
 
-      html2pdf().set({ margin: 10, filename: `${viewingRecord.topic}.pdf` }).save(element);
+      if (window.html2pdf) {
+        window.html2pdf().set({ margin: 10, filename: `${viewingRecord.topic}.pdf` }).save(element);
+      } else {
+        alert('PDF library not loaded. Please try again.');
+      }
     } catch (err) {
       alert('PDF export failed: ' + err.message);
     }

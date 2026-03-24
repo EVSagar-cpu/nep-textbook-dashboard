@@ -368,13 +368,13 @@ Generated: ${new Date().toLocaleDateString()} • ${viewingRecord.word_count || 
         <div style={{ background: 'white', padding: '40px', borderRadius: '12px', boxShadow: '0 20px 60px rgba(0,0,0,0.3)', width: '100%', maxWidth: '420px' }}>
           <div style={{ textAlign: 'center', marginBottom: '40px' }}>
             <div style={{ fontSize: '36px', marginBottom: '12px' }}>📖</div>
-            <h1 style={{ margin: '0 0 8px 0', fontSize: '28px', fontWeight: '700', color: COLORS.darkText }}>AI Content Studio</h1>
+            <h1 style={{ margin: '0 0 8px 0', fontSize: '20px', fontWeight: '700', color: COLORS.darkText }}>AI Content Studio</h1>
             <p style={{ margin: 0, fontSize: '14px', color: COLORS.lightText }}>Manage and create AI-generated curriculum</p>
           </div>
 
           <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: COLORS.darkText, marginBottom: '6px', textTransform: 'uppercase' }}>Email Address</label>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: COLORS.darkText, marginBottom: '6px', textTransform: 'uppercase' }}>Email Address</label>
               <input
                 type="email"
                 value={loginEmail}
@@ -386,7 +386,7 @@ Generated: ${new Date().toLocaleDateString()} • ${viewingRecord.word_count || 
             </div>
 
             <div>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: COLORS.darkText, marginBottom: '6px', textTransform: 'uppercase' }}>Password</label>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: COLORS.darkText, marginBottom: '6px', textTransform: 'uppercase' }}>Password</label>
               <input
                 type="password"
                 value={loginPassword}
@@ -406,7 +406,7 @@ Generated: ${new Date().toLocaleDateString()} • ${viewingRecord.word_count || 
             <button
               type="submit"
               disabled={loginLoading}
-              style={{ padding: '12px', background: COLORS.navActive, color: 'white', border: 'none', borderRadius: '6px', cursor: loginLoading ? 'not-allowed' : 'pointer', fontWeight: '600', fontSize: '14px', opacity: loginLoading ? 0.7 : 1 }}
+              style={{ padding: '12px', background: COLORS.navActive, color: 'white', border: 'none', borderRadius: '6px', cursor: loginLoading ? 'not-allowed' : 'pointer', fontWeight: '500', fontSize: '14px', opacity: loginLoading ? 0.7 : 1 }}
             >
               {loginLoading ? '⏳ Loading...' : isSignUp ? '✓ Create Account' : '🔓 Sign In'}
             </button>
@@ -416,7 +416,7 @@ Generated: ${new Date().toLocaleDateString()} • ${viewingRecord.word_count || 
               <button
                 type="button"
                 onClick={() => { setIsSignUp(!isSignUp); setLoginError(''); }}
-                style={{ background: 'none', border: 'none', color: COLORS.navActive, cursor: 'pointer', fontWeight: '600', fontSize: '13px', textDecoration: 'underline', padding: 0 }}
+                style={{ background: 'none', border: 'none', color: COLORS.navActive, cursor: 'pointer', fontWeight: '500', fontSize: '13px', textDecoration: 'underline', padding: 0 }}
               >
                 {isSignUp ? 'Sign In' : 'Sign Up'}
               </button>
@@ -424,7 +424,7 @@ Generated: ${new Date().toLocaleDateString()} • ${viewingRecord.word_count || 
           </form>
 
           <div style={{ marginTop: '28px', paddingTop: '28px', borderTop: `1px solid ${COLORS.borderColor}`, textAlign: 'center' }}>
-            <p style={{ margin: '0 0 10px 0', fontSize: '12px', fontWeight: '600', color: COLORS.darkText }}>📋 Demo Credentials:</p>
+            <p style={{ margin: '0 0 10px 0', fontSize: '12px', fontWeight: '500', color: COLORS.darkText }}>📋 Demo Credentials:</p>
             <div style={{ background: COLORS.filterBg, padding: '12px', borderRadius: '6px', fontSize: '13px', fontFamily: 'monospace', color: COLORS.darkText, lineHeight: '1.6' }}>
               <div>Email: <strong>demo@example.com</strong></div>
               <div>Password: <strong>demo123456</strong></div>
@@ -508,7 +508,7 @@ Generated: ${new Date().toLocaleDateString()} • ${viewingRecord.word_count || 
           <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
             <AlertCircle size={20} color={COLORS.navText} style={{ cursor: 'pointer' }} />
             <BookOpen size={20} color={COLORS.navText} style={{ cursor: 'pointer' }} />
-            <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#f4d4b8', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#8b5a3c', fontWeight: '600', cursor: 'pointer', fontSize: '14px' }}>
+            <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#f4d4b8', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#8b5a3c', fontWeight: '500', cursor: 'pointer', fontSize: '14px' }}>
               {session.user.email[0].toUpperCase()}
             </div>
           </div>
@@ -524,16 +524,16 @@ Generated: ${new Date().toLocaleDateString()} • ${viewingRecord.word_count || 
 
           {/* Action Buttons */}
           <div style={{ display: 'flex', gap: '12px', marginBottom: '24px' }}>
-            <button onClick={() => setShowAddForm(!showAddForm)} style={{ padding: '10px 16px', background: COLORS.navActive, color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <button onClick={() => setShowAddForm(!showAddForm)} style={{ padding: '10px 16px', background: COLORS.navActive, color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '500', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
               <Plus size={18} /> Add Record
             </button>
-            <button onClick={handleExport} style={{ padding: '10px 16px', background: COLORS.filterBg, color: COLORS.darkText, border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <button onClick={handleExport} style={{ padding: '10px 16px', background: COLORS.filterBg, color: COLORS.darkText, border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '500', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
               <Download size={18} /> Export
             </button>
-            <button onClick={fetchRecords} style={{ padding: '10px 16px', background: COLORS.filterBg, color: COLORS.darkText, border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <button onClick={fetchRecords} style={{ padding: '10px 16px', background: COLORS.filterBg, color: COLORS.darkText, border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '500', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
               <RefreshCw size={18} /> Refresh
             </button>
-            <button onClick={handleClearFilters} style={{ padding: '10px 16px', background: COLORS.filterBg, color: COLORS.darkText, border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <button onClick={handleClearFilters} style={{ padding: '10px 16px', background: COLORS.filterBg, color: COLORS.darkText, border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '500', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
               <X size={18} /> Clear
             </button>
           </div>
@@ -541,7 +541,7 @@ Generated: ${new Date().toLocaleDateString()} • ${viewingRecord.word_count || 
           {/* Filters */}
           <div style={{ background: COLORS.filterBg, padding: '16px', borderRadius: '8px', marginBottom: '24px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '12px' }}>
             <div>
-              <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: COLORS.darkText, marginBottom: '6px', textTransform: 'uppercase' }}>CLASS</label>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: '500', color: COLORS.darkText, marginBottom: '6px', textTransform: 'uppercase' }}>CLASS</label>
               <select value={filterClass} onChange={(e) => setFilterClass(e.target.value)} style={{ width: '100%', padding: '8px 12px', border: `1px solid ${COLORS.borderColor}`, borderRadius: '6px', fontSize: '14px', background: COLORS.white, fontFamily: FONT_FAMILY }}>
                 <option value="all">All Classes</option>
                 <option value="1">1</option>
@@ -553,7 +553,7 @@ Generated: ${new Date().toLocaleDateString()} • ${viewingRecord.word_count || 
             </div>
 
             <div>
-              <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: COLORS.darkText, marginBottom: '6px', textTransform: 'uppercase' }}>SUBJECT</label>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: '500', color: COLORS.darkText, marginBottom: '6px', textTransform: 'uppercase' }}>SUBJECT</label>
               <select value={filterSubject} onChange={(e) => setFilterSubject(e.target.value)} style={{ width: '100%', padding: '8px 12px', border: `1px solid ${COLORS.borderColor}`, borderRadius: '6px', fontSize: '14px', background: COLORS.white, fontFamily: FONT_FAMILY }}>
                 <option value="all">All Subjects</option>
                 <option value="English">English</option>
@@ -572,7 +572,7 @@ Generated: ${new Date().toLocaleDateString()} • ${viewingRecord.word_count || 
             </div>
 
             <div>
-              <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: COLORS.darkText, marginBottom: '6px', textTransform: 'uppercase' }}>STATUS</label>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: '500', color: COLORS.darkText, marginBottom: '6px', textTransform: 'uppercase' }}>STATUS</label>
               <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} style={{ width: '100%', padding: '8px 12px', border: `1px solid ${COLORS.borderColor}`, borderRadius: '6px', fontSize: '14px', background: COLORS.white, fontFamily: FONT_FAMILY }}>
                 <option value="all">All Status</option>
                 <option value="pending">Pending</option>
@@ -582,12 +582,12 @@ Generated: ${new Date().toLocaleDateString()} • ${viewingRecord.word_count || 
             </div>
 
             <div>
-              <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: COLORS.darkText, marginBottom: '6px', textTransform: 'uppercase' }}>TOPIC</label>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: '500', color: COLORS.darkText, marginBottom: '6px', textTransform: 'uppercase' }}>TOPIC</label>
               <input type="text" placeholder="Search topic..." value={topicInput} onChange={(e) => { setTopicInput(e.target.value); setSearchTopic(e.target.value); }} style={{ width: '100%', padding: '8px 12px', border: `1px solid ${COLORS.borderColor}`, borderRadius: '6px', fontSize: '14px', background: COLORS.white, fontFamily: FONT_FAMILY }} />
             </div>
 
             <div>
-              <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: COLORS.darkText, marginBottom: '6px', textTransform: 'uppercase' }}>SUB-TOPIC</label>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: '500', color: COLORS.darkText, marginBottom: '6px', textTransform: 'uppercase' }}>SUB-TOPIC</label>
               <input type="text" placeholder="Search sub-topic..." value={subTopicInput} onChange={(e) => { setSubTopicInput(e.target.value); setSearchSubTopic(e.target.value); }} style={{ width: '100%', padding: '8px 12px', border: `1px solid ${COLORS.borderColor}`, borderRadius: '6px', fontSize: '14px', background: COLORS.white, fontFamily: FONT_FAMILY }} />
             </div>
           </div>
@@ -605,20 +605,20 @@ Generated: ${new Date().toLocaleDateString()} • ${viewingRecord.word_count || 
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                   <thead>
                     <tr style={{ background: COLORS.lightBg, borderBottom: `2px solid ${COLORS.borderColor}` }}>
-                      <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: COLORS.darkText, textTransform: 'uppercase' }}>ID</th>
-                      <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: COLORS.darkText, textTransform: 'uppercase' }}>CLASS</th>
-                      <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: COLORS.darkText, textTransform: 'uppercase' }}>SUBJECT</th>
-                      <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: COLORS.darkText, textTransform: 'uppercase' }}>TOPIC</th>
-                      <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: COLORS.darkText, textTransform: 'uppercase' }}>STATUS</th>
-                      <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: COLORS.darkText, textTransform: 'uppercase' }}>WORDS</th>
-                      <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: COLORS.darkText, textTransform: 'uppercase' }}>ACTION</th>
+                      <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: '500', color: COLORS.darkText, textTransform: 'uppercase' }}>ID</th>
+                      <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: '500', color: COLORS.darkText, textTransform: 'uppercase' }}>CLASS</th>
+                      <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: '500', color: COLORS.darkText, textTransform: 'uppercase' }}>SUBJECT</th>
+                      <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: '500', color: COLORS.darkText, textTransform: 'uppercase' }}>TOPIC</th>
+                      <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: '500', color: COLORS.darkText, textTransform: 'uppercase' }}>STATUS</th>
+                      <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: '500', color: COLORS.darkText, textTransform: 'uppercase' }}>WORDS</th>
+                      <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: '500', color: COLORS.darkText, textTransform: 'uppercase' }}>ACTION</th>
                     </tr>
                   </thead>
                   <tbody>
                     {records.map((record, idx) => (
                       <tr key={idx} style={{ borderBottom: `1px solid ${COLORS.borderColor}`, background: idx % 2 === 0 ? COLORS.white : COLORS.lightBg }}>
                         <td style={{ padding: '12px', fontSize: '13px', color: COLORS.lightText }}>#{record.record_id}</td>
-                        <td style={{ padding: '12px', fontSize: '13px', fontWeight: '600', color: COLORS.darkText }}>Class {record.class}</td>
+                        <td style={{ padding: '12px', fontSize: '13px', fontWeight: '500', color: COLORS.darkText }}>Class {record.class}</td>
                         <td style={{ padding: '12px', fontSize: '13px', color: COLORS.darkText }}>{record.subject}</td>
                         <td style={{ padding: '12px', fontSize: '13px', color: COLORS.darkText }}>{record.topic}</td>
                         <td style={{ padding: '12px', fontSize: '13px' }}>
@@ -626,7 +626,7 @@ Generated: ${new Date().toLocaleDateString()} • ${viewingRecord.word_count || 
                             padding: '4px 12px',
                             borderRadius: '20px',
                             fontSize: '12px',
-                            fontWeight: '600',
+                            fontWeight: '500',
                             display: 'inline-flex',
                             alignItems: 'center',
                             gap: '6px',
@@ -673,7 +673,7 @@ Generated: ${new Date().toLocaleDateString()} • ${viewingRecord.word_count || 
 
           <form onSubmit={handleSubmit} style={{ flex: 1, padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px', overflow: 'auto' }}>
             <div>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: COLORS.darkText, marginBottom: '8px', textTransform: 'uppercase' }}>CLASS</label>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: COLORS.darkText, marginBottom: '8px', textTransform: 'uppercase' }}>CLASS</label>
               <select value={formData.class} onChange={(e) => setFormData({ ...formData, class: e.target.value })} required style={{ width: '100%', padding: '10px 12px', border: `1px solid ${COLORS.borderColor}`, borderRadius: '6px', fontSize: '14px', background: COLORS.white, fontFamily: FONT_FAMILY }}>
                 <option value="">Select Class</option>
                 <option value="1">1</option>
@@ -685,7 +685,7 @@ Generated: ${new Date().toLocaleDateString()} • ${viewingRecord.word_count || 
             </div>
 
             <div>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: COLORS.darkText, marginBottom: '8px', textTransform: 'uppercase' }}>SUBJECT</label>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: COLORS.darkText, marginBottom: '8px', textTransform: 'uppercase' }}>SUBJECT</label>
               <select value={formData.subject} onChange={(e) => setFormData({ ...formData, subject: e.target.value })} required style={{ width: '100%', padding: '10px 12px', border: `1px solid ${COLORS.borderColor}`, borderRadius: '6px', fontSize: '14px', background: COLORS.white, fontFamily: FONT_FAMILY }}>
                 <option value="">Select Subject</option>
                 <option value="English">English</option>
@@ -704,31 +704,31 @@ Generated: ${new Date().toLocaleDateString()} • ${viewingRecord.word_count || 
             </div>
 
             <div>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: COLORS.darkText, marginBottom: '8px', textTransform: 'uppercase' }}>TOPIC</label>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: COLORS.darkText, marginBottom: '8px', textTransform: 'uppercase' }}>TOPIC</label>
               <input type="text" value={formData.topic} onChange={(e) => setFormData({ ...formData, topic: e.target.value })} placeholder="e.g., Quantum Mechanics" required style={{ width: '100%', padding: '10px 12px', border: `1px solid ${COLORS.borderColor}`, borderRadius: '6px', fontSize: '14px', background: COLORS.white, fontFamily: FONT_FAMILY }} />
             </div>
 
             <div>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: COLORS.darkText, marginBottom: '8px', textTransform: 'uppercase' }}>SUB-TOPIC</label>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: COLORS.darkText, marginBottom: '8px', textTransform: 'uppercase' }}>SUB-TOPIC</label>
               <input type="text" value={formData.sub_topic} onChange={(e) => setFormData({ ...formData, sub_topic: e.target.value })} placeholder="e.g., Wave-Particle Duality" required style={{ width: '100%', padding: '10px 12px', border: `1px solid ${COLORS.borderColor}`, borderRadius: '6px', fontSize: '14px', background: COLORS.white, fontFamily: FONT_FAMILY }} />
             </div>
 
             <div>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: COLORS.darkText, marginBottom: '8px', textTransform: 'uppercase' }}>AI PROMPT <span style={{ fontSize: '12px', color: COLORS.lightText, fontWeight: '400' }}>Max 20000 characters</span></label>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: COLORS.darkText, marginBottom: '8px', textTransform: 'uppercase' }}>AI PROMPT <span style={{ fontSize: '12px', color: COLORS.lightText, fontWeight: '400' }}>Max 20000 characters</span></label>
               <textarea value={formData.prompt} onChange={(e) => setFormData({ ...formData, prompt: e.target.value.slice(0, 20000) })} placeholder="Enter detailed prompt for Claude..." required rows="6" style={{ width: '100%', padding: '12px', border: `1px solid ${COLORS.borderColor}`, borderRadius: '6px', fontSize: '14px', background: COLORS.white, fontFamily: FONT_FAMILY, resize: 'vertical', minHeight: '140px' }} />
               <div style={{ fontSize: '12px', color: COLORS.lightText, marginTop: '6px' }}>{formData.prompt.length}/20000 characters</div>
             </div>
 
             <div style={{ background: `${COLORS.statusGenerating}15`, padding: '12px', borderRadius: '6px', borderLeft: `4px solid ${COLORS.statusGenerating}` }}>
-              <p style={{ margin: 0, fontSize: '13px', color: COLORS.statusGenerating, fontWeight: '600' }}>Claude AI Ready</p>
+              <p style={{ margin: 0, fontSize: '13px', color: COLORS.statusGenerating, fontWeight: '500' }}>Claude AI Ready</p>
               <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: COLORS.darkText }}>Your prompt will be processed by Claude to generate high-fidelity textbook content.</p>
             </div>
 
             <div style={{ display: 'flex', gap: '12px', marginTop: 'auto' }}>
-              <button type="button" onClick={handleCancel} style={{ flex: 1, padding: '12px', background: COLORS.filterBg, color: COLORS.darkText, border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '14px' }}>
+              <button type="button" onClick={handleCancel} style={{ flex: 1, padding: '12px', background: COLORS.filterBg, color: COLORS.darkText, border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '500', fontSize: '14px' }}>
                 CANCEL
               </button>
-              <button type="submit" disabled={loading} style={{ flex: 1, padding: '12px', background: COLORS.navActive, color: 'white', border: 'none', borderRadius: '6px', cursor: loading ? 'not-allowed' : 'pointer', fontWeight: '600', fontSize: '14px', opacity: loading ? 0.7 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+              <button type="submit" disabled={loading} style={{ flex: 1, padding: '12px', background: COLORS.navActive, color: 'white', border: 'none', borderRadius: '6px', cursor: loading ? 'not-allowed' : 'pointer', fontWeight: '500', fontSize: '14px', opacity: loading ? 0.7 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
                 ⚡ {loading ? 'GENERATING...' : 'SAVE & GENERATE'}
               </button>
             </div>
@@ -757,11 +757,11 @@ Generated: ${new Date().toLocaleDateString()} • ${viewingRecord.word_count || 
               <div style={{ flex: 1, padding: '24px', overflow: 'auto' }}>
                 {/* Content Type Selector */}
                 <div style={{ display: 'flex', gap: '12px', marginBottom: '20px', borderBottom: `1px solid ${COLORS.borderColor}`, paddingBottom: '16px' }}>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '13px', fontWeight: '600', color: contentType === 'markdown' ? COLORS.navActive : COLORS.lightText }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '13px', fontWeight: '500', color: contentType === 'markdown' ? COLORS.navActive : COLORS.lightText }}>
                     <input type="radio" checked={contentType === 'markdown'} onChange={() => setContentType('markdown')} style={{ cursor: 'pointer' }} />
                     Markdown
                   </label>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '13px', fontWeight: '600', color: contentType === 'html' ? COLORS.navActive : COLORS.lightText }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '13px', fontWeight: '500', color: contentType === 'html' ? COLORS.navActive : COLORS.lightText }}>
                     <input type="radio" checked={contentType === 'html'} onChange={() => setContentType('html')} style={{ cursor: 'pointer' }} />
                     HTML
                   </label>
@@ -774,14 +774,14 @@ Generated: ${new Date().toLocaleDateString()} • ${viewingRecord.word_count || 
                       <div style={{ fontSize: '14px', lineHeight: '1.8', color: COLORS.darkText, fontFamily: FONT_FAMILY, fontWeight: '400' }}>
                         <ReactMarkdown
                           components={{
-                            h1: ({node, ...props}) => <h1 style={{ fontSize: '24px', fontWeight: '600', margin: '20px 0 12px 0', color: COLORS.darkText, fontFamily: FONT_FAMILY }} {...props} />,
-                            h2: ({node, ...props}) => <h2 style={{ fontSize: '20px', fontWeight: '600', margin: '16px 0 10px 0', color: COLORS.darkText, fontFamily: FONT_FAMILY }} {...props} />,
-                            h3: ({node, ...props}) => <h3 style={{ fontSize: '16px', fontWeight: '600', margin: '14px 0 8px 0', color: COLORS.darkText, fontFamily: FONT_FAMILY }} {...props} />,
+                            h1: ({node, ...props}) => <h1 style={{ fontSize: '24px', fontWeight: '500', margin: '20px 0 12px 0', color: COLORS.darkText, fontFamily: FONT_FAMILY }} {...props} />,
+                            h2: ({node, ...props}) => <h2 style={{ fontSize: '20px', fontWeight: '500', margin: '16px 0 10px 0', color: COLORS.darkText, fontFamily: FONT_FAMILY }} {...props} />,
+                            h3: ({node, ...props}) => <h3 style={{ fontSize: '16px', fontWeight: '500', margin: '14px 0 8px 0', color: COLORS.darkText, fontFamily: FONT_FAMILY }} {...props} />,
                             p: ({node, ...props}) => <p style={{ margin: '12px 0', fontWeight: '400', fontFamily: FONT_FAMILY }} {...props} />,
                             ul: ({node, ...props}) => <ul style={{ marginLeft: '24px', marginTop: '12px', marginBottom: '12px', fontWeight: '400', fontFamily: FONT_FAMILY }} {...props} />,
                             ol: ({node, ...props}) => <ol style={{ marginLeft: '24px', marginTop: '12px', marginBottom: '12px', fontWeight: '400', fontFamily: FONT_FAMILY }} {...props} />,
                             li: ({node, ...props}) => <li style={{ marginBottom: '6px', fontWeight: '400', fontFamily: FONT_FAMILY }} {...props} />,
-                            strong: ({node, ...props}) => <span style={{ fontWeight: '600', fontFamily: FONT_FAMILY }} {...props} />,
+                            strong: ({node, ...props}) => <span style={{ fontWeight: '500', fontFamily: FONT_FAMILY }} {...props} />,
                             em: ({node, ...props}) => <em style={{ fontStyle: 'italic', fontWeight: '400', fontFamily: FONT_FAMILY }} {...props} />,
                             code: ({node, inline, ...props}) => <code style={{ fontFamily: 'monospace', background: inline ? COLORS.filterBg : 'transparent', padding: inline ? '2px 6px' : '12px', borderRadius: '4px', color: '#d63384', fontWeight: '400' }} {...props} />,
                             blockquote: ({node, ...props}) => <blockquote style={{ borderLeft: `4px solid ${COLORS.navActive}`, paddingLeft: '16px', marginLeft: '0', background: `${COLORS.navActive}10`, padding: '12px 16px', borderRadius: '4px', fontStyle: 'italic', fontWeight: '400' }} {...props} />,
@@ -812,7 +812,7 @@ Generated: ${new Date().toLocaleDateString()} • ${viewingRecord.word_count || 
                 <div style={{ display: 'flex', gap: '12px' }}>
                   <button 
                     onClick={exportToPDF}
-                    style={{ padding: '8px 16px', background: COLORS.filterBg, color: COLORS.darkText, border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px', transition: 'all 0.2s' }}
+                    style={{ padding: '8px 16px', background: COLORS.filterBg, color: COLORS.darkText, border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '500', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px', transition: 'all 0.2s' }}
                     onMouseEnter={(e) => e.target.style.background = '#e5e7eb'}
                     onMouseLeave={(e) => e.target.style.background = COLORS.filterBg}
                   >
@@ -820,7 +820,7 @@ Generated: ${new Date().toLocaleDateString()} • ${viewingRecord.word_count || 
                   </button>
                   <button 
                     onClick={exportToWord}
-                    style={{ padding: '8px 16px', background: COLORS.filterBg, color: COLORS.darkText, border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px', transition: 'all 0.2s' }}
+                    style={{ padding: '8px 16px', background: COLORS.filterBg, color: COLORS.darkText, border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '500', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px', transition: 'all 0.2s' }}
                     onMouseEnter={(e) => e.target.style.background = '#e5e7eb'}
                     onMouseLeave={(e) => e.target.style.background = COLORS.filterBg}
                   >

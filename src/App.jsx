@@ -93,6 +93,288 @@ export default function App() {
     'Environmental Studies', 'General Knowledge', 'Computers'
   ];
 
+  // ===== ADVANCED MARKDOWN PARSER =====
+  const parseMarkdownToReact = (markdown) => {
+    if (!markdown) return null;
+
+    const lines = markdown.split('\n');
+    const result = [];
+    let i = 0;
+    let listItems = [];
+    let tableLines = [];
+    let codeBlock = [];
+    let inCodeBlock = false;
+
+    const flushList = () => {
+      if (listItems.length > 0) {
+        result.push(
+          <ul key={`list-${result.length}`} style={{ marginLeft: '24px', marginBottom: '12px' }}>
+            {listItems.map((item, idx) => (
+              <li key={idx} style={{ marginBottom: '6px', lineHeight: '1.6' }}>
+                {renderInlineMarkdown(item)}
+              </li>
+            ))}
+          </ul>
+        );
+        listItems = [];
+      }
+    };
+
+    const flushTable = () => {
+      if (tableLines.length > 0) {
+        const rows = tableLines.map(line => 
+          line.split('|').map(cell => cell.trim()).filter(cell => cell)
+        );
+        
+        if (rows.length > 0) {
+          result.push(
+            <table key={`table-${result.length}`} style={{
+              width: '100%',
+              borderCollapse: 'collapse',
+              margin: '16px 0',
+              fontSize: '12px',
+              border: `1px solid #e5e7eb`
+            }}>
+              <thead>
+                <tr style={{ background: '#2563eb', color: 'white' }}>
+                  {rows[0].map((cell, idx) => (
+                    <th key={idx} style={{
+                      padding: '12px',
+                      textAlign: 'left',
+                      fontWeight: '600',
+                      borderBottom: `2px solid #1e40af`
+                    }}>
+                      {cell}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {rows.slice(1).map((row, rowIdx) => (
+                  <tr key={rowIdx} style={{ 
+                    background: rowIdx % 2 === 0 ? '#f9fafb' : '#ffffff',
+                    borderBottom: `1px solid #e5e7eb`
+                  }}>
+                    {row.map((cell, cellIdx) => (
+                      <td key={cellIdx} style={{
+                        padding: '12px',
+                        borderRight: cellIdx < row.length - 1 ? `1px solid #e5e7eb` : 'none'
+                      }}>
+                        {renderInlineMarkdown(cell)}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          );
+        }
+        tableLines = [];
+      }
+    };
+
+    const flushCodeBlock = () => {
+      if (codeBlock.length > 0) {
+        result.push(
+          <pre key={`code-${result.length}`} style={{
+            background: '#1f2937',
+            color: '#e5e7eb',
+            padding: '14px',
+            borderRadius: '6px',
+            overflowX: 'auto',
+            margin: '12px 0',
+            fontSize: '12px',
+            lineHeight: '1.5',
+            border: `1px solid #374151`,
+            fontFamily: 'monospace'
+          }}>
+            <code>{codeBlock.join('\n')}</code>
+          </pre>
+        );
+        codeBlock = [];
+      }
+    };
+
+    const renderInlineMarkdown = (text) => {
+      if (!text) return null;
+
+      // Handle LaTeX equations: $...$ for inline, $$...$$ for display
+      const latexRegex = /(\$\$[^\$]+\$\$|\$[^\$]+\$)/g;
+      const mathParts = text.split(latexRegex);
+
+      return mathParts.map((part, idx) => {
+        if (part.startsWith('$$')) {
+          // Display math
+          return (
+            <div key={idx} style={{
+              background: '#f0f9ff',
+              padding: '12px',
+              margin: '8px 0',
+              borderLeft: `4px solid #2563eb`,
+              fontFamily: 'monospace',
+              overflow: 'auto',
+              fontSize: '12px'
+            }}>
+              {part.replace(/\$\$/g, '')}
+            </div>
+          );
+        } else if (part.startsWith('$')) {
+          // Inline math
+          return (
+            <code key={idx} style={{
+              background: '#f0f9ff',
+              padding: '2px 6px',
+              borderRadius: '3px',
+              fontFamily: 'monospace',
+              fontSize: '12px'
+            }}>
+              {part.replace(/\$/g, '')}
+            </code>
+          );
+        }
+
+        // Handle inline formatting
+        const formatted = part
+          .replace(/\*\*(.*?)\*\*/g, '<strong style="font-weight:600">$1</strong>')
+          .replace(/__(.*?)__/g, '<strong style="font-weight:600">$1</strong>')
+          .replace(/\*(.*?)\*/g, '<em style="font-style:italic">$1</em>')
+          .replace(/_(.*?)_/g, '<em style="font-style:italic">$1</em>')
+          .replace(/`(.*?)`/g, '<code style="background:#f3f4f6;padding:2px 6px;border-radius:3px;font-family:monospace">$1</code>');
+
+        if (formatted !== part) {
+          return <span key={idx} dangerouslySetInnerHTML={{ __html: formatted }} />;
+        }
+
+        return part;
+      });
+    };
+
+    while (i < lines.length) {
+      const line = lines[i];
+
+      // Code block
+      if (line.trim().startsWith('```')) {
+        if (inCodeBlock) {
+          flushCodeBlock();
+          inCodeBlock = false;
+        } else {
+          inCodeBlock = true;
+        }
+        i++;
+        continue;
+      }
+
+      if (inCodeBlock) {
+        codeBlock.push(line);
+        i++;
+        continue;
+      }
+
+      // Table detection: contains | and is not empty
+      if (line.includes('|') && line.trim().length > 2) {
+        tableLines.push(line);
+        i++;
+        continue;
+      }
+
+      // Flush table if we hit non-table line
+      if (tableLines.length > 0 && (!line.includes('|') || line.trim().length < 2)) {
+        flushTable();
+      }
+
+      // Headers
+      if (line.startsWith('###')) {
+        flushList();
+        result.push(
+          <h3 key={i} style={{ fontSize: '15px', margin: '12px 0 8px 0', fontWeight: '600', color: '#0f172a' }}>
+            {renderInlineMarkdown(line.replace(/^#+\s*/, ''))}
+          </h3>
+        );
+        i++;
+        continue;
+      }
+
+      if (line.startsWith('##')) {
+        flushList();
+        result.push(
+          <h2 key={i} style={{ fontSize: '17px', margin: '14px 0 10px 0', fontWeight: '600', color: '#0f172a' }}>
+            {renderInlineMarkdown(line.replace(/^#+\s*/, ''))}
+          </h2>
+        );
+        i++;
+        continue;
+      }
+
+      if (line.startsWith('#')) {
+        flushList();
+        result.push(
+          <h1 key={i} style={{ fontSize: '20px', margin: '16px 0 12px 0', fontWeight: '700', color: '#0f172a' }}>
+            {renderInlineMarkdown(line.replace(/^#+\s*/, ''))}
+          </h1>
+        );
+        i++;
+        continue;
+      }
+
+      // Lists
+      if (line.trim().startsWith('-') || line.trim().startsWith('*') || /^\d+\./.test(line.trim())) {
+        const itemText = line.replace(/^[\s\-\*]+|\d+\.\s*/, '').trim();
+        if (itemText) {
+          listItems.push(itemText);
+        }
+        i++;
+        continue;
+      }
+
+      // Blockquote
+      if (line.startsWith('>')) {
+        flushList();
+        result.push(
+          <blockquote key={i} style={{
+            borderLeft: `4px solid #2563eb`,
+            paddingLeft: '12px',
+            margin: '12px 0',
+            background: '#f0f9ff',
+            padding: '10px 12px',
+            fontSize: '13px',
+            fontStyle: 'italic',
+            color: '#475569'
+          }}>
+            {renderInlineMarkdown(line.replace(/^>\s*/, ''))}
+          </blockquote>
+        );
+        i++;
+        continue;
+      }
+
+      // Empty line
+      if (line.trim().length === 0) {
+        flushList();
+        result.push(<div key={i} style={{ height: '8px' }} />);
+        i++;
+        continue;
+      }
+
+      // Paragraph
+      if (line.trim()) {
+        flushList();
+        result.push(
+          <p key={i} style={{ margin: '8px 0', lineHeight: '1.6', color: '#0f172a' }}>
+            {renderInlineMarkdown(line)}
+          </p>
+        );
+      }
+
+      i++;
+    }
+
+    flushList();
+    flushTable();
+    flushCodeBlock();
+
+    return result;
+  };
+
   // ===== LOAD FONT & LIBS =====
   useEffect(() => {
     const link = document.createElement('link');
@@ -503,18 +785,121 @@ export default function App() {
       let contentHtml = markdownContent;
 
       if (viewMarkdown) {
-        // Convert markdown to HTML
-        contentHtml = markdownContent
-          .replace(/^### (.*?)$/gm, '<h3 style="font-size:16px;margin:12px 0 6px 0;font-weight:600;">$1</h3>')
-          .replace(/^## (.*?)$/gm, '<h2 style="font-size:18px;margin:14px 0 8px 0;font-weight:600;">$1</h2>')
-          .replace(/^# (.*?)$/gm, '<h1 style="font-size:20px;margin:16px 0 10px 0;font-weight:700;">$1</h1>')
-          .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-          .replace(/\*(.*?)\*/g, '<em>$1</em>')
-          .replace(/^- (.*?)$/gm, '<li style="margin-left:24px;">$1</li>')
-          .replace(/(?:<li.*?<\/li>)/s, (match) => `<ul style="margin:8px 0;">${match}</ul>`)
-          .replace(/^> (.*?)$/gm, '<blockquote style="border-left:4px solid #2563eb;padding-left:12px;margin:10px 0;background:#f0f9ff;padding:10px;font-size:13px;">$1</blockquote>')
-          .replace(/`(.*?)`/g, '<code style="background:#f3f4f6;padding:2px 6px;border-radius:3px;">$1</code>')
-          .replace(/```(.*?)```/gs, '<pre style="background:#f3f4f6;padding:12px;border-radius:6px;overflow-x:auto;"><code>$1</code></pre>');
+        // Better markdown to HTML conversion with table support
+        const lines = markdownContent.split('\n');
+        let html = '';
+        let i = 0;
+        let inCodeBlock = false;
+        let codeContent = [];
+
+        while (i < lines.length) {
+          const line = lines[i];
+
+          // Code block
+          if (line.trim().startsWith('```')) {
+            if (inCodeBlock) {
+              html += `<pre style="background:#1f2937;color:#e5e7eb;padding:12px;border-radius:6px;margin:12px 0;overflow-x:auto;font-size:11px;"><code>${codeContent.join('\n')}</code></pre>`;
+              codeContent = [];
+              inCodeBlock = false;
+            } else {
+              inCodeBlock = true;
+            }
+            i++;
+            continue;
+          }
+
+          if (inCodeBlock) {
+            codeContent.push(line);
+            i++;
+            continue;
+          }
+
+          // Tables
+          if (line.includes('|') && line.trim().length > 2) {
+            let tableLines = [line];
+            i++;
+            while (i < lines.length && lines[i].includes('|')) {
+              tableLines.push(lines[i]);
+              i++;
+            }
+            
+            const rows = tableLines.map(l => 
+              l.split('|').map(c => c.trim()).filter(c => c)
+            );
+
+            if (rows.length > 0) {
+              html += '<table style="width:100%;border-collapse:collapse;margin:12px 0;border:1px solid #e5e7eb;"><thead><tr style="background:#2563eb;color:white;">';
+              rows[0].forEach(cell => {
+                html += `<th style="padding:10px;text-align:left;font-weight:600;border-bottom:2px solid #1e40af;">${cell}</th>`;
+              });
+              html += '</tr></thead><tbody>';
+              rows.slice(1).forEach((row, idx) => {
+                html += `<tr style="background:${idx % 2 === 0 ? '#f9fafb' : '#ffffff'};border-bottom:1px solid #e5e7eb;">`;
+                row.forEach((cell, cIdx) => {
+                  html += `<td style="padding:10px;border-right:${cIdx < row.length - 1 ? '1px solid #e5e7eb' : 'none'};">${cell}</td>`;
+                });
+                html += '</tr>';
+              });
+              html += '</tbody></table>';
+            }
+            continue;
+          }
+
+          // Headers
+          if (line.startsWith('###')) {
+            html += `<h3 style="font-size:15px;margin:12px 0 8px 0;font-weight:600;">${line.replace(/^#+\s*/, '')}</h3>`;
+            i++;
+            continue;
+          }
+          if (line.startsWith('##')) {
+            html += `<h2 style="font-size:17px;margin:14px 0 10px 0;font-weight:600;">${line.replace(/^#+\s*/, '')}</h2>`;
+            i++;
+            continue;
+          }
+          if (line.startsWith('#')) {
+            html += `<h1 style="font-size:20px;margin:16px 0 12px 0;font-weight:700;">${line.replace(/^#+\s*/, '')}</h1>`;
+            i++;
+            continue;
+          }
+
+          // Lists
+          if (line.trim().startsWith('-') || /^\d+\./.test(line.trim())) {
+            let listItems = [];
+            while (i < lines.length && (lines[i].trim().startsWith('-') || /^\d+\./.test(lines[i].trim()))) {
+              const item = lines[i].replace(/^[\s\-\*]+|\d+\.\s*/, '').trim();
+              if (item) listItems.push(item);
+              i++;
+            }
+            if (listItems.length > 0) {
+              html += '<ul style="margin-left:24px;margin-bottom:12px;">';
+              listItems.forEach(item => {
+                html += `<li style="margin-bottom:6px;">${item}</li>`;
+              });
+              html += '</ul>';
+            }
+            continue;
+          }
+
+          // Blockquote
+          if (line.startsWith('>')) {
+            html += `<blockquote style="border-left:4px solid #2563eb;padding-left:12px;margin:12px 0;background:#f0f9ff;padding:10px 12px;font-style:italic;color:#475569;">${line.replace(/^>\s*/, '')}</blockquote>`;
+            i++;
+            continue;
+          }
+
+          // Paragraph
+          if (line.trim()) {
+            let text = line
+              .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+              .replace(/\*(.*?)\*/g, '<em>$1</em>')
+              .replace(/`(.*?)`/g, '<code style="background:#f3f4f6;padding:2px 6px;border-radius:3px;">$1</code>');
+            html += `<p style="margin:8px 0;line-height:1.6;">${text}</p>`;
+          }
+
+          i++;
+        }
+
+        contentHtml = html;
       }
 
       const element = document.createElement('div');
@@ -1198,14 +1583,7 @@ export default function App() {
 
                   {viewMarkdown ? (
                     <div style={{ fontSize: '13px', lineHeight: '1.6', color: COLORS.darkText, fontFamily: FONT_FAMILY, fontWeight: '400' }}>
-                      {viewingRecord.ai_output.split('\n').map((line, i) => {
-                        if (line.startsWith('###')) return <h3 key={i} style={{ fontSize: '16px', margin: '10px 0 6px 0', fontWeight: '600' }}>{line.replace('### ', '')}</h3>;
-                        if (line.startsWith('##')) return <h2 key={i} style={{ fontSize: '18px', margin: '12px 0 8px 0', fontWeight: '600' }}>{line.replace('## ', '')}</h2>;
-                        if (line.startsWith('#')) return <h1 key={i} style={{ fontSize: '20px', margin: '14px 0 10px 0', fontWeight: '700' }}>{line.replace('# ', '')}</h1>;
-                        if (line.startsWith('-')) return <li key={i} style={{ marginLeft: '24px', marginBottom: '4px' }}>{line.replace('- ', '')}</li>;
-                        if (line.startsWith('>')) return <blockquote key={i} style={{ borderLeft: `4px solid ${COLORS.navActive}`, paddingLeft: '12px', margin: '10px 0', background: '#f0f9ff', padding: '10px', fontSize: '12px' }}>{line.replace('> ', '')}</blockquote>;
-                        return line.trim() ? <p key={i} style={{ margin: '6px 0' }}>{line}</p> : <div key={i} style={{ height: '6px' }} />;
-                      })}
+                      {parseMarkdownToReact(viewingRecord.ai_output)}
                     </div>
                   ) : (
                     <div dangerouslySetInnerHTML={{ __html: viewingRecord.ai_output }} style={{ fontSize: '13px', lineHeight: '1.6', color: COLORS.darkText, fontFamily: FONT_FAMILY, fontWeight: '400' }} />

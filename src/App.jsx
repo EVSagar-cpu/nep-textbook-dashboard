@@ -860,10 +860,14 @@ export default function App() {
 
         <nav style={{ marginTop: '30px' }}>
           {[
-            { icon: <BookOpen size={20} />, label: 'Textbooks', action: 'textbooks', disabled: false },
-            { icon: <Users size={20} />, label: 'Manage Users', action: 'manage-users', disabled: true },
-            { icon: <Mail size={20} />, label: 'Invites', action: 'invites', disabled: false }
-          ].map((item, i) => (
+            { icon: <BookOpen size={20} />, label: 'Textbooks', action: 'textbooks', disabled: false, rolesAllowed: ['central_admin', 'admin', 'content_developer'] },
+            { icon: <Users size={20} />, label: 'Manage Users', action: 'manage-users', disabled: true, rolesAllowed: ['central_admin', 'admin'] },
+            { icon: <Mail size={20} />, label: 'Invites', action: 'invites', disabled: false, rolesAllowed: ['central_admin', 'admin'] }
+          ].filter(item => {
+            // Show item only if user's role is allowed
+            const userRole = currentUser?.user_metadata?.role || 'content_developer';
+            return item.rolesAllowed.includes(userRole);
+          }).map((item, i) => (
             <button
               key={i}
               onClick={() => {
@@ -937,7 +941,7 @@ export default function App() {
         {/* CONTENT AREA */}
         <div style={{ flex: 1, padding: '40px', overflowY: 'auto' }}>
           {/* INVITE PANEL */}
-          {showInvitePanel && (
+          {showInvitePanel && (currentUser?.user_metadata?.role === 'central_admin' || currentUser?.user_metadata?.role === 'admin') && (
             <div style={{ background: COLORS.white, borderRadius: '12px', padding: '24px', marginBottom: '30px', border: `1px solid ${COLORS.borderColor}` }}>
               <h2 style={{ margin: '0 0 20px 0', fontSize: '18px', fontWeight: '700', color: COLORS.darkText }}>Send Invite</h2>
 

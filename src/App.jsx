@@ -471,10 +471,17 @@ export default function App() {
         </div>
       `;
 
-      if (window.html2pdf) {
-        window.html2pdf().set({ margin: 10, filename: `${viewingRecord.topic}.pdf` }).save(element);
+      if (typeof window !== 'undefined' && window.html2pdf) {
+        const opt = {
+          margin: 10,
+          filename: `${viewingRecord.topic}.pdf`,
+          image: { type: 'jpeg', quality: 0.98 },
+          html2canvas: { scale: 2 },
+          jsPDF: { orientation: 'portrait', unit: 'mm', format: 'a4' }
+        };
+        window.html2pdf().set(opt).from(element).save();
       } else {
-        alert('PDF library not loaded. Please try again.');
+        alert('PDF library is loading. Please try again in a moment.');
       }
     } catch (err) {
       alert('PDF export failed: ' + err.message);
@@ -1034,14 +1041,14 @@ export default function App() {
             ) : (
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
-                  <tr style={{ background: COLORS.filterBg, borderBottom: `1px solid ${COLORS.borderColor}` }}>
-                    <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: '500', color: COLORS.darkText, textTransform: 'uppercase' }}>ID</th>
-                    <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: '500', color: COLORS.darkText, textTransform: 'uppercase' }}>CLASS</th>
-                    <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: '500', color: COLORS.darkText, textTransform: 'uppercase' }}>SUBJECT</th>
-                    <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: '500', color: COLORS.darkText, textTransform: 'uppercase' }}>TOPIC</th>
-                    <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: '500', color: COLORS.darkText, textTransform: 'uppercase' }}>STATUS</th>
-                    <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: '500', color: COLORS.darkText, textTransform: 'uppercase' }}>WORDS</th>
-                    <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: '500', color: COLORS.darkText, textTransform: 'uppercase' }}>ACTION</th>
+                  <tr style={{ background: COLORS.navActive, borderBottom: `1px solid ${COLORS.borderColor}` }}>
+                    <th style={{ padding: '14px 12px', textAlign: 'left', fontSize: '11px', fontWeight: '600', color: COLORS.white, textTransform: 'uppercase', letterSpacing: '0.5px' }}>ID</th>
+                    <th style={{ padding: '14px 12px', textAlign: 'left', fontSize: '11px', fontWeight: '600', color: COLORS.white, textTransform: 'uppercase', letterSpacing: '0.5px' }}>CLASS</th>
+                    <th style={{ padding: '14px 12px', textAlign: 'left', fontSize: '11px', fontWeight: '600', color: COLORS.white, textTransform: 'uppercase', letterSpacing: '0.5px' }}>SUBJECT</th>
+                    <th style={{ padding: '14px 12px', textAlign: 'left', fontSize: '11px', fontWeight: '600', color: COLORS.white, textTransform: 'uppercase', letterSpacing: '0.5px' }}>TOPIC</th>
+                    <th style={{ padding: '14px 12px', textAlign: 'left', fontSize: '11px', fontWeight: '600', color: COLORS.white, textTransform: 'uppercase', letterSpacing: '0.5px' }}>STATUS</th>
+                    <th style={{ padding: '14px 12px', textAlign: 'left', fontSize: '11px', fontWeight: '600', color: COLORS.white, textTransform: 'uppercase', letterSpacing: '0.5px' }}>WORDS</th>
+                    <th style={{ padding: '14px 12px', textAlign: 'left', fontSize: '11px', fontWeight: '600', color: COLORS.white, textTransform: 'uppercase', letterSpacing: '0.5px' }}>ACTION</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1065,8 +1072,14 @@ export default function App() {
                       </td>
                       <td style={{ padding: '12px', fontSize: '13px', color: COLORS.lightText }}>{record.word_count || 0}</td>
                       <td style={{ padding: '12px', fontSize: '13px' }}>
-                        <button onClick={() => setViewingRecord(record)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: COLORS.navActive, fontSize: '16px', marginRight: '12px' }}>👁</button>
-                        <button onClick={() => handleEdit(record)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: COLORS.navActive, fontSize: '16px' }}>✏</button>
+                        <div style={{ display: 'flex', gap: '12px' }}>
+                          <button onClick={() => setViewingRecord(record)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '6px', borderRadius: '6px', transition: 'all 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center', color: COLORS.navActive, hover: { background: '#f0f9ff' } }} title="View">
+                            <Eye size={18} strokeWidth={2} />
+                          </button>
+                          <button onClick={() => handleEdit(record)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '6px', borderRadius: '6px', transition: 'all 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center', color: COLORS.navActive }} title="Edit">
+                            <Edit2 size={18} strokeWidth={2} />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -1101,18 +1114,18 @@ export default function App() {
                   </div>
 
                   {viewMarkdown ? (
-                    <div style={{ fontSize: '14px', lineHeight: '1.8', color: COLORS.darkText, fontFamily: FONT_FAMILY, fontWeight: '400' }}>
+                    <div style={{ fontSize: '13px', lineHeight: '1.6', color: COLORS.darkText, fontFamily: FONT_FAMILY, fontWeight: '400' }}>
                       {viewingRecord.ai_output.split('\n').map((line, i) => {
-                        if (line.startsWith('###')) return <h3 key={i} style={{ fontSize: '18px', margin: '12px 0 8px 0', fontWeight: '600' }}>{line.replace('### ', '')}</h3>;
-                        if (line.startsWith('##')) return <h2 key={i} style={{ fontSize: '22px', margin: '16px 0 10px 0', fontWeight: '600' }}>{line.replace('## ', '')}</h2>;
-                        if (line.startsWith('#')) return <h1 key={i} style={{ fontSize: '28px', margin: '20px 0 12px 0', fontWeight: '700' }}>{line.replace('# ', '')}</h1>;
+                        if (line.startsWith('###')) return <h3 key={i} style={{ fontSize: '16px', margin: '10px 0 6px 0', fontWeight: '600' }}>{line.replace('### ', '')}</h3>;
+                        if (line.startsWith('##')) return <h2 key={i} style={{ fontSize: '18px', margin: '12px 0 8px 0', fontWeight: '600' }}>{line.replace('## ', '')}</h2>;
+                        if (line.startsWith('#')) return <h1 key={i} style={{ fontSize: '20px', margin: '14px 0 10px 0', fontWeight: '700' }}>{line.replace('# ', '')}</h1>;
                         if (line.startsWith('-')) return <li key={i} style={{ marginLeft: '24px', marginBottom: '4px' }}>{line.replace('- ', '')}</li>;
-                        if (line.startsWith('>')) return <blockquote key={i} style={{ borderLeft: `4px solid ${COLORS.navActive}`, paddingLeft: '12px', margin: '12px 0', background: '#f0f9ff', padding: '12px' }}>{line.replace('> ', '')}</blockquote>;
-                        return line.trim() ? <p key={i} style={{ margin: '8px 0' }}>{line}</p> : <div key={i} style={{ height: '8px' }} />;
+                        if (line.startsWith('>')) return <blockquote key={i} style={{ borderLeft: `4px solid ${COLORS.navActive}`, paddingLeft: '12px', margin: '10px 0', background: '#f0f9ff', padding: '10px', fontSize: '12px' }}>{line.replace('> ', '')}</blockquote>;
+                        return line.trim() ? <p key={i} style={{ margin: '6px 0' }}>{line}</p> : <div key={i} style={{ height: '6px' }} />;
                       })}
                     </div>
                   ) : (
-                    <div dangerouslySetInnerHTML={{ __html: viewingRecord.ai_output }} style={{ fontSize: '14px', lineHeight: '1.8', color: COLORS.darkText, fontFamily: FONT_FAMILY, fontWeight: '400' }} />
+                    <div dangerouslySetInnerHTML={{ __html: viewingRecord.ai_output }} style={{ fontSize: '13px', lineHeight: '1.6', color: COLORS.darkText, fontFamily: FONT_FAMILY, fontWeight: '400' }} />
                   )}
                 </>
               ) : (
@@ -1121,11 +1134,15 @@ export default function App() {
             </div>
 
             {viewingRecord.ai_output && (
-              <div style={{ padding: '16px', borderTop: `1px solid ${COLORS.borderColor}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: '12px', color: COLORS.lightText }}>{viewingRecord.word_count || 0} words • Format: {viewMarkdown ? 'Markdown' : 'HTML'}</span>
-                <div style={{ display: 'flex', gap: '12px' }}>
-                  <button onClick={handleExportPDF} style={{ padding: '8px 16px', background: COLORS.navActive, color: COLORS.white, border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '500', fontSize: '13px', fontFamily: FONT_FAMILY }}>📄 PDF</button>
-                  <button onClick={handleExportWord} style={{ padding: '8px 16px', background: COLORS.navActive, color: COLORS.white, border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '500', fontSize: '13px', fontFamily: FONT_FAMILY }}>📝 Word</button>
+              <div style={{ padding: '16px', borderTop: `1px solid ${COLORS.borderColor}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: COLORS.lightBg }}>
+                <span style={{ fontSize: '11px', color: COLORS.lightText, fontWeight: '500' }}>{viewingRecord.word_count || 0} words • Format: {viewMarkdown ? 'Markdown' : 'HTML'}</span>
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  <button onClick={handleExportPDF} style={{ padding: '8px 14px', background: COLORS.navActive, color: COLORS.white, border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '500', fontSize: '12px', fontFamily: FONT_FAMILY, display: 'flex', alignItems: 'center', gap: '6px', transition: 'all 0.2s' }}>
+                    <Download size={14} /> PDF
+                  </button>
+                  <button onClick={handleExportWord} style={{ padding: '8px 14px', background: COLORS.navActive, color: COLORS.white, border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '500', fontSize: '12px', fontFamily: FONT_FAMILY, display: 'flex', alignItems: 'center', gap: '6px', transition: 'all 0.2s' }}>
+                    <Download size={14} /> Word
+                  </button>
                 </div>
               </div>
             )}

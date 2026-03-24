@@ -449,35 +449,37 @@ export default function App() {
       if (viewMarkdown) {
         // Convert markdown to HTML
         contentHtml = markdownContent
-          .replace(/^### (.*?)$/gm, '<h3 style="font-size:18px;margin:12px 0 8px 0;font-weight:600;">$1</h3>')
-          .replace(/^## (.*?)$/gm, '<h2 style="font-size:22px;margin:16px 0 10px 0;font-weight:600;">$1</h2>')
-          .replace(/^# (.*?)$/gm, '<h1 style="font-size:28px;margin:20px 0 12px 0;font-weight:700;">$1</h1>')
+          .replace(/^### (.*?)$/gm, '<h3 style="font-size:16px;margin:12px 0 6px 0;font-weight:600;">$1</h3>')
+          .replace(/^## (.*?)$/gm, '<h2 style="font-size:18px;margin:14px 0 8px 0;font-weight:600;">$1</h2>')
+          .replace(/^# (.*?)$/gm, '<h1 style="font-size:20px;margin:16px 0 10px 0;font-weight:700;">$1</h1>')
           .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
           .replace(/\*(.*?)\*/g, '<em>$1</em>')
           .replace(/^- (.*?)$/gm, '<li style="margin-left:24px;">$1</li>')
           .replace(/(?:<li.*?<\/li>)/s, (match) => `<ul style="margin:8px 0;">${match}</ul>`)
-          .replace(/^> (.*?)$/gm, '<blockquote style="border-left:4px solid #2563eb;padding-left:12px;margin:12px 0;background:#f0f9ff;padding:12px;">$1</blockquote>')
+          .replace(/^> (.*?)$/gm, '<blockquote style="border-left:4px solid #2563eb;padding-left:12px;margin:10px 0;background:#f0f9ff;padding:10px;font-size:13px;">$1</blockquote>')
           .replace(/`(.*?)`/g, '<code style="background:#f3f4f6;padding:2px 6px;border-radius:3px;">$1</code>')
           .replace(/```(.*?)```/gs, '<pre style="background:#f3f4f6;padding:12px;border-radius:6px;overflow-x:auto;"><code>$1</code></pre>');
       }
 
       const element = document.createElement('div');
+      element.style.width = '100%';
+      element.style.padding = '20px';
       element.innerHTML = `
-        <div style="font-family: Lexend, sans-serif; padding: 20px; color: #0f172a;">
-          <h1 style="font-size: 28px; margin-bottom: 8px;">${viewingRecord.topic}</h1>
-          <p style="color: #6b7280; margin-bottom: 20px;">Class ${viewingRecord.class} | ${viewingRecord.subject}</p>
+        <div style="font-family: Lexend, sans-serif; color: #0f172a; max-width: 100%; word-wrap: break-word;">
+          <h1 style="font-size: 24px; margin-bottom: 8px;">${viewingRecord.topic}</h1>
+          <p style="color: #6b7280; margin-bottom: 20px; font-size: 13px;">Class ${viewingRecord.class} | ${viewingRecord.subject}</p>
           <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 20px 0;">
-          <div style="line-height: 1.8; font-size: 14px;">${contentHtml}</div>
+          <div style="line-height: 1.6; font-size: 13px; color: #0f172a; overflow-wrap: break-word; word-break: break-word;">${contentHtml}</div>
         </div>
       `;
 
       if (typeof window !== 'undefined' && window.html2pdf) {
         const opt = {
-          margin: 10,
+          margin: [10, 10, 10, 10],
           filename: `${viewingRecord.topic}.pdf`,
           image: { type: 'jpeg', quality: 0.98 },
-          html2canvas: { scale: 2 },
-          jsPDF: { orientation: 'portrait', unit: 'mm', format: 'a4' }
+          html2canvas: { scale: 2, useCORS: true, allowTaint: true },
+          jsPDF: { orientation: 'portrait', unit: 'mm', format: 'a4', compress: true }
         };
         window.html2pdf().set(opt).from(element).save();
       } else {
@@ -485,6 +487,27 @@ export default function App() {
       }
     } catch (err) {
       alert('PDF export failed: ' + err.message);
+    }
+  };
+
+  // ===== COPY TO CLIPBOARD =====
+  const handleCopyContent = async () => {
+    if (!viewingRecord || !viewingRecord.ai_output) return;
+
+    try {
+      let contentToCopy = viewingRecord.ai_output;
+
+      if (!viewMarkdown) {
+        // If viewing HTML, strip tags
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = contentToCopy;
+        contentToCopy = tempDiv.textContent || '';
+      }
+
+      await navigator.clipboard.writeText(contentToCopy);
+      alert('✓ Content copied to clipboard!');
+    } catch (err) {
+      alert('Failed to copy: ' + err.message);
     }
   };
 
@@ -1137,6 +1160,9 @@ export default function App() {
               <div style={{ padding: '16px', borderTop: `1px solid ${COLORS.borderColor}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: COLORS.lightBg }}>
                 <span style={{ fontSize: '11px', color: COLORS.lightText, fontWeight: '500' }}>{viewingRecord.word_count || 0} words • Format: {viewMarkdown ? 'Markdown' : 'HTML'}</span>
                 <div style={{ display: 'flex', gap: '10px' }}>
+                  <button onClick={handleCopyContent} style={{ padding: '8px 14px', background: '#6366f1', color: COLORS.white, border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '500', fontSize: '12px', fontFamily: FONT_FAMILY, display: 'flex', alignItems: 'center', gap: '6px', transition: 'all 0.2s' }} title="Copy content">
+                    <Copy size={14} /> Copy
+                  </button>
                   <button onClick={handleExportPDF} style={{ padding: '8px 14px', background: COLORS.navActive, color: COLORS.white, border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '500', fontSize: '12px', fontFamily: FONT_FAMILY, display: 'flex', alignItems: 'center', gap: '6px', transition: 'all 0.2s' }}>
                     <Download size={14} /> PDF
                   </button>

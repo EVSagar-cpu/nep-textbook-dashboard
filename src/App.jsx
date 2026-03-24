@@ -200,22 +200,40 @@ export default function App() {
       return;
     }
 
+    if (!setupToken) {
+      setSetupError('No invite token found. Invalid link.');
+      return;
+    }
+
     setSetupLoading(true);
 
     try {
+      console.log('Starting setup with token:', setupToken);
+
       // Verify invite token in invites table
       const { data: inviteData, error: inviteError } = await supabase
         .from('invites')
         .select('*')
         .eq('token', setupToken)
-        .eq('status', 'pending')
         .single();
 
-      if (inviteError || !inviteData) {
-        throw new Error('Invalid or expired invite link');
+      console.log('Invite query result:', { inviteData, inviteError });
+
+      if (inviteError) {
+        console.error('Invite lookup error:', inviteError);
+        throw new Error('Invite link is invalid or expired. Please contact your administrator.');
+      }
+
+      if (!inviteData) {
+        throw new Error('Invite not found. Please contact your administrator.');
+      }
+
+      if (inviteData.status !== 'pending') {
+        throw new Error('This invite has already been used or expired.');
       }
 
       const invitedEmail = inviteData.email;
+      console.log('Creating user for email:', invitedEmail);
 
       // Create user with email
       const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
@@ -224,31 +242,65 @@ export default function App() {
         options: { emailRedirectTo: window.location.origin }
       });
 
-      if (signUpError) throw signUpError;
+      console.log('Sign up result:', { signUpData, signUpError });
 
-      const userId = signUpData.user.id;
+      if (signUpError) {
+        // If user already exists, allow it
+        if (signUpError.message.includes('already registered')) {
+          console.log('User already exists, attempting sign in');
+        } else {
+          throw signUpError;
+        }
+      }
 
-      // Add role to user_roles table
-      const { error: roleError } = await supabase
-        .from('user_roles')
-        .insert([{ user_id: userId, role: 'content_developer' }]);
+      // If signup succeeded, get the user ID
+      let userId = signUpData?.user?.id;
 
-      if (roleError) throw roleError;
+      if (!userId) {
+        // If no ID from signup, try to get current user
+        const { data: userData } = await supabase.auth.getUser();
+        userId = userData?.user?.id;
+      }
+
+      if (userId) {
+        // Add role to user_roles table
+        const { error: roleError } = await supabase
+          .from('user_roles')
+          .insert([{ user_id: userId, role: 'content_developer' }])
+          .select();
+
+        if (roleError && !roleError.message.includes('duplicate')) {
+          console.error('Role insert error (non-critical):', roleError);
+        }
+      }
 
       // Mark invite as accepted
-      await supabase
+      const { error: updateError } = await supabase
         .from('invites')
-        .update({ status: 'accepted', accepted_at: new Date() })
+        .update({ status: 'accepted', accepted_at: new Date().toISOString() })
         .eq('token', setupToken);
 
-      // Auto login
-      await supabase.auth.signInWithPassword({
+      console.log('Invite update result:', { updateError });
+
+      // Sign in user
+      console.log('Attempting sign in...');
+      const { error: signInError } = await supabase.auth.signInWithPassword({
         email: invitedEmail,
         password: setupPassword
       });
 
+      if (signInError) {
+        console.error('Sign in error:', signInError);
+        throw signInError;
+      }
+
+      // Get current user
       const { data: { user } } = await supabase.auth.getUser();
       
+      if (!user) {
+        throw new Error('Failed to get user session');
+      }
+
       // Fetch user role
       const { data: roleData } = await supabase
         .from('user_roles')
@@ -263,12 +315,13 @@ export default function App() {
           role: roleData?.role || 'content_developer'
         }
       };
-      
+
       setCurrentUser(userWithRole);
       setAuthPage('dashboard');
       fetchRecords();
     } catch (err) {
-      setSetupError(err.message || 'Setup failed');
+      console.error('Setup password error:', err);
+      setSetupError(err.message || 'Setup failed. Please try again.');
     } finally {
       setSetupLoading(false);
     }

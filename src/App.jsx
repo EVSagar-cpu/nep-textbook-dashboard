@@ -971,6 +971,30 @@ export default function App() {
     setFilterContentType('All Types');
   };
 
+  // ===== HANDLE OPEN ADD FORM =====
+  const handleOpenAddForm = () => {
+    setEditingId(null);
+    setFormClass('1');
+    setFormSubject('English');
+    setFormTopic('');
+    setFormSubTopic('');
+    setFormContentType('');
+    setFormPrompt('');
+    setShowAddForm(!showAddForm);
+  };
+
+  // ===== HANDLE CANCEL FORM =====
+  const handleCancelForm = () => {
+    setShowAddForm(false);
+    setEditingId(null);
+    setFormClass('1');
+    setFormSubject('English');
+    setFormTopic('');
+    setFormSubTopic('');
+    setFormContentType('');
+    setFormPrompt('');
+  };
+
   // ===== PAGE SETTINGS TOGGLE =====
   const [showPageSettings, setShowPageSettings] = useState(false);
 
@@ -1592,7 +1616,7 @@ export default function App() {
           <p style={{ margin: '0 0 24px 0', color: COLORS.lightText, fontSize: '14px' }}>Manage and curate AI-generated curriculum materials.</p>
 
           <div style={{ display: 'flex', gap: '12px', marginBottom: '24px', flexWrap: 'wrap' }}>
-            <button onClick={() => setShowAddForm(!showAddForm)} style={{ padding: '10px 16px', background: COLORS.navActive, color: COLORS.white, border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '400', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px', fontFamily: FONT_FAMILY }}>
+            <button onClick={handleOpenAddForm} style={{ padding: '10px 16px', background: COLORS.navActive, color: COLORS.white, border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '400', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px', fontFamily: FONT_FAMILY }}>
               <Plus size={16} /> Add Record
             </button>
             <button onClick={handleExport} style={{ padding: '10px 16px', background: COLORS.filterBg, color: COLORS.darkText, border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '400', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px', fontFamily: FONT_FAMILY }}>
@@ -1660,7 +1684,7 @@ export default function App() {
                 </div>
 
                 <div style={{ display: 'flex', gap: '8px' }}>
-                  <button type="button" onClick={() => { setShowAddForm(false); setEditingId(null); }} style={{ flex: 1, padding: '10px', background: COLORS.filterBg, color: COLORS.darkText, border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '500', fontSize: '14px', fontFamily: FONT_FAMILY }}>
+                  <button type="button" onClick={handleCancelForm} style={{ flex: 1, padding: '10px', background: COLORS.filterBg, color: COLORS.darkText, border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '500', fontSize: '14px', fontFamily: FONT_FAMILY }}>
                     Cancel
                   </button>
                   <button type="submit" disabled={formLoading} style={{ flex: 1, padding: '10px', background: COLORS.navActive, color: COLORS.white, border: 'none', borderRadius: '6px', cursor: formLoading ? 'not-allowed' : 'pointer', fontWeight: '500', fontSize: '14px', fontFamily: FONT_FAMILY }}>

@@ -1701,6 +1701,8 @@ export default function App() {
                   {['All Types', ...CONTENT_TYPES].map(t => <option key={t}>{t}</option>)}
                 </select>
               </div>
+            </div>
+          </div>
 
           <div style={{ background: COLORS.white, borderRadius: '12px', border: `1px solid ${COLORS.borderColor}`, overflow: 'hidden' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>

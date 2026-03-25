@@ -207,13 +207,13 @@ export default function App() {
               pageBreakInside: 'avoid'
             }}>
               <thead>
-                <tr style={{ background: '#2563eb', color: 'white' }}>
+                <tr style={{ background: '#64748b', color: 'white' }}>
                   {rows[0].map((cell, idx) => (
                     <th key={idx} style={{
                       padding: '12px',
                       textAlign: 'left',
                       fontWeight: '600',
-                      borderBottom: `2px solid #1e40af`
+                      borderBottom: `2px solid #475569`
                     }}>
                       {cell}
                     </th>
@@ -796,9 +796,9 @@ export default function App() {
             );
 
             if (rows.length > 0) {
-              html += '<table style="width:100%;border-collapse:collapse;margin:12px 0;border:1px solid #e5e7eb;page-break-inside:avoid;"><thead><tr style="background:#2563eb;color:white;">';
+              html += '<table style="width:100%;border-collapse:collapse;margin:12px 0;border:1px solid #e5e7eb;page-break-inside:avoid;"><thead><tr style="background:#64748b;color:white;">';
               rows[0].forEach(cell => {
-                html += `<th style="padding:10px;text-align:left;font-weight:600;border-bottom:2px solid #1e40af;">${cell}</th>`;
+                html += `<th style="padding:10px;text-align:left;font-weight:600;border-bottom:2px solid #475569;">${cell}</th>`;
               });
               html += '</tr></thead><tbody>';
               rows.slice(1).forEach((row, idx) => {
@@ -942,186 +942,245 @@ export default function App() {
     setFilterTopic('');
   };
 
+  // ===== PAGE SETTINGS TOGGLE =====
+  const [showPageSettings, setShowPageSettings] = useState(false);
+
   // ===== PAGE SETTINGS PANEL =====
   const renderPageSettingsPanel = () => {
     const dimensions = getPaperDimensions();
     
     return (
-      <div style={{
-        position: 'fixed',
-        bottom: '20px',
-        right: '20px',
-        background: COLORS.white,
-        border: `1px solid ${COLORS.borderColor}`,
-        borderRadius: '8px',
-        padding: '16px',
-        width: '320px',
-        boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-        zIndex: 999,
-        maxHeight: '500px',
-        overflowY: 'auto',
-        fontFamily: FONT_FAMILY
-      }}>
-        <h3 style={{ margin: '0 0 12px 0', fontSize: '14px', fontWeight: '600', color: COLORS.darkText }}>
-          📄 PDF & Page Settings
-        </h3>
-        
-        <div style={{ marginBottom: '12px' }}>
-          <label style={{ display: 'block', fontSize: '11px', fontWeight: '500', color: COLORS.darkText, marginBottom: '4px', textTransform: 'uppercase' }}>
-            Paper Size
-          </label>
-          <select 
-            value={pageSettings.paperSize}
-            onChange={(e) => {
-              const size = e.target.value;
-              if (size !== 'Custom') {
-                const dims = PAPER_SIZES[size];
-                setPageSettings({
-                  ...pageSettings,
-                  paperSize: size,
-                  customWidth: dims.width,
-                  customHeight: dims.height
-                });
-              } else {
-                setPageSettings({ ...pageSettings, paperSize: 'Custom' });
-              }
-            }}
-            style={{
+      <>
+        {/* Floating Toggle Button */}
+        <button
+          onClick={() => setShowPageSettings(!showPageSettings)}
+          style={{
+            position: 'fixed',
+            bottom: '20px',
+            right: '20px',
+            width: '60px',
+            height: '60px',
+            background: COLORS.navActive,
+            color: COLORS.white,
+            border: 'none',
+            borderRadius: '50%',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '28px',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
+            zIndex: 998,
+            transition: 'transform 0.2s, box-shadow 0.2s',
+            fontFamily: FONT_FAMILY
+          }}
+          onMouseEnter={(e) => {
+            e.target.style.transform = 'scale(1.1)';
+            e.target.style.boxShadow = '0 6px 16px rgba(0,0,0,0.3)';
+          }}
+          onMouseLeave={(e) => {
+            e.target.style.transform = 'scale(1)';
+            e.target.style.boxShadow = '0 4px 12px rgba(0,0,0,0.2)';
+          }}
+          title="PDF Page Settings"
+        >
+          📄
+        </button>
+
+        {/* Settings Modal */}
+        {showPageSettings && (
+          <div style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 999
+          }} onClick={() => setShowPageSettings(false)}>
+            <div style={{
+              background: COLORS.white,
+              borderRadius: '12px',
+              padding: '24px',
               width: '100%',
-              padding: '8px',
-              border: `1px solid ${COLORS.borderColor}`,
-              borderRadius: '4px',
-              fontSize: '12px',
-              fontFamily: FONT_FAMILY
-            }}
-          >
-            {Object.keys(PAPER_SIZES).map(size => (
-              <option key={size} value={size}>{PAPER_SIZES[size].label}</option>
-            ))}
-            <option value="Custom">Custom Size</option>
-          </select>
-        </div>
+              maxWidth: '400px',
+              boxShadow: '0 20px 40px rgba(0,0,0,0.2)',
+              fontFamily: FONT_FAMILY,
+              maxHeight: '90vh',
+              overflowY: 'auto'
+            }} onClick={e => e.stopPropagation()}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                <h2 style={{ margin: 0, fontSize: '18px', fontWeight: '600', color: COLORS.darkText }}>
+                  📄 PDF Settings
+                </h2>
+                <button 
+                  onClick={() => setShowPageSettings(false)}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '20px', padding: '4px' }}
+                >
+                  ✕
+                </button>
+              </div>
+              
+              <div style={{ marginBottom: '12px' }}>
+                <label style={{ display: 'block', fontSize: '11px', fontWeight: '500', color: COLORS.darkText, marginBottom: '4px', textTransform: 'uppercase' }}>
+                  Paper Size
+                </label>
+                <select 
+                  value={pageSettings.paperSize}
+                  onChange={(e) => {
+                    const size = e.target.value;
+                    if (size !== 'Custom') {
+                      const dims = PAPER_SIZES[size];
+                      setPageSettings({
+                        ...pageSettings,
+                        paperSize: size,
+                        customWidth: dims.width,
+                        customHeight: dims.height
+                      });
+                    } else {
+                      setPageSettings({ ...pageSettings, paperSize: 'Custom' });
+                    }
+                  }}
+                  style={{
+                    width: '100%',
+                    padding: '8px',
+                    border: `1px solid ${COLORS.borderColor}`,
+                    borderRadius: '4px',
+                    fontSize: '12px',
+                    fontFamily: FONT_FAMILY
+                  }}
+                >
+                  {Object.keys(PAPER_SIZES).map(size => (
+                    <option key={size} value={size}>{PAPER_SIZES[size].label}</option>
+                  ))}
+                  <option value="Custom">Custom Size</option>
+                </select>
+              </div>
 
-        <div style={{ marginBottom: '12px' }}>
-          <label style={{ display: 'block', fontSize: '11px', fontWeight: '500', color: COLORS.darkText, marginBottom: '4px', textTransform: 'uppercase' }}>
-            Orientation
-          </label>
-          <div style={{ display: 'flex', gap: '8px' }}>
-            <button
-              onClick={() => setPageSettings({ ...pageSettings, orientation: 'portrait' })}
-              style={{
-                flex: 1,
-                padding: '8px',
-                background: pageSettings.orientation === 'portrait' ? COLORS.navActive : COLORS.filterBg,
-                color: pageSettings.orientation === 'portrait' ? COLORS.white : COLORS.darkText,
-                border: 'none',
-                borderRadius: '4px',
-                cursor: 'pointer',
-                fontSize: '12px',
-                fontWeight: '500',
-                fontFamily: FONT_FAMILY
-              }}
-            >
-              📗 Portrait
-            </button>
-            <button
-              onClick={() => setPageSettings({ ...pageSettings, orientation: 'landscape' })}
-              style={{
-                flex: 1,
-                padding: '8px',
-                background: pageSettings.orientation === 'landscape' ? COLORS.navActive : COLORS.filterBg,
-                color: pageSettings.orientation === 'landscape' ? COLORS.white : COLORS.darkText,
-                border: 'none',
-                borderRadius: '4px',
-                cursor: 'pointer',
-                fontSize: '12px',
-                fontWeight: '500',
-                fontFamily: FONT_FAMILY
-              }}
-            >
-              📕 Landscape
-            </button>
-          </div>
-        </div>
+              <div style={{ marginBottom: '12px' }}>
+                <label style={{ display: 'block', fontSize: '11px', fontWeight: '500', color: COLORS.darkText, marginBottom: '4px', textTransform: 'uppercase' }}>
+                  Orientation
+                </label>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button
+                    onClick={() => setPageSettings({ ...pageSettings, orientation: 'portrait' })}
+                    style={{
+                      flex: 1,
+                      padding: '8px',
+                      background: pageSettings.orientation === 'portrait' ? COLORS.navActive : COLORS.filterBg,
+                      color: pageSettings.orientation === 'portrait' ? COLORS.white : COLORS.darkText,
+                      border: 'none',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      fontSize: '12px',
+                      fontWeight: '500',
+                      fontFamily: FONT_FAMILY
+                    }}
+                  >
+                    📗 Portrait
+                  </button>
+                  <button
+                    onClick={() => setPageSettings({ ...pageSettings, orientation: 'landscape' })}
+                    style={{
+                      flex: 1,
+                      padding: '8px',
+                      background: pageSettings.orientation === 'landscape' ? COLORS.navActive : COLORS.filterBg,
+                      color: pageSettings.orientation === 'landscape' ? COLORS.white : COLORS.darkText,
+                      border: 'none',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      fontSize: '12px',
+                      fontWeight: '500',
+                      fontFamily: FONT_FAMILY
+                    }}
+                  >
+                    📕 Landscape
+                  </button>
+                </div>
+              </div>
 
-        {pageSettings.paperSize === 'Custom' && (
-          <div style={{ marginBottom: '12px', background: COLORS.filterBg, padding: '10px', borderRadius: '4px' }}>
-            <label style={{ display: 'block', fontSize: '11px', fontWeight: '500', color: COLORS.darkText, marginBottom: '4px' }}>
-              Width (mm)
-            </label>
-            <input
-              type="number"
-              value={pageSettings.customWidth}
-              onChange={(e) => setPageSettings({ ...pageSettings, customWidth: parseInt(e.target.value) || 210 })}
-              style={{
-                width: '100%',
-                padding: '6px',
-                border: `1px solid ${COLORS.borderColor}`,
-                borderRadius: '4px',
-                fontSize: '12px',
-                marginBottom: '8px',
-                fontFamily: FONT_FAMILY
-              }}
-              min="50"
-              max="1000"
-            />
-            
-            <label style={{ display: 'block', fontSize: '11px', fontWeight: '500', color: COLORS.darkText, marginBottom: '4px' }}>
-              Height (mm)
-            </label>
-            <input
-              type="number"
-              value={pageSettings.customHeight}
-              onChange={(e) => setPageSettings({ ...pageSettings, customHeight: parseInt(e.target.value) || 297 })}
-              style={{
-                width: '100%',
-                padding: '6px',
-                border: `1px solid ${COLORS.borderColor}`,
-                borderRadius: '4px',
-                fontSize: '12px',
-                fontFamily: FONT_FAMILY
-              }}
-              min="50"
-              max="1000"
-            />
+              {pageSettings.paperSize === 'Custom' && (
+                <div style={{ marginBottom: '12px', background: COLORS.filterBg, padding: '10px', borderRadius: '4px' }}>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: '500', color: COLORS.darkText, marginBottom: '4px' }}>
+                    Width (mm)
+                  </label>
+                  <input
+                    type="number"
+                    value={pageSettings.customWidth}
+                    onChange={(e) => setPageSettings({ ...pageSettings, customWidth: parseInt(e.target.value) || 210 })}
+                    style={{
+                      width: '100%',
+                      padding: '6px',
+                      border: `1px solid ${COLORS.borderColor}`,
+                      borderRadius: '4px',
+                      fontSize: '12px',
+                      marginBottom: '8px',
+                      fontFamily: FONT_FAMILY
+                    }}
+                    min="50"
+                    max="1000"
+                  />
+                  
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: '500', color: COLORS.darkText, marginBottom: '4px' }}>
+                    Height (mm)
+                  </label>
+                  <input
+                    type="number"
+                    value={pageSettings.customHeight}
+                    onChange={(e) => setPageSettings({ ...pageSettings, customHeight: parseInt(e.target.value) || 297 })}
+                    style={{
+                      width: '100%',
+                      padding: '6px',
+                      border: `1px solid ${COLORS.borderColor}`,
+                      borderRadius: '4px',
+                      fontSize: '12px',
+                      fontFamily: FONT_FAMILY
+                    }}
+                    min="50"
+                    max="1000"
+                  />
+                </div>
+              )}
+
+              <div style={{ marginBottom: '12px' }}>
+                <label style={{ display: 'block', fontSize: '11px', fontWeight: '500', color: COLORS.darkText, marginBottom: '4px', textTransform: 'uppercase' }}>
+                  Margins (mm)
+                </label>
+                <input
+                  type="number"
+                  value={pageSettings.margins}
+                  onChange={(e) => setPageSettings({ ...pageSettings, margins: parseInt(e.target.value) || 10 })}
+                  style={{
+                    width: '100%',
+                    padding: '8px',
+                    border: `1px solid ${COLORS.borderColor}`,
+                    borderRadius: '4px',
+                    fontSize: '12px',
+                    fontFamily: FONT_FAMILY
+                  }}
+                  min="0"
+                  max="50"
+                />
+              
+              <div style={{ borderTop: `1px solid ${COLORS.borderColor}`, paddingTop: '16px', marginTop: '16px' }}>
+                <div style={{
+                  background: COLORS.lightBg,
+                  padding: '12px',
+                  borderRadius: '4px',
+                  fontSize: '11px',
+                  color: COLORS.lightText,
+                  fontFamily: FONT_FAMILY
+                }}>
+                  <strong>Current Settings:</strong><br/>
+                  {dimensions.width} × {dimensions.height} mm<br/>
+                  {pageSettings.orientation === 'portrait' ? '📗 Portrait' : '📕 Landscape'}<br/>
+                  Margins: {pageSettings.margins}mm
+                </div>
+              </div>
+            </div>
           </div>
         )}
-
-        <div style={{ marginBottom: '12px' }}>
-          <label style={{ display: 'block', fontSize: '11px', fontWeight: '500', color: COLORS.darkText, marginBottom: '4px', textTransform: 'uppercase' }}>
-            Margins (mm)
-          </label>
-          <input
-            type="number"
-            value={pageSettings.margins}
-            onChange={(e) => setPageSettings({ ...pageSettings, margins: parseInt(e.target.value) || 10 })}
-            style={{
-              width: '100%',
-              padding: '8px',
-              border: `1px solid ${COLORS.borderColor}`,
-              borderRadius: '4px',
-              fontSize: '12px',
-              fontFamily: FONT_FAMILY
-            }}
-            min="0"
-            max="50"
-          />
-        </div>
-
-        <div style={{
-          background: COLORS.lightBg,
-          padding: '10px',
-          borderRadius: '4px',
-          fontSize: '11px',
-          color: COLORS.lightText,
-          fontFamily: FONT_FAMILY
-        }}>
-          <strong>Current:</strong><br/>
-          {dimensions.width} × {dimensions.height} mm<br/>
-          {pageSettings.orientation === 'portrait' ? '📗 Portrait' : '📕 Landscape'}<br/>
-          Margins: {pageSettings.margins}mm
-        </div>
-      </div>
+      </>
     );
   };
 
@@ -1602,7 +1661,7 @@ export default function App() {
           <div style={{ background: COLORS.white, borderRadius: '12px', border: `1px solid ${COLORS.borderColor}`, overflow: 'hidden' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
-                <tr style={{ background: COLORS.navActive, color: COLORS.white }}>
+                <tr style={{ background: '#64748b', color: COLORS.white }}>
                   {['ID', 'CLASS', 'SUBJECT', 'TOPIC', 'STATUS', 'WORDS', 'ACTION'].map(h => (
                     <th key={h} style={{ padding: '12px', textAlign: 'left', fontSize: '11px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                       {h}
@@ -1647,75 +1706,205 @@ export default function App() {
         </div>
       </div>
 
-      {/* VIEW MODAL */}
+      {/* VIEW MODAL - CENTERED LARGE DIALOG */}
       {viewingRecord && (
         <div style={{
           position: 'fixed',
           inset: 0,
-          background: 'rgba(0, 0, 0, 0.5)',
+          background: 'rgba(0, 0, 0, 0.6)',
           display: 'flex',
-          justifyContent: 'flex-end',
-          zIndex: 1000
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          padding: '20px'
         }} onClick={() => setViewingRecord(null)}>
           <div style={{
             background: COLORS.white,
-            width: '600px',
-            height: '100%',
+            width: '95%',
+            maxWidth: '1000px',
+            height: '90vh',
             display: 'flex',
             flexDirection: 'column',
-            boxShadow: '-2px 0 12px rgba(0,0,0,0.1)',
+            borderRadius: '12px',
+            boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
             overflow: 'hidden'
           }} onClick={e => e.stopPropagation()}>
-            <div style={{ padding: '16px 20px', borderBottom: `1px solid ${COLORS.borderColor}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h2 style={{ margin: 0, fontSize: '16px', fontWeight: '600', color: COLORS.darkText }}>
-                {viewingRecord.topic}
-              </h2>
-              <button onClick={() => setViewingRecord(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px' }}>
-                <X size={20} />
+            {/* HEADER */}
+            <div style={{ 
+              padding: '20px 24px', 
+              borderBottom: `1px solid ${COLORS.borderColor}`, 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              alignItems: 'center',
+              background: 'linear-gradient(135deg, #f5f6f8 0%, #ffffff 100%)'
+            }}>
+              <div>
+                <h2 style={{ margin: '0 0 4px 0', fontSize: '24px', fontWeight: '700', color: COLORS.darkText }}>
+                  {viewingRecord.topic}
+                </h2>
+                <p style={{ margin: 0, fontSize: '13px', color: COLORS.lightText }}>
+                  Class {viewingRecord.class} • {viewingRecord.subject} • {viewingRecord.sub_topic || 'N/A'}
+                </p>
+              </div>
+              <button 
+                onClick={() => setViewingRecord(null)} 
+                style={{ 
+                  background: 'none', 
+                  border: 'none', 
+                  cursor: 'pointer', 
+                  padding: '8px',
+                  fontSize: '24px',
+                  color: COLORS.lightText
+                }}
+              >
+                ✕
               </button>
             </div>
 
-            <div style={{ padding: '16px 20px', borderBottom: `1px solid ${COLORS.borderColor}`, display: 'flex', gap: '16px' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', cursor: 'pointer' }}>
-                <input type="radio" checked={viewMarkdown} onChange={() => setViewMarkdown(true)} />
-                Markdown
-              </label>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', cursor: 'pointer' }}>
-                <input type="radio" checked={!viewMarkdown} onChange={() => setViewMarkdown(false)} />
-                HTML
-              </label>
+            {/* CONTROLS */}
+            <div style={{ 
+              padding: '12px 24px', 
+              borderBottom: `1px solid ${COLORS.borderColor}`, 
+              display: 'flex', 
+              gap: '16px',
+              alignItems: 'center',
+              background: COLORS.lightBg
+            }}>
+              <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', cursor: 'pointer', fontWeight: '500' }}>
+                  <input type="radio" checked={viewMarkdown} onChange={() => setViewMarkdown(true)} />
+                  <span>Markdown</span>
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', cursor: 'pointer', fontWeight: '500' }}>
+                  <input type="radio" checked={!viewMarkdown} onChange={() => setViewMarkdown(false)} />
+                  <span>HTML</span>
+                </label>
+              </div>
+              <div style={{ marginLeft: 'auto', display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <span style={{ fontSize: '11px', color: COLORS.lightText, fontWeight: '500' }}>
+                  {viewingRecord.word_count || 0} words
+                </span>
+              </div>
             </div>
 
-            <div style={{ flex: 1, overflowY: 'auto', padding: '20px' }}>
+            {/* CONTENT */}
+            <div style={{ 
+              flex: 1, 
+              overflowY: 'auto', 
+              padding: '28px 32px',
+              background: COLORS.white
+            }}>
               {viewingRecord.ai_output ? (
                 <>
                   {viewMarkdown ? (
-                    <div style={{ fontSize: '13px', lineHeight: '1.6', color: COLORS.darkText, fontFamily: FONT_FAMILY, fontWeight: '400' }}>
+                    <div style={{ 
+                      fontSize: '14px', 
+                      lineHeight: '1.8', 
+                      color: COLORS.darkText, 
+                      fontFamily: FONT_FAMILY, 
+                      fontWeight: '400',
+                      maxWidth: '800px'
+                    }}>
                       {parseMarkdownToReact(viewingRecord.ai_output)}
                     </div>
                   ) : (
-                    <div dangerouslySetInnerHTML={{ __html: viewingRecord.ai_output }} style={{ fontSize: '13px', lineHeight: '1.6', color: COLORS.darkText, fontFamily: FONT_FAMILY, fontWeight: '400' }} />
+                    <div 
+                      dangerouslySetInnerHTML={{ __html: viewingRecord.ai_output }} 
+                      style={{ 
+                        fontSize: '14px', 
+                        lineHeight: '1.8', 
+                        color: COLORS.darkText, 
+                        fontFamily: FONT_FAMILY, 
+                        fontWeight: '400',
+                        maxWidth: '800px'
+                      }} 
+                    />
                   )}
                 </>
               ) : (
-                <div style={{ textAlign: 'center', color: COLORS.lightText, padding: '40px' }}>No content generated yet.</div>
+                <div style={{ textAlign: 'center', color: COLORS.lightText, padding: '60px 20px', fontSize: '16px' }}>
+                  ⏳ No content generated yet. Please wait for Claude AI to generate the content.
+                </div>
               )}
             </div>
 
+            {/* FOOTER WITH ACTIONS */}
             {viewingRecord.ai_output && (
-              <div style={{ padding: '16px', borderTop: `1px solid ${COLORS.borderColor}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: COLORS.lightBg }}>
-                <span style={{ fontSize: '11px', color: COLORS.lightText, fontWeight: '500' }}>{viewingRecord.word_count || 0} words • Format: {viewMarkdown ? 'Markdown' : 'HTML'}</span>
-                <div style={{ display: 'flex', gap: '10px' }}>
-                  <button onClick={handleCopyContent} style={{ padding: '8px 14px', background: '#6366f1', color: COLORS.white, border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '500', fontSize: '12px', fontFamily: FONT_FAMILY, display: 'flex', alignItems: 'center', gap: '6px', transition: 'all 0.2s' }} title="Copy content">
-                    <Copy size={14} /> Copy
-                  </button>
-                  <button onClick={handleExportPDF} style={{ padding: '8px 14px', background: COLORS.navActive, color: COLORS.white, border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '500', fontSize: '12px', fontFamily: FONT_FAMILY, display: 'flex', alignItems: 'center', gap: '6px', transition: 'all 0.2s' }}>
-                    <Download size={14} /> PDF
-                  </button>
-                  <button onClick={handleExportWord} style={{ padding: '8px 14px', background: COLORS.navActive, color: COLORS.white, border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '500', fontSize: '12px', fontFamily: FONT_FAMILY, display: 'flex', alignItems: 'center', gap: '6px', transition: 'all 0.2s' }}>
-                    <Download size={14} /> Word
-                  </button>
-                </div>
+              <div style={{ 
+                padding: '16px 24px', 
+                borderTop: `1px solid ${COLORS.borderColor}`, 
+                display: 'flex', 
+                justifyContent: 'flex-end',
+                gap: '12px',
+                background: COLORS.lightBg
+              }}>
+                <button 
+                  onClick={handleCopyContent} 
+                  style={{ 
+                    padding: '10px 18px', 
+                    background: '#6366f1', 
+                    color: COLORS.white, 
+                    border: 'none', 
+                    borderRadius: '6px', 
+                    cursor: 'pointer', 
+                    fontWeight: '500', 
+                    fontSize: '13px', 
+                    fontFamily: FONT_FAMILY, 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: '8px',
+                    transition: 'all 0.2s'
+                  }}
+                  onMouseEnter={(e) => e.target.style.background = '#4f46e5'}
+                  onMouseLeave={(e) => e.target.style.background = '#6366f1'}
+                  title="Copy all content"
+                > 
+                  <Copy size={16} /> Copy
+                </button>
+                <button 
+                  onClick={handleExportPDF} 
+                  style={{ 
+                    padding: '10px 18px', 
+                    background: COLORS.navActive, 
+                    color: COLORS.white, 
+                    border: 'none', 
+                    borderRadius: '6px', 
+                    cursor: 'pointer', 
+                    fontWeight: '500', 
+                    fontSize: '13px', 
+                    fontFamily: FONT_FAMILY, 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: '8px',
+                    transition: 'all 0.2s'
+                  }}
+                  onMouseEnter={(e) => e.target.style.opacity = '0.8'}
+                  onMouseLeave={(e) => e.target.style.opacity = '1'}
+                >
+                  <Download size={16} /> PDF
+                </button>
+                <button 
+                  onClick={handleExportWord} 
+                  style={{ 
+                    padding: '10px 18px', 
+                    background: COLORS.navActive, 
+                    color: COLORS.white, 
+                    border: 'none', 
+                    borderRadius: '6px', 
+                    cursor: 'pointer', 
+                    fontWeight: '500', 
+                    fontSize: '13px', 
+                    fontFamily: FONT_FAMILY, 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: '8px',
+                    transition: 'all 0.2s'
+                  }}
+                  onMouseEnter={(e) => e.target.style.opacity = '0.8'}
+                  onMouseLeave={(e) => e.target.style.opacity = '1'}
+                >
+                  <Download size={16} /> Word
+                </button>
               </div>
             )}
           </div>

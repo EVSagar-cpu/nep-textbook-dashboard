@@ -668,8 +668,11 @@ export default function App() {
         return;
       }
 
+      let result;
+
       if (editingId) {
-        await supabase
+        console.log('🔄 Updating record:', editingId);
+        result = await supabase
           .from('textbook_content')
           .update({
             class: formClass,
@@ -682,8 +685,17 @@ export default function App() {
             updated_at: new Date(),
           })
           .eq('record_id', editingId);
+        
+        if (result.error) {
+          console.error('❌ Update error:', result.error);
+          alert('Error updating record: ' + result.error.message);
+          setFormLoading(false);
+          return;
+        }
+        console.log('✅ Record updated successfully');
       } else {
-        await supabase
+        console.log('📝 Creating new record');
+        result = await supabase
           .from('textbook_content')
           .insert([{
             class: formClass,
@@ -694,8 +706,17 @@ export default function App() {
             prompt: formPrompt,
             status: 'generating',
           }]);
+        
+        if (result.error) {
+          console.error('❌ Insert error:', result.error);
+          alert('Error saving record: ' + result.error.message);
+          setFormLoading(false);
+          return;
+        }
+        console.log('✅ Record created successfully:', result.data);
       }
 
+      // Clear form
       setFormClass('1');
       setFormSubject('English');
       setFormTopic('');
@@ -704,9 +725,18 @@ export default function App() {
       setFormPrompt('');
       setShowAddForm(false);
       setEditingId(null);
-      fetchRecords();
+
+      // Wait a moment for database write to complete, then fetch
+      setTimeout(() => {
+        console.log('🔄 Fetching updated records...');
+        fetchRecords();
+        alert('Record saved successfully! (status: generating)');
+      }, 500);
+
     } catch (err) {
+      console.error('❌ Exception error:', err);
       alert('Error saving record: ' + err.message);
+      setFormLoading(false);
     } finally {
       setFormLoading(false);
     }
@@ -1676,7 +1706,7 @@ export default function App() {
                     AI PROMPT
                     <span style={{ fontSize: '11px', color: COLORS.lightText }}>{formPrompt.length} / 20000</span>
                   </label>
-                  <textarea value={formPrompt} onChange={(e) => setFormPrompt(e.target.value.substring(0, 20000))} rows="6" style={{ width: '100%', padding: '10px', border: `1px solid ${COLORS.borderColor}`, borderRadius: '6px', fontSize: '13px', fontFamily: FONT_FAMILY, resize: 'none' }} />
+                  <textarea value={formPrompt} onChange={(e) => setFormPrompt(e.target.value.substring(0, 20000))} rows="12" style={{ width: '100%', padding: '12px', border: `1px solid ${COLORS.borderColor}`, borderRadius: '6px', fontSize: '13px', fontFamily: FONT_FAMILY, resize: 'vertical', minHeight: '240px', lineHeight: '1.5' }} />
                 </div>
 
                 <div style={{ background: '#f0f9ff', border: '1px solid #a7f3d0', borderRadius: '6px', padding: '12px', marginBottom: '16px', fontSize: '12px', color: '#065f46' }}>

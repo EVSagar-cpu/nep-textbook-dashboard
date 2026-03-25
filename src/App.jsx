@@ -1025,6 +1025,20 @@ export default function App() {
     setFormPrompt('');
   };
 
+  // ===== HANDLE EDIT RECORD =====
+  const handleEditRecord = (record) => {
+    console.log('✏️ Editing record:', record.record_id);
+    setEditingId(record.record_id);
+    setFormClass(record.class || '1');
+    setFormSubject(record.subject || 'English');
+    setFormTopic(record.topic || '');
+    setFormSubTopic(record.sub_topic || '');
+    setFormContentType(record.content_type || '');
+    setFormPrompt(record.prompt || '');
+    setShowAddForm(true);
+    console.log('✅ Edit form loaded');
+  };
+
   // ===== PAGE SETTINGS TOGGLE =====
   const [showPageSettings, setShowPageSettings] = useState(false);
 
@@ -1808,7 +1822,7 @@ export default function App() {
                       <button onClick={() => setViewingRecord(r)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', display: 'flex' }}>
                         <Eye size={18} color={COLORS.navActive} />
                       </button>
-                      <button onClick={() => { setEditingId(r.record_id); setFormClass(r.class); setFormSubject(r.subject); setFormTopic(r.topic); setFormSubTopic(r.sub_topic); setFormContentType(r.content_type); setFormPrompt(r.prompt); setShowAddForm(true); }} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', display: 'flex' }}>
+                      <button onClick={() => handleEditRecord(r)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', display: 'flex' }}>
                         <Edit2 size={18} color={COLORS.navActive} />
                       </button>
                     </td>

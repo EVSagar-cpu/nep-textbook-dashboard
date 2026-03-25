@@ -4,6 +4,12 @@ import {
   Menu, X, LogOut, Eye, Edit2, BookOpen, Plus, Download, RefreshCw,
   Mail, Check, AlertCircle, Copy, Users
 } from 'lucide-react';
+import {
+  detectErrorType,
+  showDetailedError,
+  logError,
+  checkAPIHealth
+} from './utils/errorHandling';
 
 // ===== SUPABASE CLIENT =====
 const supabase = createClient(
@@ -155,6 +161,13 @@ export default function App() {
       }
     }
     checkAuth();
+    
+    // ✅ Check Claude API health on startup
+    checkAPIHealth().then(health => {
+      if (!health.healthy) {
+        console.warn('⚠️ Claude API may be experiencing issues');
+      }
+    });
   }, []);
 
   // ===== CHECK AUTH =====
@@ -687,8 +700,8 @@ export default function App() {
           .eq('record_id', editingId);
         
         if (result.error) {
-          console.error('❌ Update error:', result.error);
-          alert('Error updating record: ' + result.error.message);
+          logError('handleSaveRecord-UPDATE', result.error, { recordId: editingId });
+          showDetailedError(result.error);
           setFormLoading(false);
           return;
         }
@@ -708,8 +721,8 @@ export default function App() {
           }]);
         
         if (result.error) {
-          console.error('❌ Insert error:', result.error);
-          alert('Error saving record: ' + result.error.message);
+          logError('handleSaveRecord-INSERT', result.error, { action: 'CREATE' });
+          showDetailedError(result.error);
           setFormLoading(false);
           return;
         }
@@ -734,8 +747,8 @@ export default function App() {
       }, 500);
 
     } catch (err) {
-      console.error('❌ Exception error:', err);
-      alert('Error saving record: ' + err.message);
+      logError('handleSaveRecord-EXCEPTION', err, { context: 'try-catch' });
+      showDetailedError(err);
       setFormLoading(false);
     } finally {
       setFormLoading(false);

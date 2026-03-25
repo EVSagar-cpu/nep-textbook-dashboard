@@ -1,10 +1,9 @@
 // ============================================================================
-// COMPREHENSIVE ERROR HANDLING SYSTEM
-// Add this to your App.jsx to improve error messages
+// ERROR HANDLING SYSTEM - COMPREHENSIVE ERROR DETECTION & MESSAGES
 // ============================================================================
 
 // ===== ERROR TYPE DETECTION =====
-const detectErrorType = (error) => {
+export const detectErrorType = (error) => {
   const errorMsg = error?.message?.toLowerCase() || '';
   const errorCode = error?.code || '';
   
@@ -103,7 +102,7 @@ const detectErrorType = (error) => {
 };
 
 // ===== ERROR DISPLAY FUNCTION =====
-const showDetailedError = (error) => {
+export const showDetailedError = (error) => {
   const errorInfo = detectErrorType(error);
   
   // Log to console for debugging
@@ -121,6 +120,10 @@ const showDetailedError = (error) => {
     userMessage += '\n\nAction: ' + errorInfo.action;
   }
   
+  if (errorInfo.contactLink) {
+    userMessage += '\n\n' + errorInfo.contactLink;
+  }
+  
   if (errorInfo.retry) {
     userMessage += '\n\n(You can try again)';
   }
@@ -132,33 +135,8 @@ const showDetailedError = (error) => {
   return errorInfo;
 };
 
-// ============================================================================
-// USAGE IN handleSaveRecord
-// ============================================================================
-
-// Replace the current error handling in handleSaveRecord with:
-
-if (result.error) {
-  console.error('❌ Save error:', result.error);
-  const errorInfo = showDetailedError(result.error);
-  
-  // Could also log to external service here:
-  // logErrorToExternalService({
-  //   type: errorInfo.type,
-  //   timestamp: new Date(),
-  //   userId: user.id,
-  //   action: editingId ? 'UPDATE' : 'INSERT'
-  // });
-  
-  setFormLoading(false);
-  return;
-}
-
-// ============================================================================
-// ENHANCED ERROR LOGGING
-// ============================================================================
-
-const logError = (context, error, additionalData = {}) => {
+// ===== ERROR LOGGING =====
+export const logError = (context, error, additionalData = {}) => {
   const errorInfo = {
     timestamp: new Date().toISOString(),
     context: context,
@@ -174,24 +152,15 @@ const logError = (context, error, additionalData = {}) => {
   
   // Log to browser console
   console.error('📋 ERROR LOG:', errorInfo);
-  
-  // Could send to external error tracking service:
-  // fetch('/api/log-error', { method: 'POST', body: JSON.stringify(errorInfo) });
 };
 
-// Usage:
-// logError('handleSaveRecord', error, { recordId: editingId, action: 'INSERT' });
-
-// ============================================================================
-// API HEALTH CHECK
-// ============================================================================
-
-const checkAPIHealth = async () => {
+// ===== API HEALTH CHECK =====
+export const checkAPIHealth = async () => {
   try {
     // Quick test to see if Claude API is responding
     const response = await fetch('https://api.anthropic.com/v1/models', {
       headers: {
-        'x-api-key': process.env.REACT_APP_ANTHROPIC_API_KEY,
+        'x-api-key': process.env.REACT_APP_ANTHROPIC_API_KEY || '',
       }
     });
     
@@ -207,7 +176,7 @@ const checkAPIHealth = async () => {
     console.log('✅ Claude API is healthy');
     return { healthy: true };
   } catch (error) {
-    console.error('⚠️ Could not check API health:', error);
+    console.warn('⚠️ Could not check API health:', error.message);
     return {
       healthy: false,
       error: error.message
@@ -215,16 +184,8 @@ const checkAPIHealth = async () => {
   }
 };
 
-// Run on app load:
-// useEffect(() => {
-//   checkAPIHealth();
-// }, []);
-
-// ============================================================================
-// ERROR MESSAGES BY CATEGORY
-// ============================================================================
-
-const ErrorMessages = {
+// ===== ERROR MESSAGES TEMPLATES =====
+export const ErrorMessages = {
   API: {
     QUOTA_EXCEEDED: {
       title: '⚠️ API Quota Exceeded',
@@ -242,7 +203,7 @@ const ErrorMessages = {
       title: '🔴 Claude API Server Error',
       message: 'Claude API is experiencing server issues.',
       severity: 'HIGH',
-      action: 'Wait and retry, or check Anthropic status'
+      action: 'Wait and check status, or retry'
     },
     TIMEOUT: {
       title: '⏱️ Request Timeout',
@@ -275,15 +236,3 @@ const ErrorMessages = {
     }
   }
 };
-
-// ============================================================================
-// EXPORT FUNCTIONS
-// ============================================================================
-
-export {
-  detectErrorType,
-  showDetailedError,
-  logError,
-  checkAPIHealth,
-  ErrorMessages
-};  

@@ -6,13 +6,13 @@ import {
 } from 'lucide-react';
 
 // ===== SUPABASE CLIENT =====
-const supabaseUrl = 'https://syacvhjmcgpgxvczassp.supabase.co';
-const supabaseKey = 'sb_publishable_tmoQwBjJYHyMnOSGAzts2w_v-aG0iYl';
-const supabase = createClient(supabaseUrl, supabaseKey);
+const supabase = createClient(
+  'https://syacvhjmcgpgxvczassp.supabase.co',
+  'sb_publishable_tmoQwBjJYHyMnOSGAzts2w_v-aG0iYl'
+);
 
 // ===== COLORS =====
 const COLORS = {
-  sidebarBg: '#f5f6f8',
   navActive: '#2563eb',
   navText: '#5a6978',
   navDisabled: '#cbd5e0',
@@ -22,27 +22,33 @@ const COLORS = {
   lightBg: '#f9fafb',
   filterBg: '#f3f4f6',
   borderColor: '#e5e7eb',
-  statusGenerated: '#10b981',
+  sidebarBg: '#f5f6f8',
   statusGenerating: '#8b5cf6',
+  statusGenerated: '#10b981',
   statusPending: '#9ca3af',
-  errorBg: '#fee2e2',
-  errorBorder: '#fca5a5',
-  errorText: '#dc2626',
-  successBg: '#dcfce7',
-  successBorder: '#86efac',
-  successText: '#16a34a'
+  successBg: '#ecfdf5',
+  successBorder: '#a7f3d0',
+  successText: '#065f46',
+  errorBg: '#fef2f2',
+  errorBorder: '#fecaca',
+  errorText: '#991b1b',
 };
 
-const FONT_FAMILY = '"Lexend", sans-serif';
+const FONT_FAMILY = 'Lexend, sans-serif';
+
+// ===== PAPER SIZES =====
+const PAPER_SIZES = {
+  'A4': { width: 210, height: 297, label: 'A4 (210 × 297 mm)' },
+  'A3': { width: 297, height: 420, label: 'A3 (297 × 420 mm)' },
+  'Letter': { width: 216, height: 279, label: 'Letter (8.5 × 11 in)' },
+  'Legal': { width: 216, height: 356, label: 'Legal (8.5 × 14 in)' },
+};
 
 export default function App() {
   // ===== AUTH & LAYOUT =====
   const [currentUser, setCurrentUser] = useState(null);
-  const [authPage, setAuthPage] = useState('login'); // 'login', 'setup-password', 'invite-sent'
+  const [authPage, setAuthPage] = useState('login');
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [showAddForm, setShowAddForm] = useState(false);
-  const [viewingRecord, setViewingRecord] = useState(null);
-  const [editingRecord, setEditingRecord] = useState(null);
 
   // ===== INVITE SYSTEM =====
   const [showInvitePanel, setShowInvitePanel] = useState(false);
@@ -52,38 +58,37 @@ export default function App() {
   const [pendingInvites, setPendingInvites] = useState([]);
 
   // ===== PASSWORD SETUP =====
+  const [setupToken, setSetupToken] = useState('');
   const [setupPassword, setSetupPassword] = useState('');
   const [setupPasswordConfirm, setSetupPasswordConfirm] = useState('');
-  const [setupToken, setSetupToken] = useState('');
   const [setupError, setSetupError] = useState('');
   const [setupLoading, setSetupLoading] = useState(false);
 
   // ===== LOGIN =====
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
-  const [loginLoading, setLoginLoading] = useState(false);
   const [loginError, setLoginError] = useState('');
+  const [loginLoading, setLoginLoading] = useState(false);
 
   // ===== RECORDS & FILTERS =====
   const [records, setRecords] = useState([]);
-  const [filteredRecords, setFilteredRecords] = useState([]);
   const [filterClass, setFilterClass] = useState('All Classes');
   const [filterSubject, setFilterSubject] = useState('All Subjects');
   const [filterStatus, setFilterStatus] = useState('All Status');
   const [filterTopic, setFilterTopic] = useState('');
-  const [filterSubTopic, setFilterSubTopic] = useState('');
-  const [loading, setLoading] = useState(false);
 
   // ===== FORM DATA =====
-  const [formData, setFormData] = useState({
-    class: '1',
-    subject: 'English',
-    topic: '',
-    sub_topic: '',
-    prompt: ''
-  });
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [formClass, setFormClass] = useState('1');
+  const [formSubject, setFormSubject] = useState('English');
+  const [formTopic, setFormTopic] = useState('');
+  const [formSubTopic, setFormSubTopic] = useState('');
+  const [formPrompt, setFormPrompt] = useState('');
+  const [formLoading, setFormLoading] = useState(false);
+  const [editingId, setEditingId] = useState(null);
 
   // ===== VIEW MODAL =====
+  const [viewingRecord, setViewingRecord] = useState(null);
   const [viewMarkdown, setViewMarkdown] = useState(true);
 
   // ===== SUBJECTS =====
@@ -92,6 +97,71 @@ export default function App() {
     'मधुबन सरल-SL', 'तरंग-TL', 'Arts', 'Physical Education',
     'Environmental Studies', 'General Knowledge', 'Computers'
   ];
+
+  // ===== PAGE SETTINGS =====
+  const [pageSettings, setPageSettings] = useState(() => {
+    const saved = localStorage.getItem('pdfPageSettings');
+    return saved ? JSON.parse(saved) : {
+      paperSize: 'A4',
+      orientation: 'portrait',
+      customWidth: 210,
+      customHeight: 297,
+      margins: 10,
+    };
+  });
+
+  // ===== LOAD FONT & LIBS =====
+  useEffect(() => {
+    const link = document.createElement('link');
+    link.href = 'https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&display=swap';
+    link.rel = 'stylesheet';
+    document.head.appendChild(link);
+
+    const script = document.createElement('script');
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
+    document.head.appendChild(script);
+  }, []);
+
+  // ===== SAVE PAGE SETTINGS =====
+  useEffect(() => {
+    localStorage.setItem('pdfPageSettings', JSON.stringify(pageSettings));
+  }, [pageSettings]);
+
+  // ===== CHECK INVITE TOKEN ON MOUNT =====
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (hash.includes('invite_token=')) {
+      const token = new URLSearchParams(hash.substring(1)).get('invite_token');
+      if (token) {
+        setSetupToken(token);
+        setAuthPage('setup-password');
+      }
+    }
+    checkAuth();
+  }, []);
+
+  // ===== CHECK AUTH =====
+  const checkAuth = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      const { data: roleData } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id)
+        .single();
+
+      const userWithRole = {
+        ...user,
+        user_metadata: {
+          ...user.user_metadata,
+          role: roleData?.role || 'content_developer'
+        }
+      };
+      setCurrentUser(userWithRole);
+      setAuthPage('dashboard');
+      fetchRecords();
+    }
+  };
 
   // ===== ADVANCED MARKDOWN PARSER =====
   const parseMarkdownToReact = (markdown) => {
@@ -133,7 +203,8 @@ export default function App() {
               borderCollapse: 'collapse',
               margin: '16px 0',
               fontSize: '12px',
-              border: `1px solid #e5e7eb`
+              border: `1px solid ${COLORS.borderColor}`,
+              pageBreakInside: 'avoid'
             }}>
               <thead>
                 <tr style={{ background: '#2563eb', color: 'white' }}>
@@ -153,12 +224,12 @@ export default function App() {
                 {rows.slice(1).map((row, rowIdx) => (
                   <tr key={rowIdx} style={{ 
                     background: rowIdx % 2 === 0 ? '#f9fafb' : '#ffffff',
-                    borderBottom: `1px solid #e5e7eb`
+                    borderBottom: `1px solid ${COLORS.borderColor}`
                   }}>
                     {row.map((cell, cellIdx) => (
                       <td key={cellIdx} style={{
                         padding: '12px',
-                        borderRight: cellIdx < row.length - 1 ? `1px solid #e5e7eb` : 'none'
+                        borderRight: cellIdx < row.length - 1 ? `1px solid ${COLORS.borderColor}` : 'none'
                       }}>
                         {renderInlineMarkdown(cell)}
                       </td>
@@ -186,7 +257,8 @@ export default function App() {
             fontSize: '12px',
             lineHeight: '1.5',
             border: `1px solid #374151`,
-            fontFamily: 'monospace'
+            fontFamily: 'monospace',
+            pageBreakInside: 'avoid'
           }}>
             <code>{codeBlock.join('\n')}</code>
           </pre>
@@ -198,13 +270,11 @@ export default function App() {
     const renderInlineMarkdown = (text) => {
       if (!text) return null;
 
-      // Handle LaTeX equations: $...$ for inline, $$...$$ for display
       const latexRegex = /(\$\$[^\$]+\$\$|\$[^\$]+\$)/g;
       const mathParts = text.split(latexRegex);
 
       return mathParts.map((part, idx) => {
         if (part.startsWith('$$')) {
-          // Display math
           return (
             <div key={idx} style={{
               background: '#f0f9ff',
@@ -219,7 +289,6 @@ export default function App() {
             </div>
           );
         } else if (part.startsWith('$')) {
-          // Inline math
           return (
             <code key={idx} style={{
               background: '#f0f9ff',
@@ -233,7 +302,6 @@ export default function App() {
           );
         }
 
-        // Handle inline formatting
         const formatted = part
           .replace(/\*\*(.*?)\*\*/g, '<strong style="font-weight:600">$1</strong>')
           .replace(/__(.*?)__/g, '<strong style="font-weight:600">$1</strong>')
@@ -252,7 +320,6 @@ export default function App() {
     while (i < lines.length) {
       const line = lines[i];
 
-      // Code block
       if (line.trim().startsWith('```')) {
         if (inCodeBlock) {
           flushCodeBlock();
@@ -270,23 +337,20 @@ export default function App() {
         continue;
       }
 
-      // Table detection: contains | and is not empty
       if (line.includes('|') && line.trim().length > 2) {
         tableLines.push(line);
         i++;
         continue;
       }
 
-      // Flush table if we hit non-table line
       if (tableLines.length > 0 && (!line.includes('|') || line.trim().length < 2)) {
         flushTable();
       }
 
-      // Headers
       if (line.startsWith('###')) {
         flushList();
         result.push(
-          <h3 key={i} style={{ fontSize: '15px', margin: '12px 0 8px 0', fontWeight: '600', color: '#0f172a' }}>
+          <h3 key={i} style={{ fontSize: '15px', margin: '12px 0 8px 0', fontWeight: '600', color: COLORS.darkText, pageBreakAfter: 'avoid' }}>
             {renderInlineMarkdown(line.replace(/^#+\s*/, ''))}
           </h3>
         );
@@ -297,7 +361,7 @@ export default function App() {
       if (line.startsWith('##')) {
         flushList();
         result.push(
-          <h2 key={i} style={{ fontSize: '17px', margin: '14px 0 10px 0', fontWeight: '600', color: '#0f172a' }}>
+          <h2 key={i} style={{ fontSize: '17px', margin: '14px 0 10px 0', fontWeight: '600', color: COLORS.darkText, pageBreakAfter: 'avoid' }}>
             {renderInlineMarkdown(line.replace(/^#+\s*/, ''))}
           </h2>
         );
@@ -308,7 +372,7 @@ export default function App() {
       if (line.startsWith('#')) {
         flushList();
         result.push(
-          <h1 key={i} style={{ fontSize: '20px', margin: '16px 0 12px 0', fontWeight: '700', color: '#0f172a' }}>
+          <h1 key={i} style={{ fontSize: '20px', margin: '16px 0 12px 0', fontWeight: '700', color: COLORS.darkText, pageBreakAfter: 'avoid' }}>
             {renderInlineMarkdown(line.replace(/^#+\s*/, ''))}
           </h1>
         );
@@ -316,7 +380,6 @@ export default function App() {
         continue;
       }
 
-      // Lists
       if (line.trim().startsWith('-') || line.trim().startsWith('*') || /^\d+\./.test(line.trim())) {
         const itemText = line.replace(/^[\s\-\*]+|\d+\.\s*/, '').trim();
         if (itemText) {
@@ -326,7 +389,6 @@ export default function App() {
         continue;
       }
 
-      // Blockquote
       if (line.startsWith('>')) {
         flushList();
         result.push(
@@ -338,7 +400,8 @@ export default function App() {
             padding: '10px 12px',
             fontSize: '13px',
             fontStyle: 'italic',
-            color: '#475569'
+            color: '#475569',
+            pageBreakInside: 'avoid'
           }}>
             {renderInlineMarkdown(line.replace(/^>\s*/, ''))}
           </blockquote>
@@ -347,7 +410,6 @@ export default function App() {
         continue;
       }
 
-      // Empty line
       if (line.trim().length === 0) {
         flushList();
         result.push(<div key={i} style={{ height: '8px' }} />);
@@ -355,11 +417,10 @@ export default function App() {
         continue;
       }
 
-      // Paragraph
       if (line.trim()) {
         flushList();
         result.push(
-          <p key={i} style={{ margin: '8px 0', lineHeight: '1.6', color: '#0f172a' }}>
+          <p key={i} style={{ margin: '8px 0', lineHeight: '1.6', color: COLORS.darkText, pageBreakInside: 'avoid' }}>
             {renderInlineMarkdown(line)}
           </p>
         );
@@ -375,96 +436,24 @@ export default function App() {
     return result;
   };
 
-  // ===== LOAD FONT & LIBS =====
-  useEffect(() => {
-    const link = document.createElement('link');
-    link.href = 'https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&display=swap';
-    link.rel = 'stylesheet';
-    document.head.appendChild(link);
-
-    // Load html2pdf from CDN
-    const script = document.createElement('script');
-    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
-    document.head.appendChild(script);
-  }, []);
-
-  // ===== CHECK INVITE TOKEN ON MOUNT =====
-  useEffect(() => {
-    const hash = window.location.hash;
-    if (hash.includes('invite_token=')) {
-      const token = new URLSearchParams(hash.substring(1)).get('invite_token');
-      if (token) {
-        setSetupToken(token);
-        setAuthPage('setup-password');
-      }
+  // ===== GET PAPER DIMENSIONS =====
+  const getPaperDimensions = () => {
+    let width, height;
+    
+    if (pageSettings.paperSize === 'Custom') {
+      width = pageSettings.customWidth;
+      height = pageSettings.customHeight;
+    } else {
+      const size = PAPER_SIZES[pageSettings.paperSize];
+      width = size.width;
+      height = size.height;
     }
-    checkAuth();
-  }, []);
-
-  // ===== CHECK AUTH =====
-  const checkAuth = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      // Fetch user role
-      const { data: roleData } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', user.id)
-        .single();
-      
-      const userWithRole = {
-        ...user,
-        user_metadata: {
-          ...user.user_metadata,
-          role: roleData?.role || 'content_developer'
-        }
-      };
-      
-      setCurrentUser(userWithRole);
-      setAuthPage('dashboard');
-      fetchRecords();
+    
+    if (pageSettings.orientation === 'landscape') {
+      [width, height] = [height, width];
     }
-  };
-
-  // ===== LOGIN =====
-  const handleLogin = async (e) => {
-    e.preventDefault();
-    setLoginError('');
-    setLoginLoading(true);
-
-    try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email: loginEmail,
-        password: loginPassword
-      });
-
-      if (error) throw error;
-
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      // Fetch user role
-      const { data: roleData } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', user.id)
-        .single();
-      
-      const userWithRole = {
-        ...user,
-        user_metadata: {
-          ...user.user_metadata,
-          role: roleData?.role || 'content_developer'
-        }
-      };
-      
-      setCurrentUser(userWithRole);
-      setAuthPage('dashboard');
-      fetchRecords();
-    } catch (err) {
-      setLoginError(err.message || 'Login failed');
-    } finally {
-      setLoginLoading(false);
-    }
+    
+    return { width, height };
   };
 
   // ===== SETUP PASSWORD (FROM INVITE) =====
@@ -490,19 +479,13 @@ export default function App() {
     setSetupLoading(true);
 
     try {
-      console.log('Starting setup with token:', setupToken);
-
-      // Verify invite token in invites table
       const { data: inviteData, error: inviteError } = await supabase
         .from('invites')
         .select('*')
         .eq('token', setupToken)
         .single();
 
-      console.log('Invite query result:', { inviteData, inviteError });
-
       if (inviteError) {
-        console.error('Invite lookup error:', inviteError);
         throw new Error('Invite link is invalid or expired. Please contact your administrator.');
       }
 
@@ -515,78 +498,60 @@ export default function App() {
       }
 
       const invitedEmail = inviteData.email;
-      console.log('Creating user for email:', invitedEmail);
 
-      // Create user with email (no confirmation required for invites)
       const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
         email: invitedEmail,
         password: setupPassword,
         options: { 
           emailRedirectTo: window.location.origin,
-          data: { auto_confirmed: true } // Skip email confirmation for invites
+          data: { auto_confirmed: true }
         }
       });
 
-      console.log('Sign up result:', { signUpData, signUpError });
-
       if (signUpError) {
-        // If user already exists, allow it
         if (signUpError.message.includes('already registered')) {
-          console.log('User already exists, attempting sign in');
+          // User exists, try sign in
         } else {
           throw signUpError;
         }
       }
 
-      // If signup succeeded, get the user ID
       let userId = signUpData?.user?.id;
 
       if (!userId) {
-        // If no ID from signup, try to get current user
         const { data: userData } = await supabase.auth.getUser();
         userId = userData?.user?.id;
       }
 
       if (userId) {
-        // Add role to user_roles table
         const { error: roleError } = await supabase
           .from('user_roles')
           .insert([{ user_id: userId, role: 'content_developer' }])
           .select();
 
         if (roleError && !roleError.message.includes('duplicate')) {
-          console.error('Role insert error (non-critical):', roleError);
+          console.error('Role insert error:', roleError);
         }
       }
 
-      // Mark invite as accepted
-      const { error: updateError } = await supabase
+      await supabase
         .from('invites')
         .update({ status: 'accepted', accepted_at: new Date().toISOString() })
         .eq('token', setupToken);
 
-      console.log('Invite update result:', { updateError });
-
-      // Sign in user
-      console.log('Attempting sign in...');
       const { error: signInError } = await supabase.auth.signInWithPassword({
         email: invitedEmail,
         password: setupPassword
       });
 
-      if (signInError) {
-        console.error('Sign in error:', signInError);
-        throw signInError;
-      }
+      if (signInError) throw signInError;
 
-      // Get current user
       const { data: { user } } = await supabase.auth.getUser();
       
       if (!user) {
         throw new Error('Failed to get user session');
       }
 
-      // Fetch user role
       const { data: roleData } = await supabase
         .from('user_roles')
         .select('role')
@@ -605,40 +570,142 @@ export default function App() {
       setAuthPage('dashboard');
       fetchRecords();
     } catch (err) {
-      console.error('Setup password error:', err);
       setSetupError(err.message || 'Setup failed. Please try again.');
     } finally {
       setSetupLoading(false);
     }
   };
 
-  // ===== SEND INVITE =====
-  const handleSendInvite = async (e) => {
+  // ===== LOGIN =====
+  const handleLogin = async (e) => {
     e.preventDefault();
-    setInviteMessage('');
-    setInviteSending(true);
+    setLoginError('');
+    setLoginLoading(true);
 
     try {
-      // Generate token
-      const token = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: loginEmail,
+        password: loginPassword,
+      });
 
-      // Store invite in database
-      const { error } = await supabase
+      if (error) throw error;
+
+      const { data: roleData } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', data.user.id)
+        .single();
+
+      const userWithRole = {
+        ...data.user,
+        user_metadata: {
+          ...data.user.user_metadata,
+          role: roleData?.role || 'content_developer'
+        }
+      };
+
+      setCurrentUser(userWithRole);
+      setAuthPage('dashboard');
+      fetchRecords();
+    } catch (err) {
+      setLoginError(err.message || 'Login failed');
+    } finally {
+      setLoginLoading(false);
+    }
+  };
+
+  // ===== FETCH RECORDS =====
+  const fetchRecords = async () => {
+    const { data, error } = await supabase
+      .from('textbook_content')
+      .select('*')
+      .order('updated_at', { ascending: false });
+
+    if (!error && data) {
+      setRecords(data);
+    }
+  };
+
+  // ===== APPLY FILTERS =====
+  const applyFilters = () => {
+    return records.filter(r => {
+      const classMatch = filterClass === 'All Classes' || r.class === filterClass;
+      const subjectMatch = filterSubject === 'All Subjects' || r.subject === filterSubject;
+      const statusMatch = filterStatus === 'All Status' || r.status === filterStatus;
+      const topicMatch = !filterTopic || r.topic.toLowerCase().includes(filterTopic.toLowerCase());
+      return classMatch && subjectMatch && statusMatch && topicMatch;
+    });
+  };
+
+  // ===== SAVE RECORD =====
+  const handleSaveRecord = async (e) => {
+    e.preventDefault();
+    setFormLoading(true);
+
+    try {
+      if (editingId) {
+        await supabase
+          .from('textbook_content')
+          .update({
+            class: formClass,
+            subject: formSubject,
+            topic: formTopic,
+            sub_topic: formSubTopic,
+            prompt: formPrompt,
+            status: 'generating',
+            updated_at: new Date(),
+          })
+          .eq('record_id', editingId);
+      } else {
+        await supabase
+          .from('textbook_content')
+          .insert([{
+            class: formClass,
+            subject: formSubject,
+            topic: formTopic,
+            sub_topic: formSubTopic,
+            prompt: formPrompt,
+            status: 'generating',
+          }]);
+      }
+
+      setFormClass('1');
+      setFormSubject('English');
+      setFormTopic('');
+      setFormSubTopic('');
+      setFormPrompt('');
+      setShowAddForm(false);
+      setEditingId(null);
+      fetchRecords();
+    } catch (err) {
+      alert('Error saving record: ' + err.message);
+    } finally {
+      setFormLoading(false);
+    }
+  };
+
+  // ===== HANDLE SEND INVITE =====
+  const handleSendInvite = async (e) => {
+    e.preventDefault();
+    setInviteSending(true);
+    setInviteMessage('');
+
+    try {
+      const token = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+      const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+
+      await supabase
         .from('invites')
         .insert([{
           email: inviteEmail,
           token: token,
           status: 'pending',
           invited_by: currentUser.id,
-          created_at: new Date()
+          expires_at: expiresAt.toISOString(),
         }]);
 
-      if (error) throw error;
-
       const inviteLink = `${window.location.origin}#invite_token=${token}`;
-
-      // In real app, send email. For now, show link
-      setInviteMessage(`✅ Invite created! Share this link:\n\n${inviteLink}`);
+      setInviteMessage(`✅ Invite sent!\n\nShare this link:\n${inviteLink}\n\nExpires in 7 days`);
       setInviteEmail('');
       fetchPendingInvites();
     } catch (err) {
@@ -650,142 +717,45 @@ export default function App() {
 
   // ===== FETCH PENDING INVITES =====
   const fetchPendingInvites = async () => {
-    try {
-      const { data } = await supabase
-        .from('invites')
-        .select('*')
-        .eq('status', 'pending')
-        .order('created_at', { ascending: false });
+    const { data } = await supabase
+      .from('invites')
+      .select('*')
+      .eq('status', 'pending')
+      .order('created_at', { ascending: false });
 
-      setPendingInvites(data || []);
-    } catch (err) {
-      console.error('Error fetching invites:', err);
-    }
+    setPendingInvites(data || []);
   };
 
-  // ===== LOGOUT =====
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    setCurrentUser(null);
-    setAuthPage('login');
-    setLoginEmail('');
-    setLoginPassword('');
-    setRecords([]);
-    setFilteredRecords([]);
-  };
-
-  // ===== FETCH RECORDS =====
-  const fetchRecords = async () => {
-    setLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from('textbook_content')
-        .select('*')
-        .order('updated_at', { ascending: false });
-
-      if (error) throw error;
-      setRecords(data || []);
-      applyFilters(data || []);
-    } catch (err) {
-      console.error('Error fetching records:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // ===== APPLY FILTERS =====
-  const applyFilters = (data) => {
-    let filtered = data;
-
-    if (filterClass !== 'All Classes') {
-      filtered = filtered.filter(r => r.class === filterClass);
-    }
-
-    if (filterSubject !== 'All Subjects') {
-      filtered = filtered.filter(r => r.subject === filterSubject);
-    }
-
-    if (filterStatus !== 'All Status') {
-      filtered = filtered.filter(r => r.status === filterStatus);
-    }
-
-    if (filterTopic) {
-      filtered = filtered.filter(r => r.topic.toLowerCase().includes(filterTopic.toLowerCase()));
-    }
-
-    if (filterSubTopic) {
-      filtered = filtered.filter(r => r.sub_topic.toLowerCase().includes(filterSubTopic.toLowerCase()));
-    }
-
-    setFilteredRecords(filtered);
-  };
-
-  useEffect(() => {
-    applyFilters(records);
-  }, [filterClass, filterSubject, filterStatus, filterTopic, filterSubTopic]);
-
-  // ===== ADD/UPDATE RECORD =====
-  const handleSaveRecord = async () => {
-    if (!formData.topic.trim()) {
-      alert('Topic is required');
-      return;
-    }
+  // ===== COPY CONTENT =====
+  const handleCopyContent = async () => {
+    if (!viewingRecord || !viewingRecord.ai_output) return;
 
     try {
-      if (editingRecord) {
-        // Update
-        const { error } = await supabase
-          .from('textbook_content')
-          .update({
-            class: formData.class,
-            subject: formData.subject,
-            topic: formData.topic,
-            sub_topic: formData.sub_topic,
-            prompt: formData.prompt,
-            status: formData.prompt ? 'generating' : 'pending',
-            updated_at: new Date()
-          })
-          .eq('record_id', editingRecord.record_id);
+      let contentToCopy = viewingRecord.ai_output;
 
-        if (error) throw error;
-      } else {
-        // Insert
-        const { error } = await supabase
-          .from('textbook_content')
-          .insert([{
-            class: formData.class,
-            subject: formData.subject,
-            topic: formData.topic,
-            sub_topic: formData.sub_topic,
-            prompt: formData.prompt,
-            status: formData.prompt ? 'generating' : 'pending',
-            ai_output: '',
-            word_count: 0,
-            updated_at: new Date()
-          }]);
-
-        if (error) throw error;
+      if (!viewMarkdown) {
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = contentToCopy;
+        contentToCopy = tempDiv.textContent || '';
       }
 
-      setFormData({ class: '1', subject: 'English', topic: '', sub_topic: '', prompt: '' });
-      setShowAddForm(false);
-      setEditingRecord(null);
-      fetchRecords();
+      await navigator.clipboard.writeText(contentToCopy);
+      alert('✓ Content copied to clipboard!');
     } catch (err) {
-      alert(`Error: ${err.message}`);
+      alert('Failed to copy: ' + err.message);
     }
   };
 
-  // ===== EXPORT PDF =====
+  // ===== EXPORT PDF (WITH PAGE SETTINGS) =====
   const handleExportPDF = () => {
     if (!viewingRecord || !viewingRecord.ai_output) return;
 
     try {
       const markdownContent = viewingRecord.ai_output;
       let contentHtml = markdownContent;
+      const dimensions = getPaperDimensions();
 
       if (viewMarkdown) {
-        // Better markdown to HTML conversion with table support
         const lines = markdownContent.split('\n');
         let html = '';
         let i = 0;
@@ -795,10 +765,9 @@ export default function App() {
         while (i < lines.length) {
           const line = lines[i];
 
-          // Code block
           if (line.trim().startsWith('```')) {
             if (inCodeBlock) {
-              html += `<pre style="background:#1f2937;color:#e5e7eb;padding:12px;border-radius:6px;margin:12px 0;overflow-x:auto;font-size:11px;"><code>${codeContent.join('\n')}</code></pre>`;
+              html += `<pre style="background:#1f2937;color:#e5e7eb;padding:12px;border-radius:6px;margin:12px 0;overflow-x:auto;font-size:11px;page-break-inside:avoid;"><code>${codeContent.join('\n')}</code></pre>`;
               codeContent = [];
               inCodeBlock = false;
             } else {
@@ -814,7 +783,6 @@ export default function App() {
             continue;
           }
 
-          // Tables
           if (line.includes('|') && line.trim().length > 2) {
             let tableLines = [line];
             i++;
@@ -828,7 +796,7 @@ export default function App() {
             );
 
             if (rows.length > 0) {
-              html += '<table style="width:100%;border-collapse:collapse;margin:12px 0;border:1px solid #e5e7eb;"><thead><tr style="background:#2563eb;color:white;">';
+              html += '<table style="width:100%;border-collapse:collapse;margin:12px 0;border:1px solid #e5e7eb;page-break-inside:avoid;"><thead><tr style="background:#2563eb;color:white;">';
               rows[0].forEach(cell => {
                 html += `<th style="padding:10px;text-align:left;font-weight:600;border-bottom:2px solid #1e40af;">${cell}</th>`;
               });
@@ -845,24 +813,22 @@ export default function App() {
             continue;
           }
 
-          // Headers
           if (line.startsWith('###')) {
-            html += `<h3 style="font-size:15px;margin:12px 0 8px 0;font-weight:600;">${line.replace(/^#+\s*/, '')}</h3>`;
+            html += `<h3 style="font-size:15px;margin:12px 0 8px 0;font-weight:600;page-break-after:avoid;">${line.replace(/^#+\s*/, '')}</h3>`;
             i++;
             continue;
           }
           if (line.startsWith('##')) {
-            html += `<h2 style="font-size:17px;margin:14px 0 10px 0;font-weight:600;">${line.replace(/^#+\s*/, '')}</h2>`;
+            html += `<h2 style="font-size:17px;margin:14px 0 10px 0;font-weight:600;page-break-after:avoid;">${line.replace(/^#+\s*/, '')}</h2>`;
             i++;
             continue;
           }
           if (line.startsWith('#')) {
-            html += `<h1 style="font-size:20px;margin:16px 0 12px 0;font-weight:700;">${line.replace(/^#+\s*/, '')}</h1>`;
+            html += `<h1 style="font-size:20px;margin:16px 0 12px 0;font-weight:700;page-break-after:avoid;">${line.replace(/^#+\s*/, '')}</h1>`;
             i++;
             continue;
           }
 
-          // Lists
           if (line.trim().startsWith('-') || /^\d+\./.test(line.trim())) {
             let listItems = [];
             while (i < lines.length && (lines[i].trim().startsWith('-') || /^\d+\./.test(lines[i].trim()))) {
@@ -871,7 +837,7 @@ export default function App() {
               i++;
             }
             if (listItems.length > 0) {
-              html += '<ul style="margin-left:24px;margin-bottom:12px;">';
+              html += '<ul style="margin-left:24px;margin-bottom:12px;page-break-inside:avoid;">';
               listItems.forEach(item => {
                 html += `<li style="margin-bottom:6px;">${item}</li>`;
               });
@@ -880,20 +846,18 @@ export default function App() {
             continue;
           }
 
-          // Blockquote
           if (line.startsWith('>')) {
-            html += `<blockquote style="border-left:4px solid #2563eb;padding-left:12px;margin:12px 0;background:#f0f9ff;padding:10px 12px;font-style:italic;color:#475569;">${line.replace(/^>\s*/, '')}</blockquote>`;
+            html += `<blockquote style="border-left:4px solid #2563eb;padding-left:12px;margin:12px 0;background:#f0f9ff;padding:10px 12px;font-style:italic;color:#475569;page-break-inside:avoid;">${line.replace(/^>\s*/, '')}</blockquote>`;
             i++;
             continue;
           }
 
-          // Paragraph
           if (line.trim()) {
             let text = line
               .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
               .replace(/\*(.*?)\*/g, '<em>$1</em>')
               .replace(/`(.*?)`/g, '<code style="background:#f3f4f6;padding:2px 6px;border-radius:3px;">$1</code>');
-            html += `<p style="margin:8px 0;line-height:1.6;">${text}</p>`;
+            html += `<p style="margin:8px 0;line-height:1.6;page-break-inside:avoid;">${text}</p>`;
           }
 
           i++;
@@ -904,10 +868,10 @@ export default function App() {
 
       const element = document.createElement('div');
       element.style.width = '100%';
-      element.style.padding = '20px';
+      element.style.padding = `${pageSettings.margins}mm`;
       element.innerHTML = `
         <div style="font-family: Lexend, sans-serif; color: #0f172a; max-width: 100%; word-wrap: break-word;">
-          <h1 style="font-size: 24px; margin-bottom: 8px;">${viewingRecord.topic}</h1>
+          <h1 style="font-size: 24px; margin-bottom: 8px; page-break-after:avoid;">${viewingRecord.topic}</h1>
           <p style="color: #6b7280; margin-bottom: 20px; font-size: 13px;">Class ${viewingRecord.class} | ${viewingRecord.subject}</p>
           <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 20px 0;">
           <div style="line-height: 1.6; font-size: 13px; color: #0f172a; overflow-wrap: break-word; word-break: break-word;">${contentHtml}</div>
@@ -916,11 +880,16 @@ export default function App() {
 
       if (typeof window !== 'undefined' && window.html2pdf) {
         const opt = {
-          margin: [10, 10, 10, 10],
+          margin: pageSettings.margins,
           filename: `${viewingRecord.topic}.pdf`,
           image: { type: 'jpeg', quality: 0.98 },
           html2canvas: { scale: 2, useCORS: true, allowTaint: true },
-          jsPDF: { orientation: 'portrait', unit: 'mm', format: 'a4', compress: true }
+          jsPDF: { 
+            orientation: pageSettings.orientation === 'landscape' ? 'l' : 'p',
+            unit: 'mm', 
+            format: pageSettings.paperSize === 'Custom' ? [dimensions.width, dimensions.height] : pageSettings.paperSize, 
+            compress: true 
+          }
         };
         window.html2pdf().set(opt).from(element).save();
       } else {
@@ -931,172 +900,297 @@ export default function App() {
     }
   };
 
-  // ===== COPY TO CLIPBOARD =====
-  const handleCopyContent = async () => {
-    if (!viewingRecord || !viewingRecord.ai_output) return;
-
-    try {
-      let contentToCopy = viewingRecord.ai_output;
-
-      if (!viewMarkdown) {
-        // If viewing HTML, strip tags
-        const tempDiv = document.createElement('div');
-        tempDiv.innerHTML = contentToCopy;
-        contentToCopy = tempDiv.textContent || '';
-      }
-
-      await navigator.clipboard.writeText(contentToCopy);
-      alert('✓ Content copied to clipboard!');
-    } catch (err) {
-      alert('Failed to copy: ' + err.message);
-    }
-  };
-
   // ===== EXPORT WORD =====
   const handleExportWord = () => {
     if (!viewingRecord || !viewingRecord.ai_output) return;
 
     try {
-      let contentText = viewingRecord.ai_output;
-      if (!viewMarkdown) {
-        const tempDiv = document.createElement('div');
-        tempDiv.innerHTML = viewingRecord.ai_output;
-        contentText = tempDiv.textContent || '';
-      }
-
-      const docContent = `${viewingRecord.topic}\nClass ${viewingRecord.class} | ${viewingRecord.subject}\n\n${contentText}`;
-      const blob = new Blob([docContent], { type: 'application/msword' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${viewingRecord.topic}.doc`;
-      a.click();
-      URL.revokeObjectURL(url);
-    } catch (err) {
-      alert('Word export failed: ' + err.message);
-    }
-  };
-
-  // ===== HANDLE EDIT =====
-  const handleEdit = (record) => {
-    setEditingRecord(record);
-    setFormData({
-      class: record.class,
-      subject: record.subject,
-      topic: record.topic,
-      sub_topic: record.sub_topic,
-      prompt: record.prompt
-    });
-    setShowAddForm(true);
-    setViewingRecord(null);
-  };
-
-  // ===== CLEAR FILTERS =====
-  const handleClearFilters = () => {
-    setFilterClass('All Classes');
-    setFilterSubject('All Subjects');
-    setFilterStatus('All Status');
-    setFilterTopic('');
-    setFilterSubTopic('');
-  };
-
-  // ===== HANDLE EXPORT =====
-  const handleExport = async () => {
-    try {
-      const csv = [
-        ['ID', 'CLASS', 'SUBJECT', 'TOPIC', 'SUB-TOPIC', 'STATUS', 'WORDS'],
-        ...filteredRecords.map(r => [
-          r.record_id,
-          r.class,
-          r.subject,
-          r.topic,
-          r.sub_topic,
-          r.status,
-          r.word_count || 0
-        ])
-      ].map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
-
-      const blob = new Blob([csv], { type: 'text/csv' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'textbooks.csv';
-      a.click();
-      URL.revokeObjectURL(url);
+      const content = viewingRecord.ai_output;
+      const element = document.createElement('a');
+      const file = new Blob([content], { type: 'text/plain' });
+      element.href = URL.createObjectURL(file);
+      element.download = `${viewingRecord.topic}.txt`;
+      document.body.appendChild(element);
+      element.click();
+      document.body.removeChild(element);
     } catch (err) {
       alert('Export failed: ' + err.message);
     }
   };
 
-  // ===== LOGIN PAGE =====
+  // ===== EXPORT CSV =====
+  const handleExport = () => {
+    const filtered = applyFilters();
+    let csv = 'ID,Class,Subject,Topic,SubTopic,Status,Words\n';
+    filtered.forEach(r => {
+      csv += `${r.record_id},"${r.class}","${r.subject}","${r.topic}","${r.sub_topic}","${r.status}",${r.word_count}\n`;
+    });
+
+    const element = document.createElement('a');
+    element.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+    element.download = 'textbooks.csv';
+    document.body.appendChild(element);
+    element.click();
+    document.body.removeChild(element);
+  };
+
+  // ===== HANDLE CLEAR FILTERS =====
+  const handleClearFilters = () => {
+    setFilterClass('All Classes');
+    setFilterSubject('All Subjects');
+    setFilterStatus('All Status');
+    setFilterTopic('');
+  };
+
+  // ===== PAGE SETTINGS PANEL =====
+  const renderPageSettingsPanel = () => {
+    const dimensions = getPaperDimensions();
+    
+    return (
+      <div style={{
+        position: 'fixed',
+        bottom: '20px',
+        right: '20px',
+        background: COLORS.white,
+        border: `1px solid ${COLORS.borderColor}`,
+        borderRadius: '8px',
+        padding: '16px',
+        width: '320px',
+        boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+        zIndex: 999,
+        maxHeight: '500px',
+        overflowY: 'auto',
+        fontFamily: FONT_FAMILY
+      }}>
+        <h3 style={{ margin: '0 0 12px 0', fontSize: '14px', fontWeight: '600', color: COLORS.darkText }}>
+          📄 PDF & Page Settings
+        </h3>
+        
+        <div style={{ marginBottom: '12px' }}>
+          <label style={{ display: 'block', fontSize: '11px', fontWeight: '500', color: COLORS.darkText, marginBottom: '4px', textTransform: 'uppercase' }}>
+            Paper Size
+          </label>
+          <select 
+            value={pageSettings.paperSize}
+            onChange={(e) => {
+              const size = e.target.value;
+              if (size !== 'Custom') {
+                const dims = PAPER_SIZES[size];
+                setPageSettings({
+                  ...pageSettings,
+                  paperSize: size,
+                  customWidth: dims.width,
+                  customHeight: dims.height
+                });
+              } else {
+                setPageSettings({ ...pageSettings, paperSize: 'Custom' });
+              }
+            }}
+            style={{
+              width: '100%',
+              padding: '8px',
+              border: `1px solid ${COLORS.borderColor}`,
+              borderRadius: '4px',
+              fontSize: '12px',
+              fontFamily: FONT_FAMILY
+            }}
+          >
+            {Object.keys(PAPER_SIZES).map(size => (
+              <option key={size} value={size}>{PAPER_SIZES[size].label}</option>
+            ))}
+            <option value="Custom">Custom Size</option>
+          </select>
+        </div>
+
+        <div style={{ marginBottom: '12px' }}>
+          <label style={{ display: 'block', fontSize: '11px', fontWeight: '500', color: COLORS.darkText, marginBottom: '4px', textTransform: 'uppercase' }}>
+            Orientation
+          </label>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button
+              onClick={() => setPageSettings({ ...pageSettings, orientation: 'portrait' })}
+              style={{
+                flex: 1,
+                padding: '8px',
+                background: pageSettings.orientation === 'portrait' ? COLORS.navActive : COLORS.filterBg,
+                color: pageSettings.orientation === 'portrait' ? COLORS.white : COLORS.darkText,
+                border: 'none',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontSize: '12px',
+                fontWeight: '500',
+                fontFamily: FONT_FAMILY
+              }}
+            >
+              📗 Portrait
+            </button>
+            <button
+              onClick={() => setPageSettings({ ...pageSettings, orientation: 'landscape' })}
+              style={{
+                flex: 1,
+                padding: '8px',
+                background: pageSettings.orientation === 'landscape' ? COLORS.navActive : COLORS.filterBg,
+                color: pageSettings.orientation === 'landscape' ? COLORS.white : COLORS.darkText,
+                border: 'none',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontSize: '12px',
+                fontWeight: '500',
+                fontFamily: FONT_FAMILY
+              }}
+            >
+              📕 Landscape
+            </button>
+          </div>
+        </div>
+
+        {pageSettings.paperSize === 'Custom' && (
+          <div style={{ marginBottom: '12px', background: COLORS.filterBg, padding: '10px', borderRadius: '4px' }}>
+            <label style={{ display: 'block', fontSize: '11px', fontWeight: '500', color: COLORS.darkText, marginBottom: '4px' }}>
+              Width (mm)
+            </label>
+            <input
+              type="number"
+              value={pageSettings.customWidth}
+              onChange={(e) => setPageSettings({ ...pageSettings, customWidth: parseInt(e.target.value) || 210 })}
+              style={{
+                width: '100%',
+                padding: '6px',
+                border: `1px solid ${COLORS.borderColor}`,
+                borderRadius: '4px',
+                fontSize: '12px',
+                marginBottom: '8px',
+                fontFamily: FONT_FAMILY
+              }}
+              min="50"
+              max="1000"
+            />
+            
+            <label style={{ display: 'block', fontSize: '11px', fontWeight: '500', color: COLORS.darkText, marginBottom: '4px' }}>
+              Height (mm)
+            </label>
+            <input
+              type="number"
+              value={pageSettings.customHeight}
+              onChange={(e) => setPageSettings({ ...pageSettings, customHeight: parseInt(e.target.value) || 297 })}
+              style={{
+                width: '100%',
+                padding: '6px',
+                border: `1px solid ${COLORS.borderColor}`,
+                borderRadius: '4px',
+                fontSize: '12px',
+                fontFamily: FONT_FAMILY
+              }}
+              min="50"
+              max="1000"
+            />
+          </div>
+        )}
+
+        <div style={{ marginBottom: '12px' }}>
+          <label style={{ display: 'block', fontSize: '11px', fontWeight: '500', color: COLORS.darkText, marginBottom: '4px', textTransform: 'uppercase' }}>
+            Margins (mm)
+          </label>
+          <input
+            type="number"
+            value={pageSettings.margins}
+            onChange={(e) => setPageSettings({ ...pageSettings, margins: parseInt(e.target.value) || 10 })}
+            style={{
+              width: '100%',
+              padding: '8px',
+              border: `1px solid ${COLORS.borderColor}`,
+              borderRadius: '4px',
+              fontSize: '12px',
+              fontFamily: FONT_FAMILY
+            }}
+            min="0"
+            max="50"
+          />
+        </div>
+
+        <div style={{
+          background: COLORS.lightBg,
+          padding: '10px',
+          borderRadius: '4px',
+          fontSize: '11px',
+          color: COLORS.lightText,
+          fontFamily: FONT_FAMILY
+        }}>
+          <strong>Current:</strong><br/>
+          {dimensions.width} × {dimensions.height} mm<br/>
+          {pageSettings.orientation === 'portrait' ? '📗 Portrait' : '📕 Landscape'}<br/>
+          Margins: {pageSettings.margins}mm
+        </div>
+      </div>
+    );
+  };
+
+  // ===== RENDER FUNCTIONS =====
   if (authPage === 'login') {
     return (
       <div style={{
-        minHeight: '100vh',
-        background: `linear-gradient(135deg, ${COLORS.navActive} 0%, #764ba2 100%)`,
         display: 'flex',
         justifyContent: 'center',
         alignItems: 'center',
-        fontFamily: FONT_FAMILY,
-        padding: '20px'
+        minHeight: '100vh',
+        background: '#f5f6f8',
+        fontFamily: FONT_FAMILY
       }}>
-        <div style={{
-          background: COLORS.white,
-          borderRadius: '12px',
-          padding: '40px',
-          boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
-          maxWidth: '400px',
-          width: '100%'
-        }}>
-          <h1 style={{ textAlign: 'center', fontSize: '28px', fontWeight: '700', marginBottom: '30px', color: COLORS.darkText }}>
-            AI Content Studio
-          </h1>
-
-          {loginError && (
-            <div style={{ background: COLORS.errorBg, border: `1px solid ${COLORS.errorBorder}`, padding: '12px', borderRadius: '6px', marginBottom: '20px', color: COLORS.errorText, fontSize: '14px' }}>
-              {loginError}
-            </div>
-          )}
-
-          <form onSubmit={handleLogin}>
-            <div style={{ marginBottom: '20px' }}>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: COLORS.darkText, marginBottom: '6px', textTransform: 'uppercase' }}>Email Address</label>
+        <div style={{ width: '100%', maxWidth: '400px', padding: '20px' }}>
+          <h1 style={{ textAlign: 'center', marginBottom: '30px', color: COLORS.darkText }}>🎓 AI Content Studio</h1>
+          <form onSubmit={handleLogin} style={{
+            background: COLORS.white,
+            padding: '24px',
+            borderRadius: '8px',
+            border: `1px solid ${COLORS.borderColor}`
+          }}>
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '500', color: COLORS.darkText }}>Email</label>
               <input
                 type="email"
                 value={loginEmail}
                 onChange={(e) => setLoginEmail(e.target.value)}
-                required
                 style={{
                   width: '100%',
-                  padding: '12px',
+                  padding: '10px',
                   border: `1px solid ${COLORS.borderColor}`,
                   borderRadius: '6px',
                   fontSize: '14px',
-                  fontFamily: FONT_FAMILY,
-                  boxSizing: 'border-box'
+                  fontFamily: FONT_FAMILY
                 }}
+                required
               />
             </div>
-
-            <div style={{ marginBottom: '20px' }}>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: COLORS.darkText, marginBottom: '6px', textTransform: 'uppercase' }}>Password</label>
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '500', color: COLORS.darkText }}>Password</label>
               <input
                 type="password"
                 value={loginPassword}
                 onChange={(e) => setLoginPassword(e.target.value)}
-                required
                 style={{
                   width: '100%',
-                  padding: '12px',
+                  padding: '10px',
                   border: `1px solid ${COLORS.borderColor}`,
                   borderRadius: '6px',
                   fontSize: '14px',
-                  fontFamily: FONT_FAMILY,
-                  boxSizing: 'border-box'
+                  fontFamily: FONT_FAMILY
                 }}
+                required
               />
             </div>
-
+            {loginError && (
+              <div style={{
+                background: COLORS.errorBg,
+                border: `1px solid ${COLORS.errorBorder}`,
+                color: COLORS.errorText,
+                padding: '12px',
+                borderRadius: '6px',
+                marginBottom: '16px',
+                fontSize: '13px'
+              }}>
+                {loginError}
+              </div>
+            )}
             <button
               type="submit"
               disabled={loginLoading}
@@ -1108,98 +1202,84 @@ export default function App() {
                 border: 'none',
                 borderRadius: '6px',
                 cursor: loginLoading ? 'not-allowed' : 'pointer',
-                fontWeight: '500',
                 fontSize: '14px',
-                opacity: loginLoading ? 0.7 : 1,
+                fontWeight: '500',
                 fontFamily: FONT_FAMILY
               }}
             >
               {loginLoading ? 'Logging in...' : 'Login'}
             </button>
           </form>
-
-          <p style={{ margin: '20px 0 10px 0', fontSize: '12px', fontWeight: '500', color: COLORS.darkText }}>📋 Demo Credentials:</p>
-          <p style={{ margin: '0', fontSize: '12px', color: COLORS.lightText }}>Email: demo@example.com</p>
-          <p style={{ margin: '0', fontSize: '12px', color: COLORS.lightText }}>Password: demo123456</p>
         </div>
       </div>
     );
   }
 
-  // ===== PASSWORD SETUP PAGE =====
   if (authPage === 'setup-password') {
     return (
       <div style={{
-        minHeight: '100vh',
-        background: `linear-gradient(135deg, ${COLORS.navActive} 0%, #764ba2 100%)`,
         display: 'flex',
         justifyContent: 'center',
         alignItems: 'center',
-        fontFamily: FONT_FAMILY,
-        padding: '20px'
+        minHeight: '100vh',
+        background: '#f5f6f8',
+        fontFamily: FONT_FAMILY
       }}>
-        <div style={{
-          background: COLORS.white,
-          borderRadius: '12px',
-          padding: '40px',
-          boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
-          maxWidth: '400px',
-          width: '100%'
-        }}>
-          <h1 style={{ textAlign: 'center', fontSize: '28px', fontWeight: '700', marginBottom: '10px', color: COLORS.darkText }}>
-            Setup Your Password
-          </h1>
-          <p style={{ textAlign: 'center', fontSize: '14px', color: COLORS.lightText, marginBottom: '30px' }}>
-            Complete your account setup to get started
-          </p>
-
-          {setupError && (
-            <div style={{ background: COLORS.errorBg, border: `1px solid ${COLORS.errorBorder}`, padding: '12px', borderRadius: '6px', marginBottom: '20px', color: COLORS.errorText, fontSize: '14px' }}>
-              {setupError}
-            </div>
-          )}
-
-          <form onSubmit={handleSetupPassword}>
-            <div style={{ marginBottom: '20px' }}>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: COLORS.darkText, marginBottom: '6px', textTransform: 'uppercase' }}>Password</label>
+        <div style={{ width: '100%', maxWidth: '400px', padding: '20px' }}>
+          <h1 style={{ textAlign: 'center', marginBottom: '30px', color: COLORS.darkText }}>🎓 Setup Your Password</h1>
+          <form onSubmit={handleSetupPassword} style={{
+            background: COLORS.white,
+            padding: '24px',
+            borderRadius: '8px',
+            border: `1px solid ${COLORS.borderColor}`
+          }}>
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '500', color: COLORS.darkText }}>Password</label>
               <input
                 type="password"
                 value={setupPassword}
                 onChange={(e) => setSetupPassword(e.target.value)}
-                required
-                minLength="6"
                 style={{
                   width: '100%',
-                  padding: '12px',
+                  padding: '10px',
                   border: `1px solid ${COLORS.borderColor}`,
                   borderRadius: '6px',
                   fontSize: '14px',
-                  fontFamily: FONT_FAMILY,
-                  boxSizing: 'border-box'
+                  fontFamily: FONT_FAMILY
                 }}
+                required
               />
             </div>
-
-            <div style={{ marginBottom: '20px' }}>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: COLORS.darkText, marginBottom: '6px', textTransform: 'uppercase' }}>Confirm Password</label>
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '500', color: COLORS.darkText }}>Confirm Password</label>
               <input
                 type="password"
                 value={setupPasswordConfirm}
                 onChange={(e) => setSetupPasswordConfirm(e.target.value)}
-                required
-                minLength="6"
                 style={{
                   width: '100%',
-                  padding: '12px',
+                  padding: '10px',
                   border: `1px solid ${COLORS.borderColor}`,
                   borderRadius: '6px',
                   fontSize: '14px',
-                  fontFamily: FONT_FAMILY,
-                  boxSizing: 'border-box'
+                  fontFamily: FONT_FAMILY
                 }}
+                required
               />
             </div>
-
+            {setupError && (
+              <div style={{
+                background: COLORS.errorBg,
+                border: `1px solid ${COLORS.errorBorder}`,
+                color: COLORS.errorText,
+                padding: '12px',
+                borderRadius: '6px',
+                marginBottom: '16px',
+                fontSize: '13px'
+              }}>
+                {setupError}
+              </div>
+            )}
             <button
               type="submit"
               disabled={setupLoading}
@@ -1211,13 +1291,12 @@ export default function App() {
                 border: 'none',
                 borderRadius: '6px',
                 cursor: setupLoading ? 'not-allowed' : 'pointer',
-                fontWeight: '500',
                 fontSize: '14px',
-                opacity: setupLoading ? 0.7 : 1,
+                fontWeight: '500',
                 fontFamily: FONT_FAMILY
               }}
             >
-              {setupLoading ? 'Setting up...' : 'Complete Setup'}
+              {setupLoading ? 'Setting up...' : 'Submit'}
             </button>
           </form>
         </div>
@@ -1225,31 +1304,43 @@ export default function App() {
     );
   }
 
-  // ===== MAIN DASHBOARD =====
+  // ===== DASHBOARD =====
+  const filteredRecords = applyFilters();
+
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: COLORS.lightBg, fontFamily: FONT_FAMILY, color: COLORS.darkText }}>
+    <div style={{ display: 'flex', height: '100vh', background: COLORS.white, fontFamily: FONT_FAMILY }}>
       {/* SIDEBAR */}
       <div style={{
         width: sidebarOpen ? '280px' : '80px',
         background: COLORS.sidebarBg,
-        padding: '20px',
-        transition: 'width 0.3s',
         borderRight: `1px solid ${COLORS.borderColor}`,
-        overflowY: 'auto'
+        padding: '16px',
+        display: 'flex',
+        flexDirection: 'column',
+        transition: 'width 0.3s'
       }}>
-        <button onClick={() => setSidebarOpen(!sidebarOpen)} style={{ background: 'none', border: 'none', cursor: 'pointer', marginBottom: '20px' }}>
-          {sidebarOpen ? <X size={24} color={COLORS.navText} /> : <Menu size={24} color={COLORS.navText} />}
-        </button>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+          <button
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            style={{
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              padding: '8px',
+              display: 'flex'
+            }}
+          >
+            {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
+          </button>
+          {sidebarOpen && <h3 style={{ margin: 0, fontSize: '14px', fontWeight: '700', color: COLORS.darkText, whiteSpace: 'nowrap' }}>Academic Curator</h3>}
+        </div>
 
-        {sidebarOpen && <h3 style={{ margin: 0, fontSize: '14px', fontWeight: '700', color: COLORS.darkText, whiteSpace: 'nowrap' }}>Academic Curator</h3>}
-
-        <nav style={{ marginTop: '30px' }}>
+        <nav style={{ marginTop: '30px', flex: 1 }}>
           {[
             { icon: <BookOpen size={20} />, label: 'Textbooks', action: 'textbooks', disabled: false, rolesAllowed: ['central_admin', 'admin', 'content_developer'] },
             { icon: <Users size={20} />, label: 'Manage Users', action: 'manage-users', disabled: true, rolesAllowed: ['central_admin', 'admin'] },
             { icon: <Mail size={20} />, label: 'Invites', action: 'invites', disabled: false, rolesAllowed: ['central_admin', 'admin'] }
           ].filter(item => {
-            // Show item only if user's role is allowed
             const userRole = currentUser?.user_metadata?.role || 'content_developer';
             return item.rolesAllowed.includes(userRole);
           }).map((item, i) => (
@@ -1275,96 +1366,106 @@ export default function App() {
                 alignItems: 'center',
                 gap: '12px',
                 fontSize: '14px',
-                fontWeight: item.action === 'textbooks' ? '600' : '500',
-                opacity: item.disabled ? 0.5 : 1
+                fontWeight: '500',
+                fontFamily: FONT_FAMILY,
+                whiteSpace: 'nowrap'
               }}
             >
               {item.icon}
-              {sidebarOpen && <span style={{ fontSize: '14px', fontWeight: item.action === 'textbooks' ? '600' : '500', whiteSpace: 'nowrap' }}>{item.label}</span>}
+              {sidebarOpen && item.label}
             </button>
           ))}
         </nav>
+
+        <button
+          onClick={async () => {
+            await supabase.auth.signOut();
+            setCurrentUser(null);
+            setAuthPage('login');
+          }}
+          style={{
+            width: '100%',
+            padding: '12px 16px',
+            background: COLORS.errorBg,
+            color: COLORS.errorText,
+            border: 'none',
+            borderRadius: '6px',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+            fontSize: '14px',
+            fontWeight: '500',
+            fontFamily: FONT_FAMILY
+          }}
+        >
+          <LogOut size={20} />
+          {sidebarOpen && 'Logout'}
+        </button>
       </div>
 
       {/* MAIN CONTENT */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         {/* HEADER */}
         <div style={{
           background: COLORS.white,
           borderBottom: `1px solid ${COLORS.borderColor}`,
-          padding: '20px 40px',
+          padding: '16px 24px',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center'
         }}>
-          <div style={{ flex: 1 }}></div>
           <h1 style={{ margin: 0, fontSize: '20px', fontWeight: '700', color: COLORS.darkText }}>AI Content Studio</h1>
-          <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end', gap: '16px', alignItems: 'center' }}>
-            <div style={{ textAlign: 'right', marginRight: '16px' }}>
-              <p style={{ margin: 0, fontSize: '13px', fontWeight: '600', color: COLORS.darkText }}>{currentUser?.email}</p>
-              <p style={{ margin: '4px 0 0 0', fontSize: '11px', fontWeight: '500', color: COLORS.lightText }}>Role: {currentUser?.user_metadata?.role || 'Loading...'}</p>
-            </div>
-            <button
-              onClick={handleLogout}
-              style={{
-                background: 'none',
-                border: 'none',
-                cursor: 'pointer',
-                fontSize: '12px',
-                fontWeight: '500',
-                color: COLORS.lightText,
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px'
-              }}
-            >
-              <LogOut size={16} /> Logout
-            </button>
-          </div>
+          <span style={{ fontSize: '12px', color: COLORS.lightText }}>
+            {currentUser?.email} • {currentUser?.user_metadata?.role}
+          </span>
         </div>
 
         {/* CONTENT AREA */}
-        <div style={{ flex: 1, padding: '40px', overflowY: 'auto' }}>
-          {/* INVITE PANEL */}
+        <div style={{ flex: 1, overflow: 'auto', padding: '24px' }}>
           {showInvitePanel && (currentUser?.user_metadata?.role === 'central_admin' || currentUser?.user_metadata?.role === 'admin') && (
-            <div style={{ background: COLORS.white, borderRadius: '12px', padding: '24px', marginBottom: '30px', border: `1px solid ${COLORS.borderColor}` }}>
-              <h2 style={{ margin: '0 0 20px 0', fontSize: '18px', fontWeight: '700', color: COLORS.darkText }}>Send Invite</h2>
+            <div style={{
+              background: COLORS.white,
+              border: `1px solid ${COLORS.borderColor}`,
+              borderRadius: '8px',
+              padding: '20px',
+              marginBottom: '24px'
+            }}>
+              <h2 style={{ margin: '0 0 16px 0', fontSize: '16px', fontWeight: '600', color: COLORS.darkText }}>📧 Send Invite</h2>
 
-              <form onSubmit={handleSendInvite} style={{ marginBottom: '20px' }}>
-                <div style={{ display: 'flex', gap: '10px', marginBottom: '15px' }}>
-                  <input
-                    type="email"
-                    value={inviteEmail}
-                    onChange={(e) => setInviteEmail(e.target.value)}
-                    placeholder="user@example.com"
-                    required
-                    style={{
-                      flex: 1,
-                      padding: '10px 12px',
-                      border: `1px solid ${COLORS.borderColor}`,
-                      borderRadius: '6px',
-                      fontSize: '14px',
-                      fontFamily: FONT_FAMILY
-                    }}
-                  />
-                  <button
-                    type="submit"
-                    disabled={inviteSending}
-                    style={{
-                      padding: '10px 20px',
-                      background: COLORS.navActive,
-                      color: COLORS.white,
-                      border: 'none',
-                      borderRadius: '6px',
-                      cursor: inviteSending ? 'not-allowed' : 'pointer',
-                      fontWeight: '500',
-                      fontSize: '14px',
-                      fontFamily: FONT_FAMILY
-                    }}
-                  >
-                    {inviteSending ? 'Sending...' : 'Send Invite'}
-                  </button>
-                </div>
+              <form onSubmit={handleSendInvite} style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+                <input
+                  type="email"
+                  value={inviteEmail}
+                  onChange={(e) => setInviteEmail(e.target.value)}
+                  placeholder="user@example.com"
+                  required
+                  style={{
+                    flex: 1,
+                    padding: '10px 12px',
+                    border: `1px solid ${COLORS.borderColor}`,
+                    borderRadius: '6px',
+                    fontSize: '14px',
+                    fontFamily: FONT_FAMILY
+                  }}
+                />
+                <button
+                  type="submit"
+                  disabled={inviteSending}
+                  style={{
+                    padding: '10px 20px',
+                    background: COLORS.navActive,
+                    color: COLORS.white,
+                    border: 'none',
+                    borderRadius: '6px',
+                    cursor: inviteSending ? 'not-allowed' : 'pointer',
+                    fontWeight: '500',
+                    fontSize: '14px',
+                    fontFamily: FONT_FAMILY
+                  }}
+                >
+                  {inviteSending ? 'Sending...' : 'Send Invite'}
+                </button>
               </form>
 
               {inviteMessage && (
@@ -1398,11 +1499,9 @@ export default function App() {
             </div>
           )}
 
-          {/* PAGE TITLE */}
           <h1 style={{ margin: '0 0 8px 0', fontSize: '32px', fontWeight: '700', color: COLORS.darkText }}>Textbooks</h1>
           <p style={{ margin: '0 0 24px 0', color: COLORS.lightText, fontSize: '14px' }}>Manage and curate AI-generated curriculum materials.</p>
 
-          {/* ACTION BUTTONS */}
           <div style={{ display: 'flex', gap: '12px', marginBottom: '24px', flexWrap: 'wrap' }}>
             <button onClick={() => setShowAddForm(!showAddForm)} style={{ padding: '10px 16px', background: COLORS.navActive, color: COLORS.white, border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '500', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px', fontFamily: FONT_FAMILY }}>
               <Plus size={16} /> Add Record
@@ -1418,24 +1517,78 @@ export default function App() {
             </button>
           </div>
 
-          {/* FILTERS */}
+          {showAddForm && (
+            <div style={{ background: COLORS.white, borderRadius: '12px', padding: '20px', marginBottom: '24px', border: `1px solid ${COLORS.borderColor}` }}>
+              <h3 style={{ margin: '0 0 16px 0', fontSize: '16px', fontWeight: '600', color: COLORS.darkText }}>
+                {editingId ? '✏️ Edit Record' : '➕ Add New Record'}
+              </h3>
+              <form onSubmit={handleSaveRecord}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '500', color: COLORS.darkText, marginBottom: '6px', textTransform: 'uppercase' }}>CLASS</label>
+                    <select value={formClass} onChange={(e) => setFormClass(e.target.value)} style={{ width: '100%', padding: '10px', border: `1px solid ${COLORS.borderColor}`, borderRadius: '6px', fontSize: '14px', fontFamily: FONT_FAMILY }}>
+                      {['1', '2', '3', '4', '5'].map(c => <option key={c}>{c}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '500', color: COLORS.darkText, marginBottom: '6px', textTransform: 'uppercase' }}>SUBJECT</label>
+                    <select value={formSubject} onChange={(e) => setFormSubject(e.target.value)} style={{ width: '100%', padding: '10px', border: `1px solid ${COLORS.borderColor}`, borderRadius: '6px', fontSize: '14px', fontFamily: FONT_FAMILY }}>
+                      {subjects.map(s => <option key={s}>{s}</option>)}
+                    </select>
+                  </div>
+                </div>
+
+                <div style={{ marginBottom: '16px' }}>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '500', color: COLORS.darkText, marginBottom: '6px', textTransform: 'uppercase' }}>TOPIC</label>
+                  <input type="text" value={formTopic} onChange={(e) => setFormTopic(e.target.value)} required style={{ width: '100%', padding: '10px', border: `1px solid ${COLORS.borderColor}`, borderRadius: '6px', fontSize: '14px', fontFamily: FONT_FAMILY }} />
+                </div>
+
+                <div style={{ marginBottom: '16px' }}>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '500', color: COLORS.darkText, marginBottom: '6px', textTransform: 'uppercase' }}>SUB-TOPIC</label>
+                  <input type="text" value={formSubTopic} onChange={(e) => setFormSubTopic(e.target.value)} style={{ width: '100%', padding: '10px', border: `1px solid ${COLORS.borderColor}`, borderRadius: '6px', fontSize: '14px', fontFamily: FONT_FAMILY }} />
+                </div>
+
+                <div style={{ marginBottom: '16px' }}>
+                  <label style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', fontWeight: '500', color: COLORS.darkText, marginBottom: '6px', textTransform: 'uppercase' }}>
+                    AI PROMPT
+                    <span style={{ fontSize: '11px', color: COLORS.lightText }}>{formPrompt.length} / 20000</span>
+                  </label>
+                  <textarea value={formPrompt} onChange={(e) => setFormPrompt(e.target.value.substring(0, 20000))} rows="6" style={{ width: '100%', padding: '10px', border: `1px solid ${COLORS.borderColor}`, borderRadius: '6px', fontSize: '13px', fontFamily: FONT_FAMILY, resize: 'none' }} />
+                </div>
+
+                <div style={{ background: '#f0f9ff', border: '1px solid #a7f3d0', borderRadius: '6px', padding: '12px', marginBottom: '16px', fontSize: '12px', color: '#065f46' }}>
+                  ⚡ Claude AI Ready - Will generate content automatically
+                </div>
+
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button type="button" onClick={() => { setShowAddForm(false); setEditingId(null); }} style={{ flex: 1, padding: '10px', background: COLORS.filterBg, color: COLORS.darkText, border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '500', fontSize: '14px', fontFamily: FONT_FAMILY }}>
+                    Cancel
+                  </button>
+                  <button type="submit" disabled={formLoading} style={{ flex: 1, padding: '10px', background: COLORS.navActive, color: COLORS.white, border: 'none', borderRadius: '6px', cursor: formLoading ? 'not-allowed' : 'pointer', fontWeight: '500', fontSize: '14px', fontFamily: FONT_FAMILY }}>
+                    {formLoading ? '⏳ Saving...' : '⚡ Save & Generate'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
+
           <div style={{ background: COLORS.white, borderRadius: '12px', padding: '20px', marginBottom: '24px', border: `1px solid ${COLORS.borderColor}` }}>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '16px' }}>
               <div>
                 <label style={{ display: 'block', fontSize: '12px', fontWeight: '500', color: COLORS.darkText, marginBottom: '6px', textTransform: 'uppercase' }}>CLASS</label>
-                <select value={filterClass} onChange={(e) => setFilterClass(e.target.value)} style={{ width: '100%', padding: '10px', border: `1px solid ${COLORS.borderColor}`, borderRadius: '6px', fontSize: '14px', fontFamily: FONT_FAMILY, background: COLORS.white }}>
+                <select value={filterClass} onChange={(e) => setFilterClass(e.target.value)} style={{ width: '100%', padding: '10px', border: `1px solid ${COLORS.borderColor}`, borderRadius: '6px', fontSize: '14px', fontFamily: FONT_FAMILY }}>
                   {['All Classes', '1', '2', '3', '4', '5'].map(c => <option key={c}>{c}</option>)}
                 </select>
               </div>
               <div>
                 <label style={{ display: 'block', fontSize: '12px', fontWeight: '500', color: COLORS.darkText, marginBottom: '6px', textTransform: 'uppercase' }}>SUBJECT</label>
-                <select value={filterSubject} onChange={(e) => setFilterSubject(e.target.value)} style={{ width: '100%', padding: '10px', border: `1px solid ${COLORS.borderColor}`, borderRadius: '6px', fontSize: '14px', fontFamily: FONT_FAMILY, background: COLORS.white }}>
+                <select value={filterSubject} onChange={(e) => setFilterSubject(e.target.value)} style={{ width: '100%', padding: '10px', border: `1px solid ${COLORS.borderColor}`, borderRadius: '6px', fontSize: '14px', fontFamily: FONT_FAMILY }}>
                   {['All Subjects', ...subjects].map(s => <option key={s}>{s}</option>)}
                 </select>
               </div>
               <div>
                 <label style={{ display: 'block', fontSize: '12px', fontWeight: '500', color: COLORS.darkText, marginBottom: '6px', textTransform: 'uppercase' }}>STATUS</label>
-                <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} style={{ width: '100%', padding: '10px', border: `1px solid ${COLORS.borderColor}`, borderRadius: '6px', fontSize: '14px', fontFamily: FONT_FAMILY, background: COLORS.white }}>
+                <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} style={{ width: '100%', padding: '10px', border: `1px solid ${COLORS.borderColor}`, borderRadius: '6px', fontSize: '14px', fontFamily: FONT_FAMILY }}>
                   {['All Status', 'pending', 'generating', 'generated'].map(s => <option key={s}>{s}</option>)}
                 </select>
               </div>
@@ -1443,144 +1596,99 @@ export default function App() {
                 <label style={{ display: 'block', fontSize: '12px', fontWeight: '500', color: COLORS.darkText, marginBottom: '6px', textTransform: 'uppercase' }}>TOPIC</label>
                 <input type="text" value={filterTopic} onChange={(e) => setFilterTopic(e.target.value)} placeholder="Search topic..." style={{ width: '100%', padding: '10px', border: `1px solid ${COLORS.borderColor}`, borderRadius: '6px', fontSize: '14px', fontFamily: FONT_FAMILY }} />
               </div>
-              <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: '500', color: COLORS.darkText, marginBottom: '6px', textTransform: 'uppercase' }}>SUB-TOPIC</label>
-                <input type="text" value={filterSubTopic} onChange={(e) => setFilterSubTopic(e.target.value)} placeholder="Search sub-topic..." style={{ width: '100%', padding: '10px', border: `1px solid ${COLORS.borderColor}`, borderRadius: '6px', fontSize: '14px', fontFamily: FONT_FAMILY }} />
-              </div>
             </div>
           </div>
 
-          {/* ADD/EDIT FORM */}
-          {showAddForm && (
-            <div style={{ position: 'fixed', right: 0, top: 0, height: '100vh', width: '500px', background: COLORS.white, borderLeft: `1px solid ${COLORS.borderColor}`, padding: '30px', overflowY: 'auto', boxShadow: '-10px 0 30px rgba(0,0,0,0.1)', zIndex: 1000 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-                <h2 style={{ margin: 0, fontSize: '18px', fontWeight: '700', color: COLORS.darkText }}>{editingRecord ? 'Edit Record' : 'Add Record'}</h2>
-                <button onClick={() => { setShowAddForm(false); setEditingRecord(null); setFormData({ class: '1', subject: 'English', topic: '', sub_topic: '', prompt: '' }); }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '20px' }}>×</button>
-              </div>
-
-              <div style={{ marginBottom: '20px' }}>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: '500', color: COLORS.darkText, marginBottom: '6px', textTransform: 'uppercase' }}>CLASS</label>
-                <select value={formData.class} onChange={(e) => setFormData({ ...formData, class: e.target.value })} style={{ width: '100%', padding: '10px', border: `1px solid ${COLORS.borderColor}`, borderRadius: '6px', fontSize: '14px', fontFamily: FONT_FAMILY, background: COLORS.white }}>
-                  {['1', '2', '3', '4', '5'].map(c => <option key={c}>{c}</option>)}
-                </select>
-              </div>
-
-              <div style={{ marginBottom: '20px' }}>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: '500', color: COLORS.darkText, marginBottom: '6px', textTransform: 'uppercase' }}>SUBJECT</label>
-                <select value={formData.subject} onChange={(e) => setFormData({ ...formData, subject: e.target.value })} style={{ width: '100%', padding: '10px', border: `1px solid ${COLORS.borderColor}`, borderRadius: '6px', fontSize: '14px', fontFamily: FONT_FAMILY, background: COLORS.white }}>
-                  {subjects.map(s => <option key={s}>{s}</option>)}
-                </select>
-              </div>
-
-              <div style={{ marginBottom: '20px' }}>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: '500', color: COLORS.darkText, marginBottom: '6px', textTransform: 'uppercase' }}>TOPIC</label>
-                <input type="text" value={formData.topic} onChange={(e) => setFormData({ ...formData, topic: e.target.value })} placeholder="Enter topic..." required style={{ width: '100%', padding: '10px', border: `1px solid ${COLORS.borderColor}`, borderRadius: '6px', fontSize: '14px', fontFamily: FONT_FAMILY, boxSizing: 'border-box' }} />
-              </div>
-
-              <div style={{ marginBottom: '20px' }}>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: '500', color: COLORS.darkText, marginBottom: '6px', textTransform: 'uppercase' }}>SUB-TOPIC</label>
-                <input type="text" value={formData.sub_topic} onChange={(e) => setFormData({ ...formData, sub_topic: e.target.value })} placeholder="Enter sub-topic..." style={{ width: '100%', padding: '10px', border: `1px solid ${COLORS.borderColor}`, borderRadius: '6px', fontSize: '14px', fontFamily: FONT_FAMILY, boxSizing: 'border-box' }} />
-              </div>
-
-              <div style={{ marginBottom: '20px' }}>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: COLORS.darkText, marginBottom: '8px', textTransform: 'uppercase' }}>AI PROMPT <span style={{ fontSize: '12px', color: COLORS.lightText, fontWeight: '400' }}>Max 20000 characters</span></label>
-                <textarea value={formData.prompt} onChange={(e) => setFormData({ ...formData, prompt: e.target.value.slice(0, 20000) })} placeholder="Enter detailed prompt for Claude..." required rows="6" style={{ width: '100%', padding: '12px', border: `1px solid ${COLORS.borderColor}`, borderRadius: '6px', fontSize: '14px', background: COLORS.white, fontFamily: FONT_FAMILY, resize: 'vertical', minHeight: '140px', boxSizing: 'border-box' }} />
-                <div style={{ fontSize: '12px', color: COLORS.lightText, marginTop: '6px' }}>{formData.prompt.length}/20000 characters</div>
-              </div>
-
-              <div style={{ background: '#f0f9ff', border: `1px solid #bfdbfe`, padding: '12px', borderRadius: '6px', marginBottom: '20px' }}>
-                <p style={{ margin: '0', fontSize: '12px', color: '#1e40af', fontWeight: '500' }}>⚡ Claude AI Ready</p>
-                <p style={{ margin: '6px 0 0 0', fontSize: '12px', color: '#1e40af' }}>Your prompt will be sent to Claude when you save.</p>
-              </div>
-
-              <div style={{ display: 'flex', gap: '12px' }}>
-                <button onClick={() => { setShowAddForm(false); setEditingRecord(null); setFormData({ class: '1', subject: 'English', topic: '', sub_topic: '', prompt: '' }); }} style={{ flex: 1, padding: '10px', border: `1px solid ${COLORS.borderColor}`, background: COLORS.white, borderRadius: '6px', cursor: 'pointer', fontWeight: '500', fontSize: '14px', fontFamily: FONT_FAMILY }}>Cancel</button>
-                <button onClick={handleSaveRecord} style={{ flex: 1, padding: '10px', background: COLORS.navActive, color: COLORS.white, border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '500', fontSize: '14px', fontFamily: FONT_FAMILY }}>⚡ Save & Generate</button>
-              </div>
-            </div>
-          )}
-
-          {/* RECORDS TABLE */}
           <div style={{ background: COLORS.white, borderRadius: '12px', border: `1px solid ${COLORS.borderColor}`, overflow: 'hidden' }}>
-            {loading ? (
-              <div style={{ padding: '40px', textAlign: 'center', color: COLORS.lightText }}>Loading...</div>
-            ) : filteredRecords.length === 0 ? (
-              <div style={{ padding: '40px', textAlign: 'center', color: COLORS.lightText }}>No records found. Create one to get started!</div>
-            ) : (
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr style={{ background: COLORS.navActive, borderBottom: `1px solid ${COLORS.borderColor}` }}>
-                    <th style={{ padding: '14px 12px', textAlign: 'left', fontSize: '11px', fontWeight: '600', color: COLORS.white, textTransform: 'uppercase', letterSpacing: '0.5px' }}>ID</th>
-                    <th style={{ padding: '14px 12px', textAlign: 'left', fontSize: '11px', fontWeight: '600', color: COLORS.white, textTransform: 'uppercase', letterSpacing: '0.5px' }}>CLASS</th>
-                    <th style={{ padding: '14px 12px', textAlign: 'left', fontSize: '11px', fontWeight: '600', color: COLORS.white, textTransform: 'uppercase', letterSpacing: '0.5px' }}>SUBJECT</th>
-                    <th style={{ padding: '14px 12px', textAlign: 'left', fontSize: '11px', fontWeight: '600', color: COLORS.white, textTransform: 'uppercase', letterSpacing: '0.5px' }}>TOPIC</th>
-                    <th style={{ padding: '14px 12px', textAlign: 'left', fontSize: '11px', fontWeight: '600', color: COLORS.white, textTransform: 'uppercase', letterSpacing: '0.5px' }}>STATUS</th>
-                    <th style={{ padding: '14px 12px', textAlign: 'left', fontSize: '11px', fontWeight: '600', color: COLORS.white, textTransform: 'uppercase', letterSpacing: '0.5px' }}>WORDS</th>
-                    <th style={{ padding: '14px 12px', textAlign: 'left', fontSize: '11px', fontWeight: '600', color: COLORS.white, textTransform: 'uppercase', letterSpacing: '0.5px' }}>ACTION</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredRecords.map((record, idx) => (
-                    <tr key={idx} style={{ borderBottom: `1px solid ${COLORS.borderColor}` }}>
-                      <td style={{ padding: '12px', fontSize: '13px', fontWeight: '500', color: COLORS.darkText }}>#{record.record_id}</td>
-                      <td style={{ padding: '12px', fontSize: '13px', color: COLORS.darkText }}>Class {record.class}</td>
-                      <td style={{ padding: '12px', fontSize: '13px', color: COLORS.darkText }}>{record.subject}</td>
-                      <td style={{ padding: '12px', fontSize: '13px', color: COLORS.darkText }}>{record.topic}</td>
-                      <td style={{ padding: '12px' }}>
-                        <span style={{
-                          padding: '4px 8px',
-                          borderRadius: '4px',
-                          fontSize: '12px',
-                          fontWeight: '500',
-                          background: record.status === 'generated' ? COLORS.statusGenerated : record.status === 'generating' ? COLORS.statusGenerating : COLORS.statusPending,
-                          color: COLORS.white
-                        }}>
-                          {record.status}
-                        </span>
-                      </td>
-                      <td style={{ padding: '12px', fontSize: '13px', color: COLORS.lightText }}>{record.word_count || 0}</td>
-                      <td style={{ padding: '12px', fontSize: '13px' }}>
-                        <div style={{ display: 'flex', gap: '12px' }}>
-                          <button onClick={() => setViewingRecord(record)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '6px', borderRadius: '6px', transition: 'all 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center', color: COLORS.navActive, hover: { background: '#f0f9ff' } }} title="View">
-                            <Eye size={18} strokeWidth={2} />
-                          </button>
-                          <button onClick={() => handleEdit(record)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '6px', borderRadius: '6px', transition: 'all 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center', color: COLORS.navActive }} title="Edit">
-                            <Edit2 size={18} strokeWidth={2} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr style={{ background: COLORS.navActive, color: COLORS.white }}>
+                  {['ID', 'CLASS', 'SUBJECT', 'TOPIC', 'STATUS', 'WORDS', 'ACTION'].map(h => (
+                    <th key={h} style={{ padding: '12px', textAlign: 'left', fontSize: '11px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                      {h}
+                    </th>
                   ))}
-                </tbody>
-              </table>
-            )}
+                </tr>
+              </thead>
+              <tbody>
+                {filteredRecords.map((r, i) => (
+                  <tr key={i} style={{ borderBottom: `1px solid ${COLORS.borderColor}`, background: i % 2 === 0 ? COLORS.white : COLORS.lightBg }}>
+                    <td style={{ padding: '12px', fontSize: '13px' }}>{r.record_id}</td>
+                    <td style={{ padding: '12px', fontSize: '13px' }}>{r.class}</td>
+                    <td style={{ padding: '12px', fontSize: '13px' }}>{r.subject}</td>
+                    <td style={{ padding: '12px', fontSize: '13px' }}>{r.topic}</td>
+                    <td style={{ padding: '12px', fontSize: '13px' }}>
+                      <span style={{
+                        display: 'inline-block',
+                        padding: '4px 8px',
+                        borderRadius: '3px',
+                        fontSize: '11px',
+                        fontWeight: '500',
+                        background: r.status === 'generated' ? COLORS.successBg : r.status === 'generating' ? '#f3e8ff' : COLORS.filterBg,
+                        color: r.status === 'generated' ? COLORS.successText : r.status === 'generating' ? '#7c3aed' : COLORS.lightText
+                      }}>
+                        {r.status}
+                      </span>
+                    </td>
+                    <td style={{ padding: '12px', fontSize: '13px' }}>{r.word_count || 0}</td>
+                    <td style={{ padding: '12px', fontSize: '13px', display: 'flex', gap: '8px' }}>
+                      <button onClick={() => setViewingRecord(r)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', display: 'flex' }}>
+                        <Eye size={18} color={COLORS.navActive} />
+                      </button>
+                      <button onClick={() => { setEditingId(r.record_id); setFormClass(r.class); setFormSubject(r.subject); setFormTopic(r.topic); setFormSubTopic(r.sub_topic); setFormPrompt(r.prompt); setShowAddForm(true); }} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', display: 'flex' }}>
+                        <Edit2 size={18} color={COLORS.navActive} />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
 
       {/* VIEW MODAL */}
       {viewingRecord && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 2000, padding: '20px' }}>
-          <div style={{ background: COLORS.white, borderRadius: '12px', maxWidth: '900px', width: '100%', maxHeight: '90vh', display: 'flex', flexDirection: 'column', boxShadow: '0 25px 50px rgba(0,0,0,0.3)' }}>
-            <div style={{ padding: '24px', borderBottom: `1px solid ${COLORS.borderColor}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h2 style={{ margin: 0, fontSize: '18px', fontWeight: '700', color: COLORS.darkText }}>{viewingRecord.topic}</h2>
-              <button onClick={() => setViewingRecord(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '24px', color: COLORS.lightText }}>×</button>
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          justifyContent: 'flex-end',
+          zIndex: 1000
+        }} onClick={() => setViewingRecord(null)}>
+          <div style={{
+            background: COLORS.white,
+            width: '600px',
+            height: '100%',
+            display: 'flex',
+            flexDirection: 'column',
+            boxShadow: '-2px 0 12px rgba(0,0,0,0.1)',
+            overflow: 'hidden'
+          }} onClick={e => e.stopPropagation()}>
+            <div style={{ padding: '16px 20px', borderBottom: `1px solid ${COLORS.borderColor}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h2 style={{ margin: 0, fontSize: '16px', fontWeight: '600', color: COLORS.darkText }}>
+                {viewingRecord.topic}
+              </h2>
+              <button onClick={() => setViewingRecord(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px' }}>
+                <X size={20} />
+              </button>
             </div>
 
-            <div style={{ flex: 1, overflowY: 'auto', padding: '24px' }}>
+            <div style={{ padding: '16px 20px', borderBottom: `1px solid ${COLORS.borderColor}`, display: 'flex', gap: '16px' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', cursor: 'pointer' }}>
+                <input type="radio" checked={viewMarkdown} onChange={() => setViewMarkdown(true)} />
+                Markdown
+              </label>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', cursor: 'pointer' }}>
+                <input type="radio" checked={!viewMarkdown} onChange={() => setViewMarkdown(false)} />
+                HTML
+              </label>
+            </div>
+
+            <div style={{ flex: 1, overflowY: 'auto', padding: '20px' }}>
               {viewingRecord.ai_output ? (
                 <>
-                  <div style={{ marginBottom: '16px', display: 'flex', gap: '16px', alignItems: 'center' }}>
-                    <label style={{ fontSize: '12px', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <input type="radio" checked={viewMarkdown} onChange={() => setViewMarkdown(true)} />
-                      Markdown
-                    </label>
-                    <label style={{ fontSize: '12px', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <input type="radio" checked={!viewMarkdown} onChange={() => setViewMarkdown(false)} />
-                      HTML
-                    </label>
-                  </div>
-
                   {viewMarkdown ? (
                     <div style={{ fontSize: '13px', lineHeight: '1.6', color: COLORS.darkText, fontFamily: FONT_FAMILY, fontWeight: '400' }}>
                       {parseMarkdownToReact(viewingRecord.ai_output)}
@@ -1613,6 +1721,9 @@ export default function App() {
           </div>
         </div>
       )}
+
+      {/* PAGE SETTINGS PANEL */}
+      {authPage === 'dashboard' && renderPageSettingsPanel()}
     </div>
   );
 }

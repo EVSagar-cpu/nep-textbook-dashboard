@@ -203,7 +203,6 @@ export default function App() {
   const parseMarkdownToReact = (markdown) => {
     if (!markdown) return null;
 
-    // ✅ CHANGE 2: CONSTANT SPACING (Consistent spacing throughout)
     const SPACING = {
       paragraph: '16px',
       heading: '18px',
@@ -213,7 +212,6 @@ export default function App() {
       blockquote: '16px'
     };
 
-    // ✅ CHANGE 3: Detect if line mentions a visual
     const isVisualMention = (text) => {
       const visualKeywords = [
         'visual', 'diagram', 'illustration', 'image', 'figure',
@@ -222,503 +220,8 @@ export default function App() {
         'picture', 'photo', 'screenshot', 'icon', 'symbol',
         'design', 'layout', 'structure'
       ];
-      
-      return visualKeywords.some(keyword => 
-        text.toLowerCase().includes(keyword)
-      );
+      return visualKeywords.some(keyword => text.toLowerCase().includes(keyword));
     };
-
-    const lines = markdown.split('
-');
-    const result = [];
-    let i = 0;
-    let listItems = [];
-    let tableLines = [];
-    let codeBlock = [];
-    let inCodeBlock = false;
-
-    const flushList = () => {
-      if (listItems.length > 0) {
-        result.push(
-          <ul key={`list-${result.length}`} style={{ marginLeft: '24px', marginBottom: SPACING.list, marginTop: '8px' }}>
-            {listItems.map((item, idx) => (
-              <li key={idx} style={{ marginBottom: '6px', lineHeight: '1.6' }}>
-                {renderInlineMarkdown(item)}
-              </li>
-            ))}
-          </ul>
-        );
-        listItems = [];
-      }
-    };
-
-    const flushTable = () => {
-      if (tableLines.length > 0) {
-        const rows = tableLines.map(line => 
-          line.split('|').map(cell => cell.trim()).filter(cell => cell)
-        );
-        
-        if (rows.length > 0) {
-          result.push(
-            <table key={`table-${result.length}`} style={{
-              width: '100%',
-              borderCollapse: 'collapse',
-              margin: `16px 0 ${SPACING.table} 0`,
-              fontSize: '12px',
-              border: `1px solid ${COLORS.borderColor}`,
-              pageBreakInside: 'avoid'
-            }}>
-              <thead>
-                <tr style={{ background: '#64748b', color: 'white' }}>
-                  {rows[0].map((cell, idx) => (
-                    <th key={idx} style={{
-                      padding: '12px',
-                      textAlign: 'left',
-                      fontWeight: '600',
-                      borderBottom: `2px solid #475569`
-                    }}>
-                      {cell}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {rows.slice(1).map((row, rowIdx) => (
-                  <tr key={rowIdx} style={{ 
-                    background: rowIdx % 2 === 0 ? '#f9fafb' : '#ffffff',
-                    borderBottom: `1px solid ${COLORS.borderColor}`
-                  }}>
-                    {row.map((cell, cellIdx) => (
-                      <td key={cellIdx} style={{
-                        padding: '12px',
-                        borderRight: cellIdx < row.length - 1 ? `1px solid ${COLORS.borderColor}` : 'none'
-                      }}>
-                        {renderInlineMarkdown(cell)}
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          );
-        }
-        tableLines = [];
-      }
-    };
-
-    const flushCodeBlock = () => {
-      if (codeBlock.length > 0) {
-        result.push(
-          <pre key={`code-${result.length}`} style={{
-            background: '#1f2937',
-            color: '#e5e7eb',
-            padding: '14px',
-            borderRadius: '6px',
-            overflowX: 'auto',
-            margin: `12px 0 ${SPACING.code} 0`,
-            fontSize: '12px',
-            lineHeight: '1.5',
-            border: `1px solid #374151`,
-            fontFamily: 'monospace',
-            pageBreakInside: 'avoid'
-          }}>
-            <code>{codeBlock.join('
-')}</code>
-          </pre>
-        );
-        codeBlock = [];
-      }
-    };
-
-    const renderInlineMarkdown = (text) => {
-      if (!text) return null;
-
-      // ✅ CHANGE 3: Check if this is a visual mention
-      const hasVisual = isVisualMention(text);
-
-      const latexRegex = /(\$\$[^\$]+\$\$|\$[^\$]+\$)/g;
-      const mathParts = text.split(latexRegex);
-
-      const renderedContent = mathParts.map((part, idx) => {
-        if (part.startsWith('$$')) {
-          return (
-            <div key={idx} style={{
-              background: '#f0f9ff',
-              padding: '12px',
-              margin: '8px 0',
-              borderLeft: `4px solid #2563eb`,
-              fontFamily: 'monospace',
-              overflow: 'auto',
-              fontSize: '12px'
-            }}>
-              {part.replace(/\$\$/g, '')}
-            </div>
-          );
-        } else if (part.startsWith('$')) {
-          return (
-            <code key={idx} style={{
-              background: '#f0f9ff',
-              padding: '2px 6px',
-              borderRadius: '3px',
-              fontFamily: 'monospace',
-              fontSize: '12px'
-            }}>
-              {part.replace(/\$/g, '')}
-            </code>
-          );
-        }
-
-        const formatted = part
-          .replace(/\*\*(.*?)\*\*/g, '<strong style="font-weight:600">$1</strong>')
-          .replace(/__(.*?)__/g, '<strong style="font-weight:600">$1</strong>')
-          .replace(/\*(.*?)\*/g, '<em style="font-style:italic">$1</em>')
-          .replace(/_(.*?)_/g, '<em style="font-style:italic">$1</em>')
-          .replace(/`(.*?)`/g, '<code style="background:#f3f4f6;padding:2px 6px;border-radius:3px;font-family:monospace">$1</code>');
-
-        if (formatted !== part) {
-          return <span key={idx} dangerouslySetInnerHTML={{ __html: formatted }} />;
-        }
-
-        return part;
-      });
-
-      // ✅ CHANGE 3: If visual mention, wrap in highlighted box with italic
-      if (hasVisual) {
-        return (
-          <div style={{
-            fontStyle: 'italic',
-            backgroundColor: '#fef3c7',
-            borderLeft: `4px solid #f59e0b`,
-            padding: '12px 14px',
-            borderRadius: '4px',
-            marginBottom: '12px',
-            border: `1px solid #fcd34d`,
-            display: 'block',
-            lineHeight: '1.6'
-          }}>
-            {renderedContent}
-          </div>
-        );
-      }
-
-      return renderedContent;
-    };
-
-    while (i < lines.length) {
-      const line = lines[i];
-
-      if (line.trim().startsWith('```')) {
-        if (inCodeBlock) {
-          flushCodeBlock();
-          inCodeBlock = false;
-        } else {
-          inCodeBlock = true;
-        }
-        i++;
-        continue;
-      }
-
-      if (inCodeBlock) {
-        codeBlock.push(line);
-        i++;
-        continue;
-      }
-
-      if (line.includes('|') && line.trim().length > 2) {
-        tableLines.push(line);
-        i++;
-        continue;
-      }
-
-      if (tableLines.length > 0 && (!line.includes('|') || line.trim().length < 2)) {
-        flushTable();
-      }
-
-      if (line.startsWith('###')) {
-        flushList();
-        result.push(
-          <h3 key={i} style={{ fontSize: '15px', margin: `16px 0 ${SPACING.heading} 0`, fontWeight: '600', color: COLORS.darkText, pageBreakAfter: 'avoid' }}>
-            {renderInlineMarkdown(line.replace(/^#+\s*/, ''))}
-          </h3>
-        );
-        i++;
-        continue;
-      }
-
-      if (line.startsWith('##')) {
-        flushList();
-        result.push(
-          <h2 key={i} style={{ fontSize: '17px', margin: `16px 0 ${SPACING.heading} 0`, fontWeight: '600', color: COLORS.darkText, pageBreakAfter: 'avoid' }}>
-            {renderInlineMarkdown(line.replace(/^#+\s*/, ''))}
-          </h2>
-        );
-        i++;
-        continue;
-      }
-
-      if (line.startsWith('#')) {
-        flushList();
-        result.push(
-          <h1 key={i} style={{ fontSize: '18px', margin: `18px 0 ${SPACING.heading} 0`, fontWeight: '700', color: COLORS.darkText, pageBreakAfter: 'avoid' }}>
-            {renderInlineMarkdown(line.replace(/^#+\s*/, ''))}
-          </h1>
-        );
-        i++;
-        continue;
-      }
-
-      if (line.startsWith('>')) {
-        flushList();
-        result.push(
-          <blockquote key={i} style={{
-            borderLeft: `4px solid #9ca3af`,
-            paddingLeft: '16px',
-            paddingTop: '8px',
-            paddingBottom: '8px',
-            marginBottom: SPACING.blockquote,
-            marginTop: '8px',
-            fontStyle: 'italic',
-            color: '#6b7280',
-            backgroundColor: '#f9fafb'
-          }}>
-            {renderInlineMarkdown(line.replace(/^>\s*/, ''))}
-          </blockquote>
-        );
-        i++;
-        continue;
-      }
-
-      if (line.startsWith('-') || line.startsWith('*')) {
-        listItems.push(line.replace(/^[\-\*]\s*/, ''));
-        i++;
-        continue;
-      }
-
-      if (line.trim() !== '' && !inCodeBlock && tableLines.length === 0) {
-        flushList();
-        result.push(
-          <p key={i} style={{ marginBottom: SPACING.paragraph, marginTop: '4px', lineHeight: '1.7', color: COLORS.darkText }}>
-            {renderInlineMarkdown(line)}
-          </p>
-        );
-        i++;
-        continue;
-      }
-
-      i++;
-    }
-
-    flushList();
-    flushTable();
-    flushCodeBlock();
-
-    return result;
-  };
-
-  // ===== AUTH FUNCTIONS =====} from 'react';
-import { createClient } from '@supabase/supabase-js';
-import {
-  Menu, X, LogOut, Eye, Edit2, BookOpen, Plus, Download, RefreshCw,
-  Mail, Check, AlertCircle, Copy, Users
-} from 'lucide-react';
-import {
-  detectErrorType,
-  showDetailedError,
-  logError,
-  checkAPIHealth
-} from './utils/errorHandling';
-
-// ===== SUPABASE CLIENT =====
-const supabase = createClient(
-  'https://syacvhjmcgpgxvczassp.supabase.co',
-  'sb_publishable_tmoQwBjJYHyMnOSGAzts2w_v-aG0iYl'
-);
-
-// ===== COLORS =====
-const COLORS = {
-  navActive: '#2563eb',
-  navText: '#5a6978',
-  navDisabled: '#cbd5e0',
-  darkText: '#0f172a',
-  lightText: '#6b7280',
-  white: '#ffffff',
-  lightBg: '#f9fafb',
-  filterBg: '#f3f4f6',
-  borderColor: '#e5e7eb',
-  sidebarBg: '#f5f6f8',
-  statusGenerating: '#8b5cf6',
-  statusGenerated: '#10b981',
-  statusPending: '#9ca3af',
-  successBg: '#ecfdf5',
-  successBorder: '#a7f3d0',
-  successText: '#065f46',
-  errorBg: '#fef2f2',
-  errorBorder: '#fecaca',
-  errorText: '#991b1b',
-};
-
-const FONT_FAMILY = 'Lexend, sans-serif';
-
-// ===== PAPER SIZES =====
-const PAPER_SIZES = {
-  'A4': { width: 210, height: 297, label: 'A4 (210 × 297 mm)' },
-  'A3': { width: 297, height: 420, label: 'A3 (297 × 420 mm)' },
-  'Letter': { width: 216, height: 279, label: 'Letter (8.5 × 11 in)' },
-  'Legal': { width: 216, height: 356, label: 'Legal (8.5 × 14 in)' },
-};
-
-export default function App() {
-  // ===== AUTH & LAYOUT =====
-  const [currentUser, setCurrentUser] = useState(null);
-  const [authPage, setAuthPage] = useState('login');
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-
-  // ===== INVITE SYSTEM =====
-  const [showInvitePanel, setShowInvitePanel] = useState(false);
-  const [inviteEmail, setInviteEmail] = useState('');
-  const [inviteSending, setInviteSending] = useState(false);
-  const [inviteMessage, setInviteMessage] = useState('');
-  const [pendingInvites, setPendingInvites] = useState([]);
-
-  // ===== PASSWORD SETUP =====
-  const [setupToken, setSetupToken] = useState('');
-  const [setupPassword, setSetupPassword] = useState('');
-  const [setupPasswordConfirm, setSetupPasswordConfirm] = useState('');
-  const [setupError, setSetupError] = useState('');
-  const [setupLoading, setSetupLoading] = useState(false);
-
-  // ===== LOGIN =====
-  const [loginEmail, setLoginEmail] = useState('');
-  const [loginPassword, setLoginPassword] = useState('');
-  const [loginError, setLoginError] = useState('');
-  const [loginLoading, setLoginLoading] = useState(false);
-
-  // ===== RECORDS & FILTERS =====
-  const [records, setRecords] = useState([]);
-  const [filterClass, setFilterClass] = useState('All Classes');
-  const [filterSubject, setFilterSubject] = useState('All Subjects');
-  const [filterStatus, setFilterStatus] = useState('All Status');
-  const [filterTopic, setFilterTopic] = useState('');
-  const [filterContentType, setFilterContentType] = useState('All Types');
-
-  // ===== CONTENT TYPE OPTIONS =====
-  const CONTENT_TYPES = [
-    'Textbook',
-    'Lesson Plan',
-    'Assignment',
-    'Project Paper',
-    'Practice Questions',
-    'Flash Cards',
-    'Mock Exam',
-    'MCQ QP',
-    'Descriptive QP',
-    'Interactive Scroll',
-    'Live Worksheet'
-  ];
-
-  // ===== FORM DATA =====
-  const [showAddForm, setShowAddForm] = useState(false);
-  const [formClass, setFormClass] = useState('1');
-  const [formSubject, setFormSubject] = useState('English');
-  const [formTopic, setFormTopic] = useState('');
-  const [formSubTopic, setFormSubTopic] = useState('');
-  const [formContentType, setFormContentType] = useState('');
-  const [formPrompt, setFormPrompt] = useState('');
-  const [formLoading, setFormLoading] = useState(false);
-  const [editingId, setEditingId] = useState(null);
-
-  // ===== VIEW MODAL =====
-  const [viewingRecord, setViewingRecord] = useState(null);
-  const [viewMarkdown, setViewMarkdown] = useState(true);
-
-  // ===== SUBJECTS =====
-  const subjects = [
-    'English', 'Mathematics', 'Science', 'Social Studies', 'Social Science',
-    'मधुबन सरल-SL', 'तरंग-TL', 'Arts', 'Physical Education',
-    'Environmental Studies', 'General Knowledge', 'Computers'
-  ];
-
-  // ===== PAGE SETTINGS =====
-  const [pageSettings, setPageSettings] = useState(() => {
-    const saved = localStorage.getItem('pdfPageSettings');
-    return saved ? JSON.parse(saved) : {
-      paperSize: 'A4',
-      orientation: 'portrait',
-      customWidth: 210,
-      customHeight: 297,
-      margins: 10,
-    };
-  });
-
-  // ===== LOAD FONT & LIBS =====
-  useEffect(() => {
-    const link = document.createElement('link');
-    link.href = 'https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&display=swap';
-    link.rel = 'stylesheet';
-    document.head.appendChild(link);
-
-    // ✅ ADD MONTSERRAT FONT
-    const montserratLink = document.createElement('link');
-    montserratLink.href = 'https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap';
-    montserratLink.rel = 'stylesheet';
-    document.head.appendChild(montserratLink);
-
-    const script = document.createElement('script');
-    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
-    document.head.appendChild(script);
-  }, []);
-
-  // ===== SAVE PAGE SETTINGS =====
-  useEffect(() => {
-    localStorage.setItem('pdfPageSettings', JSON.stringify(pageSettings));
-  }, [pageSettings]);
-
-  // ===== CHECK INVITE TOKEN ON MOUNT =====
-  useEffect(() => {
-    const hash = window.location.hash;
-    if (hash.includes('invite_token=')) {
-      const token = new URLSearchParams(hash.substring(1)).get('invite_token');
-      if (token) {
-        setSetupToken(token);
-        setAuthPage('setup-password');
-      }
-    }
-    checkAuth();
-    
-    // ✅ Check Claude API health on startup
-    checkAPIHealth().then(health => {
-      if (!health.healthy) {
-        console.warn('⚠️ Claude API may be experiencing issues');
-      }
-    });
-  }, []);
-
-  // ===== CHECK AUTH =====
-  const checkAuth = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      const { data: roleData } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', user.id)
-        .single();
-
-      const userWithRole = {
-        ...user,
-        user_metadata: {
-          ...user.user_metadata,
-          role: roleData?.role || 'content_developer'
-        }
-      };
-      setCurrentUser(userWithRole);
-      setAuthPage('dashboard');
-      fetchRecords();
-    }
-  };
-
-  // ===== ADVANCED MARKDOWN PARSER =====
-  const parseMarkdownToReact = (markdown) => {
-    if (!markdown) return null;
 
     const lines = markdown.split('\n');
     const result = [];
@@ -731,7 +234,7 @@ export default function App() {
     const flushList = () => {
       if (listItems.length > 0) {
         result.push(
-          <ul key={`list-${result.length}`} style={{ marginLeft: '24px', marginBottom: '12px' }}>
+          <ul key={`list-${result.length}`} style={{ marginLeft: '24px', marginBottom: SPACING.list }}>
             {listItems.map((item, idx) => (
               <li key={idx} style={{ marginBottom: '6px', lineHeight: '1.6' }}>
                 {renderInlineMarkdown(item)}
@@ -1676,7 +1179,7 @@ export default function App() {
                 </button>
               </div>
               
-              <div style={{ marginBottom: '12px' }}>
+              <div style={{ marginBottom: SPACING.list }}>
                 <label style={{ display: 'block', fontSize: '11px', fontWeight: '500', color: COLORS.darkText, marginBottom: '4px', textTransform: 'uppercase' }}>
                   Paper Size
                 </label>
@@ -1712,7 +1215,7 @@ export default function App() {
                 </select>
               </div>
 
-              <div style={{ marginBottom: '12px' }}>
+              <div style={{ marginBottom: SPACING.list }}>
                 <label style={{ display: 'block', fontSize: '11px', fontWeight: '500', color: COLORS.darkText, marginBottom: '4px', textTransform: 'uppercase' }}>
                   Orientation
                 </label>
@@ -1755,7 +1258,7 @@ export default function App() {
               </div>
 
               {pageSettings.paperSize === 'Custom' && (
-                <div style={{ marginBottom: '12px', background: COLORS.filterBg, padding: '10px', borderRadius: '4px' }}>
+                <div style={{ marginBottom: SPACING.paragraph, background: COLORS.filterBg, padding: '10px', borderRadius: '4px' }}>
                   <label style={{ display: 'block', fontSize: '11px', fontWeight: '500', color: COLORS.darkText, marginBottom: '4px' }}>
                     Width (mm)
                   </label>
@@ -1797,7 +1300,7 @@ export default function App() {
                 </div>
               )}
 
-              <div style={{ marginBottom: '12px' }}>
+              <div style={{ marginBottom: SPACING.list }}>
                 <label style={{ display: 'block', fontSize: '11px', fontWeight: '500', color: COLORS.darkText, marginBottom: '4px', textTransform: 'uppercase' }}>
                   Margins (mm)
                 </label>
@@ -2487,7 +1990,7 @@ export default function App() {
                       fontSize: '14px', 
                       lineHeight: '1.8', 
                       color: COLORS.darkText, 
-                      fontFamily: 'Montserrat, sans-serif', 
+                      fontFamily: 'Montserrat, sans-serif',  // ✅ Montserrat font 
                       fontWeight: '400',
                       maxWidth: '800px'
                     }}>
@@ -2500,7 +2003,7 @@ export default function App() {
                         fontSize: '14px', 
                         lineHeight: '1.8', 
                         color: COLORS.darkText, 
-                        fontFamily: 'Montserrat, sans-serif', 
+                        fontFamily: 'Montserrat, sans-serif',  // ✅ Montserrat font 
                         fontWeight: '400',
                         maxWidth: '800px'
                       }} 

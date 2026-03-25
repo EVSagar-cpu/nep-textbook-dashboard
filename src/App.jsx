@@ -76,6 +76,22 @@ export default function App() {
   const [filterSubject, setFilterSubject] = useState('All Subjects');
   const [filterStatus, setFilterStatus] = useState('All Status');
   const [filterTopic, setFilterTopic] = useState('');
+  const [filterContentType, setFilterContentType] = useState('All Types');
+
+  // ===== CONTENT TYPE OPTIONS =====
+  const CONTENT_TYPES = [
+    'Textbook',
+    'Lesson Plan',
+    'Assignment',
+    'Project Paper',
+    'Practice Questions',
+    'Flash Cards',
+    'Mock Exam',
+    'MCQ QP',
+    'Descriptive QP',
+    'Interactive Scroll',
+    'Live Worksheet'
+  ];
 
   // ===== FORM DATA =====
   const [showAddForm, setShowAddForm] = useState(false);
@@ -83,6 +99,7 @@ export default function App() {
   const [formSubject, setFormSubject] = useState('English');
   const [formTopic, setFormTopic] = useState('');
   const [formSubTopic, setFormSubTopic] = useState('');
+  const [formContentType, setFormContentType] = useState('');
   const [formPrompt, setFormPrompt] = useState('');
   const [formLoading, setFormLoading] = useState(false);
   const [editingId, setEditingId] = useState(null);
@@ -632,8 +649,9 @@ export default function App() {
       const classMatch = filterClass === 'All Classes' || r.class === filterClass;
       const subjectMatch = filterSubject === 'All Subjects' || r.subject === filterSubject;
       const statusMatch = filterStatus === 'All Status' || r.status === filterStatus;
+      const contentTypeMatch = filterContentType === 'All Types' || r.content_type === filterContentType;
       const topicMatch = !filterTopic || r.topic.toLowerCase().includes(filterTopic.toLowerCase());
-      return classMatch && subjectMatch && statusMatch && topicMatch;
+      return classMatch && subjectMatch && statusMatch && contentTypeMatch && topicMatch;
     });
   };
 
@@ -643,6 +661,13 @@ export default function App() {
     setFormLoading(true);
 
     try {
+      // Validate required fields
+      if (!formClass || !formSubject || !formTopic || !formContentType || !formPrompt) {
+        alert('Please fill all required fields: Class, Subject, Topic, Content Type, and Prompt');
+        setFormLoading(false);
+        return;
+      }
+
       if (editingId) {
         await supabase
           .from('textbook_content')
@@ -651,6 +676,7 @@ export default function App() {
             subject: formSubject,
             topic: formTopic,
             sub_topic: formSubTopic,
+            content_type: formContentType,
             prompt: formPrompt,
             status: 'generating',
             updated_at: new Date(),
@@ -664,6 +690,7 @@ export default function App() {
             subject: formSubject,
             topic: formTopic,
             sub_topic: formSubTopic,
+            content_type: formContentType,
             prompt: formPrompt,
             status: 'generating',
           }]);
@@ -673,6 +700,7 @@ export default function App() {
       setFormSubject('English');
       setFormTopic('');
       setFormSubTopic('');
+      setFormContentType('');
       setFormPrompt('');
       setShowAddForm(false);
       setEditingId(null);
@@ -940,6 +968,7 @@ export default function App() {
     setFilterSubject('All Subjects');
     setFilterStatus('All Status');
     setFilterTopic('');
+    setFilterContentType('All Types');
   };
 
   // ===== PAGE SETTINGS TOGGLE =====
@@ -1397,7 +1426,7 @@ export default function App() {
 
         <nav style={{ marginTop: '30px', flex: 1 }}>
           {[
-            { icon: <BookOpen size={20} />, label: 'Textbooks', action: 'textbooks', disabled: false, rolesAllowed: ['central_admin', 'admin', 'content_developer'] },
+            { icon: <BookOpen size={20} />, label: 'Projects', action: 'textbooks', disabled: false, rolesAllowed: ['central_admin', 'admin', 'content_developer'] },
             { icon: <Users size={20} />, label: 'Manage Users', action: 'manage-users', disabled: true, rolesAllowed: ['central_admin', 'admin'] },
             { icon: <Mail size={20} />, label: 'Invites', action: 'invites', disabled: false, rolesAllowed: ['central_admin', 'admin'] }
           ].filter(item => {
@@ -1559,20 +1588,20 @@ export default function App() {
             </div>
           )}
 
-          <h1 style={{ margin: '0 0 8px 0', fontSize: '32px', fontWeight: '700', color: COLORS.darkText }}>Textbooks</h1>
+          <h1 style={{ margin: '0 0 8px 0', fontSize: '32px', fontWeight: '700', color: COLORS.darkText }}>Projects</h1>
           <p style={{ margin: '0 0 24px 0', color: COLORS.lightText, fontSize: '14px' }}>Manage and curate AI-generated curriculum materials.</p>
 
           <div style={{ display: 'flex', gap: '12px', marginBottom: '24px', flexWrap: 'wrap' }}>
-            <button onClick={() => setShowAddForm(!showAddForm)} style={{ padding: '10px 16px', background: COLORS.navActive, color: COLORS.white, border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '500', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px', fontFamily: FONT_FAMILY }}>
+            <button onClick={() => setShowAddForm(!showAddForm)} style={{ padding: '10px 16px', background: COLORS.navActive, color: COLORS.white, border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '400', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px', fontFamily: FONT_FAMILY }}>
               <Plus size={16} /> Add Record
             </button>
-            <button onClick={handleExport} style={{ padding: '10px 16px', background: COLORS.filterBg, color: COLORS.darkText, border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '500', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px', fontFamily: FONT_FAMILY }}>
+            <button onClick={handleExport} style={{ padding: '10px 16px', background: COLORS.filterBg, color: COLORS.darkText, border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '400', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px', fontFamily: FONT_FAMILY }}>
               <Download size={16} /> Export
             </button>
-            <button onClick={fetchRecords} style={{ padding: '10px 16px', background: COLORS.filterBg, color: COLORS.darkText, border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '500', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px', fontFamily: FONT_FAMILY }}>
+            <button onClick={fetchRecords} style={{ padding: '10px 16px', background: COLORS.filterBg, color: COLORS.darkText, border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '400', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px', fontFamily: FONT_FAMILY }}>
               <RefreshCw size={16} /> Refresh
             </button>
-            <button onClick={handleClearFilters} style={{ padding: '10px 16px', background: COLORS.filterBg, color: COLORS.darkText, border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '500', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px', fontFamily: FONT_FAMILY }}>
+            <button onClick={handleClearFilters} style={{ padding: '10px 16px', background: COLORS.filterBg, color: COLORS.darkText, border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '400', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px', fontFamily: FONT_FAMILY }}>
               <X size={16} /> Clear
             </button>
           </div>
@@ -1606,6 +1635,16 @@ export default function App() {
                 <div style={{ marginBottom: '16px' }}>
                   <label style={{ display: 'block', fontSize: '12px', fontWeight: '500', color: COLORS.darkText, marginBottom: '6px', textTransform: 'uppercase' }}>SUB-TOPIC</label>
                   <input type="text" value={formSubTopic} onChange={(e) => setFormSubTopic(e.target.value)} style={{ width: '100%', padding: '10px', border: `1px solid ${COLORS.borderColor}`, borderRadius: '6px', fontSize: '14px', fontFamily: FONT_FAMILY }} />
+                </div>
+
+                <div style={{ marginBottom: '16px' }}>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '500', color: COLORS.darkText, marginBottom: '6px', textTransform: 'uppercase' }}>CONTENT TYPE <span style={{ color: '#ef4444' }}>*</span></label>
+                  <select value={formContentType} onChange={(e) => setFormContentType(e.target.value)} required style={{ width: '100%', padding: '10px', border: `1px solid ${COLORS.borderColor}`, borderRadius: '6px', fontSize: '14px', fontFamily: FONT_FAMILY, background: formContentType ? COLORS.white : '#fef2f2' }}>
+                    <option value="">-- Select Content Type --</option>
+                    {CONTENT_TYPES.map(type => (
+                      <option key={type} value={type}>{type}</option>
+                    ))}
+                  </select>
                 </div>
 
                 <div style={{ marginBottom: '16px' }}>
@@ -1656,14 +1695,18 @@ export default function App() {
                 <label style={{ display: 'block', fontSize: '12px', fontWeight: '500', color: COLORS.darkText, marginBottom: '6px', textTransform: 'uppercase' }}>TOPIC</label>
                 <input type="text" value={filterTopic} onChange={(e) => setFilterTopic(e.target.value)} placeholder="Search topic..." style={{ width: '100%', padding: '10px', border: `1px solid ${COLORS.borderColor}`, borderRadius: '6px', fontSize: '14px', fontFamily: FONT_FAMILY }} />
               </div>
-            </div>
-          </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: '500', color: COLORS.darkText, marginBottom: '6px', textTransform: 'uppercase' }}>CONTENT TYPE</label>
+                <select value={filterContentType} onChange={(e) => setFilterContentType(e.target.value)} style={{ width: '100%', padding: '10px', border: `1px solid ${COLORS.borderColor}`, borderRadius: '6px', fontSize: '14px', fontFamily: FONT_FAMILY }}>
+                  {['All Types', ...CONTENT_TYPES].map(t => <option key={t}>{t}</option>)}
+                </select>
+              </div>
 
           <div style={{ background: COLORS.white, borderRadius: '12px', border: `1px solid ${COLORS.borderColor}`, overflow: 'hidden' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ background: '#64748b', color: COLORS.white }}>
-                  {['S.NO', 'ID', 'CLASS', 'SUBJECT', 'TOPIC', 'STATUS', 'WORDS', 'ACTION'].map(h => (
+                  {['S.NO', 'ID', 'CLASS', 'SUBJECT', 'TOPIC', 'CONTENT TYPE', 'STATUS', 'WORDS', 'ACTION'].map(h => (
                     <th key={h} style={{ padding: '12px', textAlign: 'left', fontSize: '11px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                       {h}
                     </th>
@@ -1682,6 +1725,19 @@ export default function App() {
                       <span style={{
                         display: 'inline-block',
                         padding: '4px 8px',
+                        borderRadius: '4px',
+                        fontSize: '11px',
+                        fontWeight: '500',
+                        background: '#e0e7ff',
+                        color: '#3730a3'
+                      }}>
+                        {r.content_type || 'N/A'}
+                      </span>
+                    </td>
+                    <td style={{ padding: '12px', fontSize: '13px' }}>
+                      <span style={{
+                        display: 'inline-block',
+                        padding: '4px 8px',
                         borderRadius: '3px',
                         fontSize: '11px',
                         fontWeight: '500',
@@ -1696,7 +1752,7 @@ export default function App() {
                       <button onClick={() => setViewingRecord(r)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', display: 'flex' }}>
                         <Eye size={18} color={COLORS.navActive} />
                       </button>
-                      <button onClick={() => { setEditingId(r.record_id); setFormClass(r.class); setFormSubject(r.subject); setFormTopic(r.topic); setFormSubTopic(r.sub_topic); setFormPrompt(r.prompt); setShowAddForm(true); }} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', display: 'flex' }}>
+                      <button onClick={() => { setEditingId(r.record_id); setFormClass(r.class); setFormSubject(r.subject); setFormTopic(r.topic); setFormSubTopic(r.sub_topic); setFormContentType(r.content_type); setFormPrompt(r.prompt); setShowAddForm(true); }} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', display: 'flex' }}>
                         <Edit2 size={18} color={COLORS.navActive} />
                       </button>
                     </td>

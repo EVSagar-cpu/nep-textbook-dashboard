@@ -1161,7 +1161,8 @@ export default function App() {
                   min="0"
                   max="50"
                 />
-              
+              </div>
+
               <div style={{ borderTop: `1px solid ${COLORS.borderColor}`, paddingTop: '16px', marginTop: '16px' }}>
                 <div style={{
                   background: COLORS.lightBg,

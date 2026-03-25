@@ -1663,7 +1663,7 @@ export default function App() {
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ background: '#64748b', color: COLORS.white }}>
-                  {['ID', 'CLASS', 'SUBJECT', 'TOPIC', 'STATUS', 'WORDS', 'ACTION'].map(h => (
+                  {['S.NO', 'ID', 'CLASS', 'SUBJECT', 'TOPIC', 'STATUS', 'WORDS', 'ACTION'].map(h => (
                     <th key={h} style={{ padding: '12px', textAlign: 'left', fontSize: '11px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                       {h}
                     </th>
@@ -1673,6 +1673,7 @@ export default function App() {
               <tbody>
                 {filteredRecords.map((r, i) => (
                   <tr key={i} style={{ borderBottom: `1px solid ${COLORS.borderColor}`, background: i % 2 === 0 ? COLORS.white : COLORS.lightBg }}>
+                    <td style={{ padding: '12px', fontSize: '13px', fontWeight: '500', color: COLORS.navActive }}>{i + 1}</td>
                     <td style={{ padding: '12px', fontSize: '13px' }}>{r.record_id}</td>
                     <td style={{ padding: '12px', fontSize: '13px' }}>{r.class}</td>
                     <td style={{ padding: '12px', fontSize: '13px' }}>{r.subject}</td>

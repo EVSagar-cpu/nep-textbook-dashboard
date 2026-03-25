@@ -1011,6 +1011,17 @@ export default function App() {
     setFormContentType('');
     setFormPrompt('');
     setShowAddForm(!showAddForm);
+    
+    // Scroll to form if opening
+    setTimeout(() => {
+      const formElement = document.querySelector('[data-form="edit-add"]');
+      if (formElement) {
+        formElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        // Auto-focus first input
+        const firstInput = formElement.querySelector('input, select, textarea');
+        if (firstInput) firstInput.focus();
+      }
+    }, 100);
   };
 
   // ===== HANDLE CANCEL FORM =====
@@ -1036,7 +1047,18 @@ export default function App() {
     setFormContentType(record.content_type || '');
     setFormPrompt(record.prompt || '');
     setShowAddForm(true);
-    console.log('✅ Edit form loaded');
+    
+    // Scroll to form and focus
+    setTimeout(() => {
+      const formElement = document.querySelector('[data-form="edit-add"]');
+      if (formElement) {
+        formElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        // Auto-focus first input
+        const firstInput = formElement.querySelector('input, select, textarea');
+        if (firstInput) firstInput.focus();
+      }
+      console.log('✅ Edit form loaded & scrolled');
+    }, 100);
   };
 
   // ===== PAGE SETTINGS TOGGLE =====
@@ -1675,8 +1697,8 @@ export default function App() {
           </div>
 
           {showAddForm && (
-            <div style={{ background: COLORS.white, borderRadius: '12px', padding: '20px', marginBottom: '24px', border: `1px solid ${COLORS.borderColor}` }}>
-              <h3 style={{ margin: '0 0 16px 0', fontSize: '16px', fontWeight: '600', color: COLORS.darkText }}>
+            <div data-form="edit-add" style={{ background: editingId ? '#fef3c7' : COLORS.white, borderRadius: '12px', padding: '20px', marginBottom: '24px', border: editingId ? '2px solid #f59e0b' : `1px solid ${COLORS.borderColor}`, boxShadow: editingId ? '0 0 0 3px rgba(245, 158, 11, 0.1)' : 'none', transition: 'all 0.3s ease' }}>
+              <h3 style={{ margin: '0 0 16px 0', fontSize: '16px', fontWeight: '600', color: editingId ? '#d97706' : COLORS.darkText }}>
                 {editingId ? '✏️ Edit Record' : '➕ Add New Record'}
               </h3>
               <form onSubmit={handleSaveRecord}>

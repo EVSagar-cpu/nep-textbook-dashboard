@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import {
   Menu, X, LogOut, Eye, Edit2, BookOpen, Plus, Download, RefreshCw,
-  Mail, Check, AlertCircle, Copy, Users
+  Mail, Check, AlertCircle, Copy, Users, Image, Sparkles, Palette,
+  ChevronDown, ChevronUp, Loader2, ImagePlus, Layers
 } from 'lucide-react';
 import {
   detectErrorType,
@@ -113,6 +114,15 @@ export default function App() {
   // ===== VIEW MODAL =====
   const [viewingRecord, setViewingRecord] = useState(null);
   const [viewMarkdown, setViewMarkdown] = useState(true);
+  const [viewTab, setViewTab] = useState('content'); // 'content' | 'visuals'
+
+  // ===== IMAGE GENERATION STATE =====
+  const [generatingCharacter, setGeneratingCharacter] = useState(false);
+  const [generatingScene, setGeneratingScene] = useState(false);
+  const [imageGenMessage, setImageGenMessage] = useState('');
+  const [selectedImageForInsert, setSelectedImageForInsert] = useState(null);
+  const [showImagePicker, setShowImagePicker] = useState(false);
+  const [insertPosition, setInsertPosition] = useState('end'); // 'end' | 'beginning' | custom index
 
   // ===== SUBJECTS =====
   const subjects = [
@@ -140,7 +150,6 @@ export default function App() {
     link.rel = 'stylesheet';
     document.head.appendChild(link);
 
-    // ✅ ADD MONTSERRAT FONT
     const montserratLink = document.createElement('link');
     montserratLink.href = 'https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap';
     montserratLink.rel = 'stylesheet';
@@ -168,7 +177,6 @@ export default function App() {
     }
     checkAuth();
     
-    // ✅ Check Claude API health on startup
     checkAPIHealth().then(health => {
       if (!health.healthy) {
         console.warn('⚠️ Claude API may be experiencing issues');
@@ -473,6 +481,43 @@ export default function App() {
         continue;
       }
 
+      // ===== INLINE IMAGE RENDERING (for inserted images) =====
+      const imgMatch = line.match(/!\[([^\]]*)\]\(([^)]+)\)/);
+      if (imgMatch) {
+        flushList();
+        result.push(
+          <div key={i} style={{ 
+            margin: '16px 0', 
+            textAlign: 'center',
+            pageBreakInside: 'avoid'
+          }}>
+            <img 
+              src={imgMatch[2]} 
+              alt={imgMatch[1]} 
+              style={{ 
+                maxWidth: '100%', 
+                maxHeight: '400px',
+                borderRadius: '8px', 
+                border: `1px solid ${COLORS.borderColor}`,
+                boxShadow: '0 2px 8px rgba(0,0,0,0.08)'
+              }} 
+            />
+            {imgMatch[1] && (
+              <p style={{ 
+                fontSize: '11px', 
+                color: COLORS.lightText, 
+                marginTop: '6px',
+                fontStyle: 'italic'
+              }}>
+                {imgMatch[1]}
+              </p>
+            )}
+          </div>
+        );
+        i++;
+        continue;
+      }
+
       if (line.trim()) {
         flushList();
         result.push(
@@ -510,6 +555,153 @@ export default function App() {
     }
     
     return { width, height };
+  };
+
+  // ===== GENERATE CHARACTER IMAGE =====
+  const handleGenerateCharacterImage = async () => {
+    if (!viewingRecord?.visual_description_prompt) {
+      setImageGenMessage('⚠️ No character description prompt available. Wait for Claude to generate it.');
+      return;
+    }
+
+    setGeneratingCharacter(true);
+    setImageGenMessage('');
+
+    try {
+      // Call Supabase Edge Function for image generation
+      const { data, error } = await supabase.functions.invoke('generate-image', {
+        body: {
+          record_id: viewingRecord.record_id,
+          type: 'character',
+          prompt: viewingRecord.visual_description_prompt,
+        }
+      });
+
+      if (error) throw error;
+
+      if (data?.image_url) {
+        // Update local state with new image
+        const updatedImages = [...(viewingRecord.character_images || []), data.image_url];
+        setViewingRecord({
+          ...viewingRecord,
+          character_images: updatedImages
+        });
+        setImageGenMessage('✅ Character image generated successfully!');
+        
+        // Refresh records to get updated data
+        fetchRecords();
+      } else {
+        throw new Error('No image URL returned');
+      }
+    } catch (err) {
+      console.error('Character image generation error:', err);
+      setImageGenMessage(`❌ Generation failed: ${err.message}. Make sure the generate-image Edge Function is deployed.`);
+    } finally {
+      setGeneratingCharacter(false);
+    }
+  };
+
+  // ===== GENERATE SCENE IMAGE =====
+  const handleGenerateSceneImage = async () => {
+    if (!viewingRecord?.scene_image_prompt) {
+      setImageGenMessage('⚠️ No scene image prompt available. Wait for Claude to generate it.');
+      return;
+    }
+
+    setGeneratingScene(true);
+    setImageGenMessage('');
+
+    try {
+      // Get first character image as reference (for consistency)
+      const characterRef = viewingRecord.character_images?.[0] || null;
+
+      const { data, error } = await supabase.functions.invoke('generate-image', {
+        body: {
+          record_id: viewingRecord.record_id,
+          type: 'scene',
+          prompt: viewingRecord.scene_image_prompt,
+          reference_image_url: characterRef,
+        }
+      });
+
+      if (error) throw error;
+
+      if (data?.image_url) {
+        const updatedImages = [...(viewingRecord.scene_images || []), data.image_url];
+        setViewingRecord({
+          ...viewingRecord,
+          scene_images: updatedImages
+        });
+        setImageGenMessage('✅ Scene image generated successfully!');
+        fetchRecords();
+      } else {
+        throw new Error('No image URL returned');
+      }
+    } catch (err) {
+      console.error('Scene image generation error:', err);
+      setImageGenMessage(`❌ Generation failed: ${err.message}. Make sure the generate-image Edge Function is deployed.`);
+    } finally {
+      setGeneratingScene(false);
+    }
+  };
+
+  // ===== INSERT IMAGE INTO CONTENT =====
+  const handleInsertImage = async (imageUrl, altText, position = 'end') => {
+    if (!viewingRecord?.ai_output) return;
+
+    try {
+      const imageMarkdown = `\n\n![${altText}](${imageUrl})\n\n`;
+      let updatedContent;
+
+      if (position === 'beginning') {
+        updatedContent = imageMarkdown + viewingRecord.ai_output;
+      } else {
+        updatedContent = viewingRecord.ai_output + imageMarkdown;
+      }
+
+      // Update in Supabase
+      const { error } = await supabase
+        .from('textbook_content')
+        .update({ ai_output: updatedContent, updated_at: new Date() })
+        .eq('record_id', viewingRecord.record_id);
+
+      if (error) throw error;
+
+      // Update local state
+      setViewingRecord({ ...viewingRecord, ai_output: updatedContent });
+      setShowImagePicker(false);
+      setSelectedImageForInsert(null);
+      setImageGenMessage('✅ Image inserted into content!');
+      fetchRecords();
+    } catch (err) {
+      console.error('Insert image error:', err);
+      setImageGenMessage(`❌ Failed to insert image: ${err.message}`);
+    }
+  };
+
+  // ===== REMOVE IMAGE FROM CONTENT =====
+  const handleRemoveImageFromContent = async (imageUrl) => {
+    if (!viewingRecord?.ai_output) return;
+
+    try {
+      // Remove the markdown image line containing this URL
+      const lines = viewingRecord.ai_output.split('\n');
+      const filteredLines = lines.filter(line => !line.includes(imageUrl));
+      const updatedContent = filteredLines.join('\n').replace(/\n{3,}/g, '\n\n');
+
+      const { error } = await supabase
+        .from('textbook_content')
+        .update({ ai_output: updatedContent, updated_at: new Date() })
+        .eq('record_id', viewingRecord.record_id);
+
+      if (error) throw error;
+
+      setViewingRecord({ ...viewingRecord, ai_output: updatedContent });
+      setImageGenMessage('✅ Image removed from content.');
+      fetchRecords();
+    } catch (err) {
+      setImageGenMessage(`❌ Failed to remove image: ${err.message}`);
+    }
   };
 
   // ===== SETUP PASSWORD (FROM INVITE) =====
@@ -700,7 +892,6 @@ export default function App() {
     setFormLoading(true);
 
     try {
-      // Validate required fields
       if (!formClass || !formSubject || !formTopic || !formContentType || !formPrompt) {
         alert('Please fill all required fields: Class, Subject, Topic, Content Type, and Prompt');
         setFormLoading(false);
@@ -755,7 +946,6 @@ export default function App() {
         console.log('✅ Record created successfully:', result.data);
       }
 
-      // Clear form
       setFormClass('1');
       setFormSubject('English');
       setFormTopic('');
@@ -765,7 +955,6 @@ export default function App() {
       setShowAddForm(false);
       setEditingId(null);
 
-      // Wait a moment for database write to complete, then fetch
       setTimeout(() => {
         console.log('🔄 Fetching updated records...');
         fetchRecords();
@@ -876,6 +1065,14 @@ export default function App() {
 
           if (inCodeBlock) {
             codeContent.push(line);
+            i++;
+            continue;
+          }
+
+          // Handle inline images in PDF export
+          const imgMatch = line.match(/!\[([^\]]*)\]\(([^)]+)\)/);
+          if (imgMatch) {
+            html += `<div style="margin:16px 0;text-align:center;page-break-inside:avoid;"><img src="${imgMatch[2]}" alt="${imgMatch[1]}" style="max-width:100%;max-height:400px;border-radius:8px;border:1px solid #e5e7eb;" />${imgMatch[1] ? `<p style="font-size:11px;color:#6b7280;margin-top:6px;font-style:italic;">${imgMatch[1]}</p>` : ''}</div>`;
             i++;
             continue;
           }
@@ -1051,12 +1248,10 @@ export default function App() {
     setFormPrompt('');
     setShowAddForm(!showAddForm);
     
-    // Scroll to form if opening
     setTimeout(() => {
       const formElement = document.querySelector('[data-form="edit-add"]');
       if (formElement) {
         formElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        // Auto-focus first input
         const firstInput = formElement.querySelector('input, select, textarea');
         if (firstInput) firstInput.focus();
       }
@@ -1087,12 +1282,10 @@ export default function App() {
     setFormPrompt(record.prompt || '');
     setShowAddForm(true);
     
-    // Scroll to form and focus
     setTimeout(() => {
       const formElement = document.querySelector('[data-form="edit-add"]');
       if (formElement) {
         formElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        // Auto-focus first input
         const firstInput = formElement.querySelector('input, select, textarea');
         if (firstInput) firstInput.focus();
       }
@@ -1103,13 +1296,414 @@ export default function App() {
   // ===== PAGE SETTINGS TOGGLE =====
   const [showPageSettings, setShowPageSettings] = useState(false);
 
+  // ===== HELPER: Get all images for a record =====
+  const getAllRecordImages = (record) => {
+    const images = [];
+    (record?.character_images || []).forEach((url, i) => {
+      images.push({ url, type: 'character', label: `Character ${i + 1}` });
+    });
+    (record?.scene_images || []).forEach((url, i) => {
+      images.push({ url, type: 'scene', label: `Scene ${i + 1}` });
+    });
+    return images;
+  };
+
+  // ===== IMAGE GALLERY COMPONENT =====
+  const renderImageGallery = (images, type) => {
+    if (!images || images.length === 0) {
+      return (
+        <div style={{
+          padding: '24px',
+          textAlign: 'center',
+          color: COLORS.lightText,
+          fontSize: '13px',
+          background: '#fafafa',
+          borderRadius: '8px',
+          border: `1px dashed ${COLORS.borderColor}`
+        }}>
+          No {type} images generated yet
+        </div>
+      );
+    }
+
+    return (
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
+        gap: '12px'
+      }}>
+        {images.map((url, idx) => (
+          <div key={idx} style={{
+            position: 'relative',
+            borderRadius: '8px',
+            overflow: 'hidden',
+            border: `1px solid ${COLORS.borderColor}`,
+            background: '#fafafa',
+            transition: 'all 0.2s',
+            cursor: 'pointer'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)';
+            e.currentTarget.style.transform = 'translateY(-2px)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.boxShadow = 'none';
+            e.currentTarget.style.transform = 'none';
+          }}
+          >
+            <img
+              src={url}
+              alt={`${type} ${idx + 1}`}
+              style={{
+                width: '100%',
+                height: '120px',
+                objectFit: 'cover',
+                display: 'block'
+              }}
+              onError={(e) => {
+                e.target.style.display = 'none';
+                e.target.parentElement.innerHTML = `<div style="height:120px;display:flex;align-items:center;justify-content:center;color:#9ca3af;font-size:11px;">Failed to load</div>`;
+              }}
+            />
+            {/* Action overlay */}
+            <div style={{
+              position: 'absolute',
+              bottom: 0,
+              left: 0,
+              right: 0,
+              background: 'linear-gradient(transparent, rgba(0,0,0,0.7))',
+              padding: '8px 6px 6px',
+              display: 'flex',
+              gap: '4px',
+              justifyContent: 'center'
+            }}>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleInsertImage(url, `${type} image ${idx + 1}`, 'end');
+                }}
+                style={{
+                  padding: '4px 8px',
+                  background: '#2563eb',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  fontSize: '10px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  fontFamily: FONT_FAMILY,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '3px'
+                }}
+                title="Insert into content"
+              >
+                <ImagePlus size={10} /> Insert
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  window.open(url, '_blank');
+                }}
+                style={{
+                  padding: '4px 8px',
+                  background: 'rgba(255,255,255,0.2)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  fontSize: '10px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  fontFamily: FONT_FAMILY
+                }}
+                title="Open full size"
+              >
+                <Eye size={10} />
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
+  // ===== VISUAL ASSETS TAB CONTENT =====
+  const renderVisualAssetsTab = () => {
+    if (!viewingRecord) return null;
+
+    return (
+      <div style={{ padding: '24px 32px', maxWidth: '900px' }}>
+        {/* Status message */}
+        {imageGenMessage && (
+          <div style={{
+            padding: '10px 14px',
+            borderRadius: '8px',
+            marginBottom: '20px',
+            fontSize: '13px',
+            fontWeight: '500',
+            background: imageGenMessage.includes('✅') ? COLORS.successBg : imageGenMessage.includes('⚠️') ? '#fffbeb' : COLORS.errorBg,
+            border: `1px solid ${imageGenMessage.includes('✅') ? COLORS.successBorder : imageGenMessage.includes('⚠️') ? '#fde68a' : COLORS.errorBorder}`,
+            color: imageGenMessage.includes('✅') ? COLORS.successText : imageGenMessage.includes('⚠️') ? '#92400e' : COLORS.errorText,
+          }}>
+            {imageGenMessage}
+          </div>
+        )}
+
+        {/* ===== CHARACTER SECTION ===== */}
+        <div style={{
+          marginBottom: '28px',
+          background: COLORS.white,
+          borderRadius: '10px',
+          border: `1px solid ${COLORS.borderColor}`,
+          overflow: 'hidden'
+        }}>
+          {/* Section Header */}
+          <div style={{
+            padding: '14px 18px',
+            background: 'linear-gradient(135deg, #ede9fe 0%, #faf5ff 100%)',
+            borderBottom: `1px solid ${COLORS.borderColor}`,
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div style={{
+                width: '32px', height: '32px', borderRadius: '8px',
+                background: '#8b5cf6', display: 'flex', alignItems: 'center', justifyContent: 'center'
+              }}>
+                <Palette size={16} color="white" />
+              </div>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '14px', fontWeight: '600', color: COLORS.darkText }}>
+                  Character / Visual Description
+                </h3>
+                <p style={{ margin: 0, fontSize: '11px', color: COLORS.lightText }}>
+                  {(viewingRecord.character_images || []).length} image{(viewingRecord.character_images || []).length !== 1 ? 's' : ''} generated
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={handleGenerateCharacterImage}
+              disabled={generatingCharacter || !viewingRecord.visual_description_prompt}
+              style={{
+                padding: '8px 16px',
+                background: generatingCharacter ? '#a78bfa' : '#8b5cf6',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                fontSize: '12px',
+                fontWeight: '600',
+                cursor: generatingCharacter || !viewingRecord.visual_description_prompt ? 'not-allowed' : 'pointer',
+                fontFamily: FONT_FAMILY,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                opacity: !viewingRecord.visual_description_prompt ? 0.5 : 1,
+                transition: 'all 0.2s'
+              }}
+            >
+              {generatingCharacter ? (
+                <><Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> Generating...</>
+              ) : (
+                <><Sparkles size={14} /> Generate Character</>
+              )}
+            </button>
+          </div>
+
+          {/* Prompt Display */}
+          <div style={{ padding: '16px 18px' }}>
+            <label style={{ 
+              display: 'block', fontSize: '10px', fontWeight: '600', 
+              color: COLORS.lightText, marginBottom: '6px', 
+              textTransform: 'uppercase', letterSpacing: '0.5px' 
+            }}>
+              AI-Generated Prompt
+            </label>
+            <div style={{
+              padding: '12px',
+              background: '#faf5ff',
+              borderRadius: '6px',
+              border: `1px solid #e9d5ff`,
+              fontSize: '12px',
+              lineHeight: '1.6',
+              color: viewingRecord.visual_description_prompt ? COLORS.darkText : COLORS.lightText,
+              fontFamily: 'Montserrat, sans-serif',
+              minHeight: '48px',
+              whiteSpace: 'pre-wrap'
+            }}>
+              {viewingRecord.visual_description_prompt || 'Waiting for Claude to generate character description...'}
+            </div>
+
+            {/* Image Gallery */}
+            <div style={{ marginTop: '14px' }}>
+              {renderImageGallery(viewingRecord.character_images, 'character')}
+            </div>
+          </div>
+        </div>
+
+        {/* ===== SCENE IMAGE SECTION ===== */}
+        <div style={{
+          marginBottom: '28px',
+          background: COLORS.white,
+          borderRadius: '10px',
+          border: `1px solid ${COLORS.borderColor}`,
+          overflow: 'hidden'
+        }}>
+          {/* Section Header */}
+          <div style={{
+            padding: '14px 18px',
+            background: 'linear-gradient(135deg, #dbeafe 0%, #eff6ff 100%)',
+            borderBottom: `1px solid ${COLORS.borderColor}`,
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div style={{
+                width: '32px', height: '32px', borderRadius: '8px',
+                background: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center'
+              }}>
+                <Layers size={16} color="white" />
+              </div>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '14px', fontWeight: '600', color: COLORS.darkText }}>
+                  Scene Image
+                </h3>
+                <p style={{ margin: 0, fontSize: '11px', color: COLORS.lightText }}>
+                  {(viewingRecord.scene_images || []).length} image{(viewingRecord.scene_images || []).length !== 1 ? 's' : ''} generated
+                  {(viewingRecord.character_images || []).length > 0 && ' • Uses character reference'}
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={handleGenerateSceneImage}
+              disabled={generatingScene || !viewingRecord.scene_image_prompt}
+              style={{
+                padding: '8px 16px',
+                background: generatingScene ? '#60a5fa' : '#2563eb',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                fontSize: '12px',
+                fontWeight: '600',
+                cursor: generatingScene || !viewingRecord.scene_image_prompt ? 'not-allowed' : 'pointer',
+                fontFamily: FONT_FAMILY,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                opacity: !viewingRecord.scene_image_prompt ? 0.5 : 1,
+                transition: 'all 0.2s'
+              }}
+            >
+              {generatingScene ? (
+                <><Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> Generating...</>
+              ) : (
+                <><Sparkles size={14} /> Generate Scene</>
+              )}
+            </button>
+          </div>
+
+          {/* Prompt Display */}
+          <div style={{ padding: '16px 18px' }}>
+            <label style={{ 
+              display: 'block', fontSize: '10px', fontWeight: '600', 
+              color: COLORS.lightText, marginBottom: '6px', 
+              textTransform: 'uppercase', letterSpacing: '0.5px' 
+            }}>
+              AI-Generated Prompt
+            </label>
+            <div style={{
+              padding: '12px',
+              background: '#eff6ff',
+              borderRadius: '6px',
+              border: `1px solid #bfdbfe`,
+              fontSize: '12px',
+              lineHeight: '1.6',
+              color: viewingRecord.scene_image_prompt ? COLORS.darkText : COLORS.lightText,
+              fontFamily: 'Montserrat, sans-serif',
+              minHeight: '48px',
+              whiteSpace: 'pre-wrap'
+            }}>
+              {viewingRecord.scene_image_prompt || 'Waiting for Claude to generate scene description...'}
+            </div>
+
+            {/* Image Gallery */}
+            <div style={{ marginTop: '14px' }}>
+              {renderImageGallery(viewingRecord.scene_images, 'scene')}
+            </div>
+          </div>
+        </div>
+
+        {/* ===== QUICK INSERT PANEL ===== */}
+        {getAllRecordImages(viewingRecord).length > 0 && viewingRecord.ai_output && (
+          <div style={{
+            background: '#f0fdf4',
+            border: `1px solid ${COLORS.successBorder}`,
+            borderRadius: '10px',
+            padding: '16px 18px'
+          }}>
+            <h4 style={{ margin: '0 0 10px 0', fontSize: '13px', fontWeight: '600', color: COLORS.successText, display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <ImagePlus size={14} /> Quick Insert into Content
+            </h4>
+            <p style={{ margin: '0 0 12px 0', fontSize: '11px', color: COLORS.lightText }}>
+              Click "Insert" on any image above, or use the buttons below to manage images in your content.
+            </p>
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              {getAllRecordImages(viewingRecord).map((img, idx) => {
+                const isInContent = viewingRecord.ai_output?.includes(img.url);
+                return (
+                  <div key={idx} style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '6px 10px',
+                    background: isInContent ? '#dcfce7' : COLORS.white,
+                    border: `1px solid ${isInContent ? '#86efac' : COLORS.borderColor}`,
+                    borderRadius: '6px',
+                    fontSize: '11px',
+                    fontWeight: '500'
+                  }}>
+                    <img src={img.url} alt="" style={{ width: '24px', height: '24px', borderRadius: '3px', objectFit: 'cover' }} />
+                    <span>{img.label}</span>
+                    {isInContent ? (
+                      <button
+                        onClick={() => handleRemoveImageFromContent(img.url)}
+                        style={{
+                          padding: '2px 6px', background: '#fecaca', color: '#991b1b',
+                          border: 'none', borderRadius: '3px', fontSize: '10px',
+                          cursor: 'pointer', fontWeight: '600', fontFamily: FONT_FAMILY
+                        }}
+                      >
+                        Remove
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => handleInsertImage(img.url, img.label, 'end')}
+                        style={{
+                          padding: '2px 6px', background: '#2563eb', color: 'white',
+                          border: 'none', borderRadius: '3px', fontSize: '10px',
+                          cursor: 'pointer', fontWeight: '600', fontFamily: FONT_FAMILY
+                        }}
+                      >
+                        + Add
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   // ===== PAGE SETTINGS PANEL =====
   const renderPageSettingsPanel = () => {
     const dimensions = getPaperDimensions();
     
     return (
       <>
-        {/* Floating Toggle Button */}
         <button
           onClick={() => setShowPageSettings(!showPageSettings)}
           style={{
@@ -1145,7 +1739,6 @@ export default function App() {
           📄
         </button>
 
-        {/* Settings Modal */}
         {showPageSettings && (
           <div style={{
             position: 'fixed',
@@ -1179,7 +1772,7 @@ export default function App() {
                 </button>
               </div>
               
-              <div style={{ marginBottom: SPACING.list }}>
+              <div style={{ marginBottom: '16px' }}>
                 <label style={{ display: 'block', fontSize: '11px', fontWeight: '500', color: COLORS.darkText, marginBottom: '4px', textTransform: 'uppercase' }}>
                   Paper Size
                 </label>
@@ -1215,7 +1808,7 @@ export default function App() {
                 </select>
               </div>
 
-              <div style={{ marginBottom: SPACING.list }}>
+              <div style={{ marginBottom: '16px' }}>
                 <label style={{ display: 'block', fontSize: '11px', fontWeight: '500', color: COLORS.darkText, marginBottom: '4px', textTransform: 'uppercase' }}>
                   Orientation
                 </label>
@@ -1223,16 +1816,11 @@ export default function App() {
                   <button
                     onClick={() => setPageSettings({ ...pageSettings, orientation: 'portrait' })}
                     style={{
-                      flex: 1,
-                      padding: '8px',
+                      flex: 1, padding: '8px',
                       background: pageSettings.orientation === 'portrait' ? COLORS.navActive : COLORS.filterBg,
                       color: pageSettings.orientation === 'portrait' ? COLORS.white : COLORS.darkText,
-                      border: 'none',
-                      borderRadius: '4px',
-                      cursor: 'pointer',
-                      fontSize: '12px',
-                      fontWeight: '500',
-                      fontFamily: FONT_FAMILY
+                      border: 'none', borderRadius: '4px', cursor: 'pointer',
+                      fontSize: '12px', fontWeight: '500', fontFamily: FONT_FAMILY
                     }}
                   >
                     📗 Portrait
@@ -1240,16 +1828,11 @@ export default function App() {
                   <button
                     onClick={() => setPageSettings({ ...pageSettings, orientation: 'landscape' })}
                     style={{
-                      flex: 1,
-                      padding: '8px',
+                      flex: 1, padding: '8px',
                       background: pageSettings.orientation === 'landscape' ? COLORS.navActive : COLORS.filterBg,
                       color: pageSettings.orientation === 'landscape' ? COLORS.white : COLORS.darkText,
-                      border: 'none',
-                      borderRadius: '4px',
-                      cursor: 'pointer',
-                      fontSize: '12px',
-                      fontWeight: '500',
-                      fontFamily: FONT_FAMILY
+                      border: 'none', borderRadius: '4px', cursor: 'pointer',
+                      fontSize: '12px', fontWeight: '500', fontFamily: FONT_FAMILY
                     }}
                   >
                     📕 Landscape
@@ -1258,7 +1841,7 @@ export default function App() {
               </div>
 
               {pageSettings.paperSize === 'Custom' && (
-                <div style={{ marginBottom: SPACING.paragraph, background: COLORS.filterBg, padding: '10px', borderRadius: '4px' }}>
+                <div style={{ marginBottom: '16px', background: COLORS.filterBg, padding: '10px', borderRadius: '4px' }}>
                   <label style={{ display: 'block', fontSize: '11px', fontWeight: '500', color: COLORS.darkText, marginBottom: '4px' }}>
                     Width (mm)
                   </label>
@@ -1267,16 +1850,11 @@ export default function App() {
                     value={pageSettings.customWidth}
                     onChange={(e) => setPageSettings({ ...pageSettings, customWidth: parseInt(e.target.value) || 210 })}
                     style={{
-                      width: '100%',
-                      padding: '6px',
-                      border: `1px solid ${COLORS.borderColor}`,
-                      borderRadius: '4px',
-                      fontSize: '12px',
-                      marginBottom: '8px',
-                      fontFamily: FONT_FAMILY
+                      width: '100%', padding: '6px',
+                      border: `1px solid ${COLORS.borderColor}`, borderRadius: '4px',
+                      fontSize: '12px', marginBottom: '8px', fontFamily: FONT_FAMILY
                     }}
-                    min="50"
-                    max="1000"
+                    min="50" max="1000"
                   />
                   
                   <label style={{ display: 'block', fontSize: '11px', fontWeight: '500', color: COLORS.darkText, marginBottom: '4px' }}>
@@ -1287,20 +1865,16 @@ export default function App() {
                     value={pageSettings.customHeight}
                     onChange={(e) => setPageSettings({ ...pageSettings, customHeight: parseInt(e.target.value) || 297 })}
                     style={{
-                      width: '100%',
-                      padding: '6px',
-                      border: `1px solid ${COLORS.borderColor}`,
-                      borderRadius: '4px',
-                      fontSize: '12px',
-                      fontFamily: FONT_FAMILY
+                      width: '100%', padding: '6px',
+                      border: `1px solid ${COLORS.borderColor}`, borderRadius: '4px',
+                      fontSize: '12px', fontFamily: FONT_FAMILY
                     }}
-                    min="50"
-                    max="1000"
+                    min="50" max="1000"
                   />
                 </div>
               )}
 
-              <div style={{ marginBottom: SPACING.list }}>
+              <div style={{ marginBottom: '16px' }}>
                 <label style={{ display: 'block', fontSize: '11px', fontWeight: '500', color: COLORS.darkText, marginBottom: '4px', textTransform: 'uppercase' }}>
                   Margins (mm)
                 </label>
@@ -1309,26 +1883,18 @@ export default function App() {
                   value={pageSettings.margins}
                   onChange={(e) => setPageSettings({ ...pageSettings, margins: parseInt(e.target.value) || 10 })}
                   style={{
-                    width: '100%',
-                    padding: '8px',
-                    border: `1px solid ${COLORS.borderColor}`,
-                    borderRadius: '4px',
-                    fontSize: '12px',
-                    fontFamily: FONT_FAMILY
+                    width: '100%', padding: '8px',
+                    border: `1px solid ${COLORS.borderColor}`, borderRadius: '4px',
+                    fontSize: '12px', fontFamily: FONT_FAMILY
                   }}
-                  min="0"
-                  max="50"
+                  min="0" max="50"
                 />
               </div>
 
               <div style={{ borderTop: `1px solid ${COLORS.borderColor}`, paddingTop: '16px', marginTop: '16px' }}>
                 <div style={{
-                  background: COLORS.lightBg,
-                  padding: '12px',
-                  borderRadius: '4px',
-                  fontSize: '11px',
-                  color: COLORS.lightText,
-                  fontFamily: FONT_FAMILY
+                  background: COLORS.lightBg, padding: '12px', borderRadius: '4px',
+                  fontSize: '11px', color: COLORS.lightText, fontFamily: FONT_FAMILY
                 }}>
                   <strong>Current Settings:</strong><br/>
                   {dimensions.width} × {dimensions.height} mm<br/>
@@ -1369,12 +1935,9 @@ export default function App() {
                 value={loginEmail}
                 onChange={(e) => setLoginEmail(e.target.value)}
                 style={{
-                  width: '100%',
-                  padding: '10px',
-                  border: `1px solid ${COLORS.borderColor}`,
-                  borderRadius: '6px',
-                  fontSize: '14px',
-                  fontFamily: FONT_FAMILY
+                  width: '100%', padding: '10px',
+                  border: `1px solid ${COLORS.borderColor}`, borderRadius: '6px',
+                  fontSize: '14px', fontFamily: FONT_FAMILY
                 }}
                 required
               />
@@ -1386,12 +1949,9 @@ export default function App() {
                 value={loginPassword}
                 onChange={(e) => setLoginPassword(e.target.value)}
                 style={{
-                  width: '100%',
-                  padding: '10px',
-                  border: `1px solid ${COLORS.borderColor}`,
-                  borderRadius: '6px',
-                  fontSize: '14px',
-                  fontFamily: FONT_FAMILY
+                  width: '100%', padding: '10px',
+                  border: `1px solid ${COLORS.borderColor}`, borderRadius: '6px',
+                  fontSize: '14px', fontFamily: FONT_FAMILY
                 }}
                 required
               />
@@ -1401,10 +1961,8 @@ export default function App() {
                 background: COLORS.errorBg,
                 border: `1px solid ${COLORS.errorBorder}`,
                 color: COLORS.errorText,
-                padding: '12px',
-                borderRadius: '6px',
-                marginBottom: '16px',
-                fontSize: '13px'
+                padding: '12px', borderRadius: '6px',
+                marginBottom: '16px', fontSize: '13px'
               }}>
                 {loginError}
               </div>
@@ -1413,16 +1971,11 @@ export default function App() {
               type="submit"
               disabled={loginLoading}
               style={{
-                width: '100%',
-                padding: '12px',
-                background: COLORS.navActive,
-                color: COLORS.white,
-                border: 'none',
-                borderRadius: '6px',
+                width: '100%', padding: '12px',
+                background: COLORS.navActive, color: COLORS.white,
+                border: 'none', borderRadius: '6px',
                 cursor: loginLoading ? 'not-allowed' : 'pointer',
-                fontSize: '14px',
-                fontWeight: '500',
-                fontFamily: FONT_FAMILY
+                fontSize: '14px', fontWeight: '500', fontFamily: FONT_FAMILY
               }}
             >
               {loginLoading ? 'Logging in...' : 'Login'}
@@ -1458,12 +2011,9 @@ export default function App() {
                 value={setupPassword}
                 onChange={(e) => setSetupPassword(e.target.value)}
                 style={{
-                  width: '100%',
-                  padding: '10px',
-                  border: `1px solid ${COLORS.borderColor}`,
-                  borderRadius: '6px',
-                  fontSize: '14px',
-                  fontFamily: FONT_FAMILY
+                  width: '100%', padding: '10px',
+                  border: `1px solid ${COLORS.borderColor}`, borderRadius: '6px',
+                  fontSize: '14px', fontFamily: FONT_FAMILY
                 }}
                 required
               />
@@ -1475,12 +2025,9 @@ export default function App() {
                 value={setupPasswordConfirm}
                 onChange={(e) => setSetupPasswordConfirm(e.target.value)}
                 style={{
-                  width: '100%',
-                  padding: '10px',
-                  border: `1px solid ${COLORS.borderColor}`,
-                  borderRadius: '6px',
-                  fontSize: '14px',
-                  fontFamily: FONT_FAMILY
+                  width: '100%', padding: '10px',
+                  border: `1px solid ${COLORS.borderColor}`, borderRadius: '6px',
+                  fontSize: '14px', fontFamily: FONT_FAMILY
                 }}
                 required
               />
@@ -1490,10 +2037,8 @@ export default function App() {
                 background: COLORS.errorBg,
                 border: `1px solid ${COLORS.errorBorder}`,
                 color: COLORS.errorText,
-                padding: '12px',
-                borderRadius: '6px',
-                marginBottom: '16px',
-                fontSize: '13px'
+                padding: '12px', borderRadius: '6px',
+                marginBottom: '16px', fontSize: '13px'
               }}>
                 {setupError}
               </div>
@@ -1502,16 +2047,11 @@ export default function App() {
               type="submit"
               disabled={setupLoading}
               style={{
-                width: '100%',
-                padding: '12px',
-                background: COLORS.navActive,
-                color: COLORS.white,
-                border: 'none',
-                borderRadius: '6px',
+                width: '100%', padding: '12px',
+                background: COLORS.navActive, color: COLORS.white,
+                border: 'none', borderRadius: '6px',
                 cursor: setupLoading ? 'not-allowed' : 'pointer',
-                fontSize: '14px',
-                fontWeight: '500',
-                fontFamily: FONT_FAMILY
+                fontSize: '14px', fontWeight: '500', fontFamily: FONT_FAMILY
               }}
             >
               {setupLoading ? 'Setting up...' : 'Submit'}
@@ -1525,8 +2065,19 @@ export default function App() {
   // ===== DASHBOARD =====
   const filteredRecords = applyFilters();
 
+  // ===== CSS KEYFRAMES FOR SPINNER =====
+  const spinKeyframes = `
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+  `;
+
   return (
     <div style={{ display: 'flex', height: '100vh', background: COLORS.white, fontFamily: FONT_FAMILY }}>
+      {/* Inject spinner animation */}
+      <style>{spinKeyframes}</style>
+
       {/* SIDEBAR */}
       <div style={{
         width: sidebarOpen ? '280px' : '80px',
@@ -1541,11 +2092,8 @@ export default function App() {
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
             style={{
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              padding: '8px',
-              display: 'flex'
+              background: 'none', border: 'none', cursor: 'pointer',
+              padding: '8px', display: 'flex'
             }}
           >
             {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
@@ -1572,21 +2120,14 @@ export default function App() {
               }}
               disabled={item.disabled}
               style={{
-                width: '100%',
-                padding: '12px 16px',
+                width: '100%', padding: '12px 16px',
                 background: item.action === 'textbooks' ? COLORS.navActive : 'transparent',
                 color: item.action === 'textbooks' ? COLORS.white : (item.disabled ? COLORS.navDisabled : COLORS.navText),
-                border: 'none',
-                borderRadius: '6px',
+                border: 'none', borderRadius: '6px',
                 cursor: item.disabled ? 'not-allowed' : 'pointer',
-                marginBottom: '8px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px',
-                fontSize: '14px',
-                fontWeight: '500',
-                fontFamily: FONT_FAMILY,
-                whiteSpace: 'nowrap'
+                marginBottom: '8px', display: 'flex', alignItems: 'center',
+                gap: '12px', fontSize: '14px', fontWeight: '500',
+                fontFamily: FONT_FAMILY, whiteSpace: 'nowrap'
               }}
             >
               {item.icon}
@@ -1602,19 +2143,11 @@ export default function App() {
             setAuthPage('login');
           }}
           style={{
-            width: '100%',
-            padding: '12px 16px',
-            background: COLORS.errorBg,
-            color: COLORS.errorText,
-            border: 'none',
-            borderRadius: '6px',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '12px',
-            fontSize: '14px',
-            fontWeight: '500',
-            fontFamily: FONT_FAMILY
+            width: '100%', padding: '12px 16px',
+            background: COLORS.errorBg, color: COLORS.errorText,
+            border: 'none', borderRadius: '6px', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', gap: '12px',
+            fontSize: '14px', fontWeight: '500', fontFamily: FONT_FAMILY
           }}
         >
           <LogOut size={20} />
@@ -1629,9 +2162,7 @@ export default function App() {
           background: COLORS.white,
           borderBottom: `1px solid ${COLORS.borderColor}`,
           padding: '16px 24px',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center'
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center'
         }}>
           <h1 style={{ margin: 0, fontSize: '20px', fontWeight: '700', color: COLORS.darkText }}>AI Content Studio</h1>
           <span style={{ fontSize: '12px', color: COLORS.lightText }}>
@@ -1645,9 +2176,7 @@ export default function App() {
             <div style={{
               background: COLORS.white,
               border: `1px solid ${COLORS.borderColor}`,
-              borderRadius: '8px',
-              padding: '20px',
-              marginBottom: '24px'
+              borderRadius: '8px', padding: '20px', marginBottom: '24px'
             }}>
               <h2 style={{ margin: '0 0 16px 0', fontSize: '16px', fontWeight: '600', color: COLORS.darkText }}>📧 Send Invite</h2>
 
@@ -1659,12 +2188,9 @@ export default function App() {
                   placeholder="user@example.com"
                   required
                   style={{
-                    flex: 1,
-                    padding: '10px 12px',
-                    border: `1px solid ${COLORS.borderColor}`,
-                    borderRadius: '6px',
-                    fontSize: '14px',
-                    fontFamily: FONT_FAMILY
+                    flex: 1, padding: '10px 12px',
+                    border: `1px solid ${COLORS.borderColor}`, borderRadius: '6px',
+                    fontSize: '14px', fontFamily: FONT_FAMILY
                   }}
                 />
                 <button
@@ -1672,14 +2198,10 @@ export default function App() {
                   disabled={inviteSending}
                   style={{
                     padding: '10px 20px',
-                    background: COLORS.navActive,
-                    color: COLORS.white,
-                    border: 'none',
-                    borderRadius: '6px',
+                    background: COLORS.navActive, color: COLORS.white,
+                    border: 'none', borderRadius: '6px',
                     cursor: inviteSending ? 'not-allowed' : 'pointer',
-                    fontWeight: '500',
-                    fontSize: '14px',
-                    fontFamily: FONT_FAMILY
+                    fontWeight: '500', fontSize: '14px', fontFamily: FONT_FAMILY
                   }}
                 >
                   {inviteSending ? 'Sending...' : 'Send Invite'}
@@ -1691,11 +2213,8 @@ export default function App() {
                   background: inviteMessage.includes('✅') ? COLORS.successBg : COLORS.errorBg,
                   border: `1px solid ${inviteMessage.includes('✅') ? COLORS.successBorder : COLORS.errorBorder}`,
                   color: inviteMessage.includes('✅') ? COLORS.successText : COLORS.errorText,
-                  padding: '12px',
-                  borderRadius: '6px',
-                  fontSize: '13px',
-                  whiteSpace: 'pre-wrap',
-                  marginBottom: '20px'
+                  padding: '12px', borderRadius: '6px', fontSize: '13px',
+                  whiteSpace: 'pre-wrap', marginBottom: '20px'
                 }}>
                   {inviteMessage}
                 </div>
@@ -1785,7 +2304,7 @@ export default function App() {
                 </div>
 
                 <div style={{ background: '#f0f9ff', border: '1px solid #a7f3d0', borderRadius: '6px', padding: '12px', marginBottom: '16px', fontSize: '12px', color: '#065f46' }}>
-                  ⚡ Claude AI Ready - Will generate content automatically
+                  ⚡ Claude AI Ready — Will generate lesson content + character description + scene description automatically
                 </div>
 
                 <div style={{ display: 'flex', gap: '8px' }}>
@@ -1837,7 +2356,7 @@ export default function App() {
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ background: '#64748b', color: COLORS.white }}>
-                  {['S.NO', 'ID', 'CLASS', 'SUBJECT', 'TOPIC', 'CONTENT TYPE', 'STATUS', 'WORDS', 'ACTION'].map(h => (
+                  {['S.NO', 'ID', 'CLASS', 'SUBJECT', 'TOPIC', 'CONTENT TYPE', 'STATUS', 'WORDS', 'IMAGES', 'ACTION'].map(h => (
                     <th key={h} style={{ padding: '12px', textAlign: 'left', fontSize: '11px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                       {h}
                     </th>
@@ -1845,57 +2364,65 @@ export default function App() {
                 </tr>
               </thead>
               <tbody>
-                {filteredRecords.map((r, i) => (
-                  <tr key={i} style={{ borderBottom: `1px solid ${COLORS.borderColor}`, background: i % 2 === 0 ? COLORS.white : COLORS.lightBg }}>
-                    <td style={{ padding: '12px', fontSize: '13px', fontWeight: '500', color: COLORS.navActive }}>{i + 1}</td>
-                    <td style={{ padding: '12px', fontSize: '13px' }}>{r.record_id}</td>
-                    <td style={{ padding: '12px', fontSize: '13px' }}>{r.class}</td>
-                    <td style={{ padding: '12px', fontSize: '13px' }}>{r.subject}</td>
-                    <td style={{ padding: '12px', fontSize: '13px' }}>{r.topic}</td>
-                    <td style={{ padding: '12px', fontSize: '13px' }}>
-                      <span style={{
-                        display: 'inline-block',
-                        padding: '4px 8px',
-                        borderRadius: '4px',
-                        fontSize: '11px',
-                        fontWeight: '500',
-                        background: '#e0e7ff',
-                        color: '#3730a3'
-                      }}>
-                        {r.content_type || 'N/A'}
-                      </span>
-                    </td>
-                    <td style={{ padding: '12px', fontSize: '13px' }}>
-                      <span style={{
-                        display: 'inline-block',
-                        padding: '4px 8px',
-                        borderRadius: '3px',
-                        fontSize: '11px',
-                        fontWeight: '500',
-                        background: r.status === 'generated' ? COLORS.successBg : r.status === 'generating' ? '#f3e8ff' : COLORS.filterBg,
-                        color: r.status === 'generated' ? COLORS.successText : r.status === 'generating' ? '#7c3aed' : COLORS.lightText
-                      }}>
-                        {r.status}
-                      </span>
-                    </td>
-                    <td style={{ padding: '12px', fontSize: '13px' }}>{r.word_count || 0}</td>
-                    <td style={{ padding: '12px', fontSize: '13px', display: 'flex', gap: '8px' }}>
-                      <button onClick={() => setViewingRecord(r)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', display: 'flex' }}>
-                        <Eye size={18} color={COLORS.navActive} />
-                      </button>
-                      <button onClick={() => handleEditRecord(r)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', display: 'flex' }}>
-                        <Edit2 size={18} color={COLORS.navActive} />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                {filteredRecords.map((r, i) => {
+                  const imgCount = (r.character_images?.length || 0) + (r.scene_images?.length || 0);
+                  return (
+                    <tr key={i} style={{ borderBottom: `1px solid ${COLORS.borderColor}`, background: i % 2 === 0 ? COLORS.white : COLORS.lightBg }}>
+                      <td style={{ padding: '12px', fontSize: '13px', fontWeight: '500', color: COLORS.navActive }}>{i + 1}</td>
+                      <td style={{ padding: '12px', fontSize: '13px' }}>{r.record_id}</td>
+                      <td style={{ padding: '12px', fontSize: '13px' }}>{r.class}</td>
+                      <td style={{ padding: '12px', fontSize: '13px' }}>{r.subject}</td>
+                      <td style={{ padding: '12px', fontSize: '13px' }}>{r.topic}</td>
+                      <td style={{ padding: '12px', fontSize: '13px' }}>
+                        <span style={{
+                          display: 'inline-block', padding: '4px 8px', borderRadius: '4px',
+                          fontSize: '11px', fontWeight: '500', background: '#e0e7ff', color: '#3730a3'
+                        }}>
+                          {r.content_type || 'N/A'}
+                        </span>
+                      </td>
+                      <td style={{ padding: '12px', fontSize: '13px' }}>
+                        <span style={{
+                          display: 'inline-block', padding: '4px 8px', borderRadius: '3px',
+                          fontSize: '11px', fontWeight: '500',
+                          background: r.status === 'generated' ? COLORS.successBg : r.status === 'generating' ? '#f3e8ff' : COLORS.filterBg,
+                          color: r.status === 'generated' ? COLORS.successText : r.status === 'generating' ? '#7c3aed' : COLORS.lightText
+                        }}>
+                          {r.status}
+                        </span>
+                      </td>
+                      <td style={{ padding: '12px', fontSize: '13px' }}>{r.word_count || 0}</td>
+                      <td style={{ padding: '12px', fontSize: '13px' }}>
+                        {imgCount > 0 ? (
+                          <span style={{
+                            display: 'inline-flex', alignItems: 'center', gap: '3px',
+                            padding: '4px 8px', borderRadius: '3px', fontSize: '11px',
+                            fontWeight: '500', background: '#dbeafe', color: '#1e40af'
+                          }}>
+                            <Image size={11} /> {imgCount}
+                          </span>
+                        ) : (
+                          <span style={{ color: COLORS.lightText, fontSize: '11px' }}>—</span>
+                        )}
+                      </td>
+                      <td style={{ padding: '12px', fontSize: '13px', display: 'flex', gap: '8px' }}>
+                        <button onClick={() => { setViewingRecord(r); setViewTab('content'); setImageGenMessage(''); }} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', display: 'flex' }}>
+                          <Eye size={18} color={COLORS.navActive} />
+                        </button>
+                        <button onClick={() => handleEditRecord(r)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', display: 'flex' }}>
+                          <Edit2 size={18} color={COLORS.navActive} />
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
         </div>
       </div>
 
-      {/* VIEW MODAL - CENTERED LARGE DIALOG */}
+      {/* ===== VIEW MODAL - WITH TABS ===== */}
       {viewingRecord && (
         <div style={{
           position: 'fixed',
@@ -1910,8 +2437,8 @@ export default function App() {
           <div style={{
             background: COLORS.white,
             width: '95%',
-            maxWidth: '1000px',
-            height: '90vh',
+            maxWidth: '1100px',
+            height: '92vh',
             display: 'flex',
             flexDirection: 'column',
             borderRadius: '12px',
@@ -1938,161 +2465,181 @@ export default function App() {
               <button 
                 onClick={() => setViewingRecord(null)} 
                 style={{ 
-                  background: 'none', 
-                  border: 'none', 
-                  cursor: 'pointer', 
-                  padding: '8px',
-                  fontSize: '24px',
-                  color: COLORS.lightText
+                  background: 'none', border: 'none', cursor: 'pointer', 
+                  padding: '8px', fontSize: '24px', color: COLORS.lightText
                 }}
               >
                 ✕
               </button>
             </div>
 
-            {/* CONTROLS */}
+            {/* TAB BAR */}
             <div style={{ 
-              padding: '12px 24px', 
+              padding: '0 24px', 
               borderBottom: `1px solid ${COLORS.borderColor}`, 
               display: 'flex', 
-              gap: '16px',
-              alignItems: 'center',
+              gap: '0',
               background: COLORS.lightBg
             }}>
-              <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', cursor: 'pointer', fontWeight: '500' }}>
-                  <input type="radio" checked={viewMarkdown} onChange={() => setViewMarkdown(true)} />
-                  <span>Markdown</span>
-                </label>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', cursor: 'pointer', fontWeight: '500' }}>
-                  <input type="radio" checked={!viewMarkdown} onChange={() => setViewMarkdown(false)} />
-                  <span>HTML</span>
-                </label>
-              </div>
-              <div style={{ marginLeft: 'auto', display: 'flex', gap: '8px', alignItems: 'center' }}>
-                <span style={{ fontSize: '11px', color: COLORS.lightText, fontWeight: '500' }}>
-                  {viewingRecord.word_count || 0} words
-                </span>
-              </div>
+              <button
+                onClick={() => setViewTab('content')}
+                style={{
+                  padding: '12px 20px',
+                  background: 'none',
+                  border: 'none',
+                  borderBottom: viewTab === 'content' ? `2px solid ${COLORS.navActive}` : '2px solid transparent',
+                  color: viewTab === 'content' ? COLORS.navActive : COLORS.lightText,
+                  fontWeight: viewTab === 'content' ? '600' : '500',
+                  fontSize: '13px',
+                  cursor: 'pointer',
+                  fontFamily: FONT_FAMILY,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  transition: 'all 0.2s'
+                }}
+              >
+                <BookOpen size={14} /> Content
+              </button>
+              <button
+                onClick={() => setViewTab('visuals')}
+                style={{
+                  padding: '12px 20px',
+                  background: 'none',
+                  border: 'none',
+                  borderBottom: viewTab === 'visuals' ? `2px solid #8b5cf6` : '2px solid transparent',
+                  color: viewTab === 'visuals' ? '#8b5cf6' : COLORS.lightText,
+                  fontWeight: viewTab === 'visuals' ? '600' : '500',
+                  fontSize: '13px',
+                  cursor: 'pointer',
+                  fontFamily: FONT_FAMILY,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  transition: 'all 0.2s'
+                }}
+              >
+                <Image size={14} /> Visual Assets
+                {((viewingRecord.character_images?.length || 0) + (viewingRecord.scene_images?.length || 0)) > 0 && (
+                  <span style={{
+                    background: '#8b5cf6', color: 'white', fontSize: '10px',
+                    padding: '1px 6px', borderRadius: '10px', fontWeight: '600'
+                  }}>
+                    {(viewingRecord.character_images?.length || 0) + (viewingRecord.scene_images?.length || 0)}
+                  </span>
+                )}
+              </button>
+
+              {/* Right-side controls (only for content tab) */}
+              {viewTab === 'content' && (
+                <div style={{ marginLeft: 'auto', display: 'flex', gap: '12px', alignItems: 'center', paddingRight: '4px' }}>
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', cursor: 'pointer', fontWeight: '500' }}>
+                      <input type="radio" checked={viewMarkdown} onChange={() => setViewMarkdown(true)} />
+                      <span>Markdown</span>
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', cursor: 'pointer', fontWeight: '500' }}>
+                      <input type="radio" checked={!viewMarkdown} onChange={() => setViewMarkdown(false)} />
+                      <span>HTML</span>
+                    </label>
+                  </div>
+                  <span style={{ fontSize: '11px', color: COLORS.lightText, fontWeight: '500' }}>
+                    {viewingRecord.word_count || 0} words
+                  </span>
+                </div>
+              )}
             </div>
 
-            {/* CONTENT */}
+            {/* CONTENT AREA */}
             <div style={{ 
               flex: 1, 
               overflowY: 'auto', 
-              padding: '28px 32px',
               background: COLORS.white
             }}>
-              {viewingRecord.ai_output ? (
-                <>
-                  {viewMarkdown ? (
-                    <div style={{ 
-                      fontSize: '14px', 
-                      lineHeight: '1.8', 
-                      color: COLORS.darkText, 
-                      fontFamily: 'Montserrat, sans-serif',  // ✅ Montserrat font 
-                      fontWeight: '400',
-                      maxWidth: '800px'
-                    }}>
-                      {parseMarkdownToReact(viewingRecord.ai_output)}
-                    </div>
+              {viewTab === 'content' ? (
+                <div style={{ padding: '28px 32px' }}>
+                  {viewingRecord.ai_output ? (
+                    <>
+                      {viewMarkdown ? (
+                        <div style={{ 
+                          fontSize: '14px', 
+                          lineHeight: '1.8', 
+                          color: COLORS.darkText, 
+                          fontFamily: 'Montserrat, sans-serif',
+                          fontWeight: '400',
+                          maxWidth: '800px'
+                        }}>
+                          {parseMarkdownToReact(viewingRecord.ai_output)}
+                        </div>
+                      ) : (
+                        <div 
+                          dangerouslySetInnerHTML={{ __html: viewingRecord.ai_output }} 
+                          style={{ 
+                            fontSize: '14px', 
+                            lineHeight: '1.8', 
+                            color: COLORS.darkText, 
+                            fontFamily: 'Montserrat, sans-serif',
+                            fontWeight: '400',
+                            maxWidth: '800px'
+                          }} 
+                        />
+                      )}
+                    </>
                   ) : (
-                    <div 
-                      dangerouslySetInnerHTML={{ __html: viewingRecord.ai_output }} 
-                      style={{ 
-                        fontSize: '14px', 
-                        lineHeight: '1.8', 
-                        color: COLORS.darkText, 
-                        fontFamily: 'Montserrat, sans-serif',  // ✅ Montserrat font 
-                        fontWeight: '400',
-                        maxWidth: '800px'
-                      }} 
-                    />
+                    <div style={{ textAlign: 'center', color: COLORS.lightText, padding: '60px 20px', fontSize: '16px' }}>
+                      ⏳ No content generated yet. Please wait for Claude AI to generate the content.
+                    </div>
                   )}
-                </>
-              ) : (
-                <div style={{ textAlign: 'center', color: COLORS.lightText, padding: '60px 20px', fontSize: '16px' }}>
-                  ⏳ No content generated yet. Please wait for Claude AI to generate the content.
                 </div>
+              ) : (
+                renderVisualAssetsTab()
               )}
             </div>
 
             {/* FOOTER WITH ACTIONS */}
             {viewingRecord.ai_output && (
               <div style={{ 
-                padding: '16px 24px', 
+                padding: '14px 24px', 
                 borderTop: `1px solid ${COLORS.borderColor}`, 
                 display: 'flex', 
                 justifyContent: 'flex-end',
-                gap: '12px',
+                gap: '10px',
                 background: COLORS.lightBg
               }}>
                 <button 
                   onClick={handleCopyContent} 
                   style={{ 
-                    padding: '10px 18px', 
-                    background: '#6366f1', 
-                    color: COLORS.white, 
-                    border: 'none', 
-                    borderRadius: '6px', 
-                    cursor: 'pointer', 
-                    fontWeight: '500', 
-                    fontSize: '13px', 
-                    fontFamily: FONT_FAMILY, 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    gap: '8px',
-                    transition: 'all 0.2s'
+                    padding: '9px 16px', background: '#6366f1', color: COLORS.white, 
+                    border: 'none', borderRadius: '6px', cursor: 'pointer', 
+                    fontWeight: '500', fontSize: '12px', fontFamily: FONT_FAMILY, 
+                    display: 'flex', alignItems: 'center', gap: '6px', transition: 'all 0.2s'
                   }}
                   onMouseEnter={(e) => e.target.style.background = '#4f46e5'}
                   onMouseLeave={(e) => e.target.style.background = '#6366f1'}
-                  title="Copy all content"
                 > 
-                  <Copy size={16} /> Copy
+                  <Copy size={14} /> Copy
                 </button>
                 <button 
                   onClick={handleExportPDF} 
                   style={{ 
-                    padding: '10px 18px', 
-                    background: COLORS.navActive, 
-                    color: COLORS.white, 
-                    border: 'none', 
-                    borderRadius: '6px', 
-                    cursor: 'pointer', 
-                    fontWeight: '500', 
-                    fontSize: '13px', 
-                    fontFamily: FONT_FAMILY, 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    gap: '8px',
-                    transition: 'all 0.2s'
+                    padding: '9px 16px', background: COLORS.navActive, color: COLORS.white, 
+                    border: 'none', borderRadius: '6px', cursor: 'pointer', 
+                    fontWeight: '500', fontSize: '12px', fontFamily: FONT_FAMILY, 
+                    display: 'flex', alignItems: 'center', gap: '6px', transition: 'all 0.2s'
                   }}
-                  onMouseEnter={(e) => e.target.style.opacity = '0.8'}
-                  onMouseLeave={(e) => e.target.style.opacity = '1'}
                 >
-                  <Download size={16} /> PDF
+                  <Download size={14} /> PDF
                 </button>
                 <button 
                   onClick={handleExportWord} 
                   style={{ 
-                    padding: '10px 18px', 
-                    background: COLORS.navActive, 
-                    color: COLORS.white, 
-                    border: 'none', 
-                    borderRadius: '6px', 
-                    cursor: 'pointer', 
-                    fontWeight: '500', 
-                    fontSize: '13px', 
-                    fontFamily: FONT_FAMILY, 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    gap: '8px',
-                    transition: 'all 0.2s'
+                    padding: '9px 16px', background: COLORS.navActive, color: COLORS.white, 
+                    border: 'none', borderRadius: '6px', cursor: 'pointer', 
+                    fontWeight: '500', fontSize: '12px', fontFamily: FONT_FAMILY, 
+                    display: 'flex', alignItems: 'center', gap: '6px', transition: 'all 0.2s'
                   }}
-                  onMouseEnter={(e) => e.target.style.opacity = '0.8'}
-                  onMouseLeave={(e) => e.target.style.opacity = '1'}
                 >
-                  <Download size={16} /> Word
+                  <Download size={14} /> Word
                 </button>
               </div>
             )}

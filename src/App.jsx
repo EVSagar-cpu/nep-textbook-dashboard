@@ -4,7 +4,7 @@ import {
   Menu, X, LogOut, Eye, Edit2, BookOpen, Plus, Download, RefreshCw,
   Mail, Check, AlertCircle, Copy, Users, Image, Sparkles, Palette,
   ChevronDown, ChevronUp, Loader2, ImagePlus, Layers, Trash2,
-  Pencil, Save, XCircle, Link, Maximize2, ZoomIn
+  Pencil, Save, XCircle, Link, Maximize2, ZoomIn, Clock
 } from 'lucide-react';
 import {
   detectErrorType,
@@ -237,27 +237,47 @@ export default function App() {
 
     const flushTable = () => {
       if (tableLines.length > 0) {
-        const rows = tableLines.map(line => line.split('|').map(cell => cell.trim()).filter(cell => cell));
-        if (rows.length > 0) {
+        // Filter out separator rows (--- | --- | ---)
+        const filteredLines = tableLines.filter(line => !line.replace(/[\s|:-]/g, '').length === 0 ? false : !/^[\s|:-]+$/.test(line));
+        const rows = filteredLines.map(line => line.split('|').map(cell => cell.trim()).filter(cell => cell));
+        if (rows.length > 1) {
+          // Calculate column count from header
+          const colCount = rows[0].length;
           result.push(
-            <table key={`table-${result.length}`} style={{ width: '100%', borderCollapse: 'collapse', margin: '16px 0', fontSize: '12px', border: `1px solid ${COLORS.borderColor}`, pageBreakInside: 'avoid', tableLayout: 'auto' }}>
-              <thead>
-                <tr style={{ background: '#64748b', color: 'white' }}>
-                  {rows[0].map((cell, idx) => (
-                    <th key={idx} style={{ padding: '12px', textAlign: 'left', fontWeight: '600', borderBottom: '2px solid #475569', whiteSpace: 'normal', wordBreak: 'break-word' }}>{cell}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {rows.slice(1).map((row, rowIdx) => (
-                  <tr key={rowIdx} style={{ background: rowIdx % 2 === 0 ? '#f9fafb' : '#ffffff', borderBottom: `1px solid ${COLORS.borderColor}` }}>
-                    {row.map((cell, cellIdx) => (
-                      <td key={cellIdx} style={{ padding: '12px', borderRight: cellIdx < row.length - 1 ? `1px solid ${COLORS.borderColor}` : 'none', whiteSpace: 'normal', wordBreak: 'break-word', verticalAlign: 'top' }}>{renderInlineMarkdown(cell)}</td>
+            <div key={`table-wrap-${result.length}`} style={{ overflowX: 'auto', margin: '16px 0', pageBreakInside: 'avoid' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', border: '1px solid ' + COLORS.borderColor, tableLayout: 'auto', minWidth: colCount > 4 ? (colCount * 120) + 'px' : 'auto' }}>
+                <thead>
+                  <tr style={{ background: '#1e293b', color: 'white' }}>
+                    {rows[0].map((cell, idx) => (
+                      <th key={idx} style={{
+                        padding: '10px 14px', textAlign: 'left', fontWeight: '600',
+                        fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.3px',
+                        borderBottom: '2px solid #475569', borderRight: idx < colCount - 1 ? '1px solid #334155' : 'none',
+                        whiteSpace: 'normal', wordBreak: 'break-word', minWidth: '80px'
+                      }}>{renderInlineMarkdown(cell)}</th>
                     ))}
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {rows.slice(1).map((row, rowIdx) => (
+                    <tr key={rowIdx} style={{
+                      background: rowIdx % 2 === 0 ? '#ffffff' : '#f8fafc',
+                      borderBottom: '1px solid ' + COLORS.borderColor,
+                      transition: 'background 0.15s'
+                    }}>
+                      {Array.from({ length: colCount }, (_, cellIdx) => (
+                        <td key={cellIdx} style={{
+                          padding: '10px 14px',
+                          borderRight: cellIdx < colCount - 1 ? '1px solid ' + COLORS.borderColor : 'none',
+                          whiteSpace: 'normal', wordBreak: 'break-word', verticalAlign: 'top',
+                          lineHeight: '1.5', fontSize: '12px'
+                        }}>{renderInlineMarkdown(row[cellIdx] || '')}</td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           );
         }
         tableLines = [];
@@ -637,12 +657,31 @@ export default function App() {
     if (!viewingRecord) return;
     setSavingContent(true);
     try {
+      // Build edit history entry
+      const historyEntry = {
+        action: 'content_edited',
+        timestamp: new Date().toISOString(),
+        user: currentUser?.email || 'unknown',
+        word_count_before: (viewingRecord.ai_output || '').trim().split(/\s+/).length,
+        word_count_after: editContent.trim().split(/\s+/).length,
+      };
+
+      // Get existing edit_history or create new array
+      var existingHistory = [];
+      try {
+        if (viewingRecord.edit_history && Array.isArray(viewingRecord.edit_history)) {
+          existingHistory = viewingRecord.edit_history;
+        }
+      } catch (e) { existingHistory = []; }
+
+      var updatedHistory = [historyEntry].concat(existingHistory);
+
       const { error } = await supabase
         .from('textbook_content')
-        .update({ ai_output: editContent, updated_at: new Date() })
+        .update({ ai_output: editContent, edit_history: updatedHistory, updated_at: new Date() })
         .eq('record_id', viewingRecord.record_id);
       if (error) throw error;
-      setViewingRecord({ ...viewingRecord, ai_output: editContent });
+      setViewingRecord({ ...viewingRecord, ai_output: editContent, edit_history: updatedHistory });
       setIsEditing(false);
       fetchRecords();
     } catch (err) {
@@ -810,30 +849,143 @@ export default function App() {
     try {
       const markdownContent = viewingRecord.ai_output;
       const dimensions = getPaperDimensions();
-      // Simple HTML conversion for PDF
-      let html = markdownContent
-        .replace(/^### (.*$)/gim, '<h3 style="font-size:15px;margin:12px 0 8px 0;font-weight:600;">$1</h3>')
-        .replace(/^## (.*$)/gim, '<h2 style="font-size:17px;margin:14px 0 10px 0;font-weight:600;">$1</h2>')
-        .replace(/^# (.*$)/gim, '<h1 style="font-size:20px;margin:16px 0 12px 0;font-weight:700;">$1</h1>')
-        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-        .replace(/\*(.*?)\*/g, '<em>$1</em>')
-        .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<div style="margin:16px 0;text-align:center;"><img src="$2" alt="$1" style="max-width:100%;max-height:400px;border-radius:8px;" /><p style="font-size:11px;color:#6b7280;margin-top:6px;">$1</p></div>')
-        .replace(/^[-*] (.*$)/gim, '<li style="margin-bottom:6px;">$1</li>')
-        .replace(/\n\n/g, '</p><p style="margin:8px 0;line-height:1.6;">');
-      html = '<p style="margin:8px 0;line-height:1.6;">' + html + '</p>';
 
-      const element = document.createElement('div');
+      // Full line-by-line markdown to HTML converter
+      const lines = markdownContent.split('\n');
+      let html = '';
+      let i = 0;
+      let inCodeBlock = false;
+      let codeContent = [];
+      let tableLines = [];
+
+      const flushPdfTable = () => {
+        if (tableLines.length > 0) {
+          const filtered = tableLines.filter(l => !/^[\s|:-]+$/.test(l));
+          const rows = filtered.map(l => l.split('|').map(c => c.trim()).filter(c => c));
+          if (rows.length > 1) {
+            const colCount = rows[0].length;
+            html += '<table style="width:100%;border-collapse:collapse;margin:14px 0;border:1px solid #d1d5db;page-break-inside:avoid;table-layout:auto;">';
+            html += '<thead><tr style="background:#1e293b;color:white;">';
+            rows[0].forEach(function(cell, ci) {
+              html += '<th style="padding:10px 14px;text-align:left;font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:0.3px;border-bottom:2px solid #475569;border-right:' + (ci < colCount - 1 ? '1px solid #334155' : 'none') + ';white-space:normal;word-break:break-word;min-width:80px;">' + cell + '</th>';
+            });
+            html += '</tr></thead><tbody>';
+            rows.slice(1).forEach(function(row, ri) {
+              html += '<tr style="background:' + (ri % 2 === 0 ? '#ffffff' : '#f8fafc') + ';border-bottom:1px solid #e5e7eb;">';
+              for (var ci = 0; ci < colCount; ci++) {
+                html += '<td style="padding:10px 14px;border-right:' + (ci < colCount - 1 ? '1px solid #e5e7eb' : 'none') + ';white-space:normal;word-break:break-word;vertical-align:top;line-height:1.5;font-size:12px;">' + (row[ci] || '') + '</td>';
+              }
+              html += '</tr>';
+            });
+            html += '</tbody></table>';
+          }
+          tableLines = [];
+        }
+      };
+
+      while (i < lines.length) {
+        var line = lines[i];
+
+        // Code blocks
+        if (line.trim().indexOf('```') === 0) {
+          if (inCodeBlock) {
+            html += '<pre style="background:#1f2937;color:#e5e7eb;padding:14px;border-radius:6px;margin:12px 0;overflow-x:auto;font-size:11px;line-height:1.5;page-break-inside:avoid;font-family:monospace;"><code>' + codeContent.join('\n') + '</code></pre>';
+            codeContent = [];
+            inCodeBlock = false;
+          } else {
+            flushPdfTable();
+            inCodeBlock = true;
+          }
+          i++; continue;
+        }
+        if (inCodeBlock) { codeContent.push(line); i++; continue; }
+
+        // Tables
+        if (line.indexOf('|') !== -1 && line.trim().length > 2) {
+          tableLines.push(line);
+          i++; continue;
+        }
+        if (tableLines.length > 0) { flushPdfTable(); }
+
+        // Images
+        var imgMatch = line.match(/!\[([^\]]*)\]\(([^)]+)\)/);
+        if (imgMatch) {
+          html += '<div style="margin:20px 0;text-align:center;page-break-inside:avoid;">';
+          html += '<img src="' + imgMatch[2] + '" alt="' + imgMatch[1] + '" style="max-width:90%;max-height:500px;border-radius:8px;border:1px solid #e5e7eb;box-shadow:0 2px 8px rgba(0,0,0,0.08);" crossorigin="anonymous" />';
+          if (imgMatch[1]) {
+            html += '<p style="font-size:10px;color:#6b7280;margin-top:6px;font-style:italic;">' + imgMatch[1] + '</p>';
+          }
+          html += '</div>';
+          i++; continue;
+        }
+
+        // Headings
+        if (line.indexOf('### ') === 0) { flushPdfTable(); html += '<h3 style="font-size:15px;margin:14px 0 8px 0;font-weight:600;color:#0f172a;page-break-after:avoid;">' + line.replace(/^#+\s*/, '') + '</h3>'; i++; continue; }
+        if (line.indexOf('## ') === 0) { flushPdfTable(); html += '<h2 style="font-size:17px;margin:16px 0 10px 0;font-weight:600;color:#0f172a;page-break-after:avoid;">' + line.replace(/^#+\s*/, '') + '</h2>'; i++; continue; }
+        if (line.indexOf('# ') === 0) { flushPdfTable(); html += '<h1 style="font-size:20px;margin:18px 0 12px 0;font-weight:700;color:#0f172a;page-break-after:avoid;">' + line.replace(/^#+\s*/, '') + '</h1>'; i++; continue; }
+
+        // Horizontal rule
+        if (/^---+$/.test(line.trim())) { html += '<hr style="border:none;border-top:1px solid #e5e7eb;margin:16px 0;">'; i++; continue; }
+
+        // Lists
+        if (line.trim().indexOf('- ') === 0 || line.trim().indexOf('* ') === 0 || /^\d+\.\s/.test(line.trim())) {
+          var listItems = [];
+          while (i < lines.length && (lines[i].trim().indexOf('- ') === 0 || lines[i].trim().indexOf('* ') === 0 || /^\d+\.\s/.test(lines[i].trim()))) {
+            var item = lines[i].replace(/^[\s\-\*]+|\d+\.\s*/, '').trim();
+            if (item) listItems.push(item);
+            i++;
+          }
+          if (listItems.length > 0) {
+            html += '<ul style="margin-left:24px;margin-bottom:12px;page-break-inside:avoid;">';
+            listItems.forEach(function(li) {
+              html += '<li style="margin-bottom:6px;line-height:1.6;">' + li.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\*(.*?)\*/g, '<em>$1</em>') + '</li>';
+            });
+            html += '</ul>';
+          }
+          continue;
+        }
+
+        // Blockquote
+        if (line.indexOf('>') === 0) {
+          html += '<blockquote style="border-left:4px solid #2563eb;padding:10px 12px;margin:12px 0;background:#f0f9ff;font-style:italic;color:#475569;font-size:13px;page-break-inside:avoid;">' + line.replace(/^>\s*/, '') + '</blockquote>';
+          i++; continue;
+        }
+
+        // Empty line
+        if (!line.trim()) { html += '<div style="height:6px;"></div>'; i++; continue; }
+
+        // Paragraph with inline formatting
+        var text = line
+          .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+          .replace(/\*(.*?)\*/g, '<em>$1</em>')
+          .replace(/<u>(.*?)<\/u>/g, '<u>$1</u>')
+          .replace(/~~(.*?)~~/g, '<s>$1</s>')
+          .replace(/`(.*?)`/g, '<code style="background:#f3f4f6;padding:2px 6px;border-radius:3px;font-family:monospace;font-size:11px;">$1</code>');
+        html += '<p style="margin:8px 0;line-height:1.7;page-break-inside:avoid;font-size:13px;">' + text + '</p>';
+        i++;
+      }
+
+      flushPdfTable();
+
+      var element = document.createElement('div');
       element.style.width = '100%';
-      element.style.padding = `${pageSettings.margins}mm`;
-      element.innerHTML = `<div style="font-family:Lexend,sans-serif;color:#0f172a;max-width:100%;word-wrap:break-word;"><h1 style="font-size:24px;margin-bottom:8px;">${viewingRecord.topic}</h1><p style="color:#6b7280;margin-bottom:20px;font-size:13px;">Class ${viewingRecord.class} | ${viewingRecord.subject}</p><hr style="border:none;border-top:1px solid #e5e7eb;margin:20px 0;"><div style="line-height:1.6;font-size:13px;">${html}</div></div>`;
+      element.style.padding = pageSettings.margins + 'mm';
+      element.innerHTML = '<div style="font-family:Montserrat,Lexend,sans-serif;color:#0f172a;max-width:100%;word-wrap:break-word;">'
+        + '<h1 style="font-size:26px;margin-bottom:4px;font-weight:700;page-break-after:avoid;">' + viewingRecord.topic + '</h1>'
+        + '<p style="color:#6b7280;margin-bottom:4px;font-size:13px;">Class ' + viewingRecord.class + ' | ' + viewingRecord.subject + (viewingRecord.sub_topic ? ' | ' + viewingRecord.sub_topic : '') + '</p>'
+        + '<p style="color:#9ca3af;margin-bottom:16px;font-size:11px;">' + (viewingRecord.content_type || '') + '</p>'
+        + '<hr style="border:none;border-top:2px solid #2563eb;margin:0 0 20px 0;width:60px;">'
+        + '<div style="line-height:1.7;font-size:13px;color:#0f172a;">' + html + '</div>'
+        + '</div>';
 
       if (window.html2pdf) {
         window.html2pdf().set({
           margin: pageSettings.margins,
-          filename: `${viewingRecord.topic}.pdf`,
+          filename: viewingRecord.topic + '.pdf',
           image: { type: 'jpeg', quality: 0.98 },
-          html2canvas: { scale: 2, useCORS: true, allowTaint: true },
-          jsPDF: { orientation: pageSettings.orientation === 'landscape' ? 'l' : 'p', unit: 'mm', format: pageSettings.paperSize === 'Custom' ? [dimensions.width, dimensions.height] : pageSettings.paperSize, compress: true }
+          html2canvas: { scale: 2, useCORS: true, allowTaint: true, logging: false },
+          jsPDF: { orientation: pageSettings.orientation === 'landscape' ? 'l' : 'p', unit: 'mm', format: pageSettings.paperSize === 'Custom' ? [dimensions.width, dimensions.height] : pageSettings.paperSize, compress: true },
+          pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
         }).from(element).save();
       } else { alert('PDF library is loading. Please try again.'); }
     } catch (err) { alert('PDF export failed: ' + err.message); }
@@ -1200,6 +1352,127 @@ export default function App() {
             </div>
           </div>
         )}
+      </div>
+    );
+  };
+
+  // ====================================================================
+  // ===== HISTORY TAB =====
+  // ====================================================================
+  const renderHistoryTab = () => {
+    if (!viewingRecord) return null;
+
+    const formatDate = (dateStr) => {
+      if (!dateStr) return '—';
+      try {
+        var d = new Date(dateStr);
+        return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+          + ' ' + d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+      } catch (e) { return dateStr; }
+    };
+
+    var timeline = [];
+
+    // Record created
+    if (viewingRecord.created_at) {
+      timeline.push({ icon: '📝', label: 'Record Created', time: viewingRecord.created_at, detail: 'Class ' + viewingRecord.class + ' • ' + viewingRecord.subject + ' • ' + viewingRecord.topic, color: '#2563eb' });
+    }
+
+    // Prompt info
+    if (viewingRecord.prompt) {
+      timeline.push({ icon: '⚡', label: 'Prompt Submitted', time: viewingRecord.created_at, detail: viewingRecord.prompt.substring(0, 120) + (viewingRecord.prompt.length > 120 ? '...' : ''), color: '#8b5cf6' });
+    }
+
+    // AI output generated
+    if (viewingRecord.status === 'generated' && viewingRecord.ai_output) {
+      timeline.push({ icon: '🤖', label: 'AI Content Generated', time: viewingRecord.updated_at, detail: (viewingRecord.word_count || 0) + ' words generated', color: '#10b981' });
+    }
+
+    // Visual prompts generated
+    var vp = getVisualPrompts(viewingRecord);
+    if (vp.length > 0) {
+      var charCount = vp.filter(function(p) { return p.type === 'character'; }).length;
+      var sceneCount = vp.filter(function(p) { return p.type === 'scene'; }).length;
+      var generatedCount = vp.filter(function(p) { return p.image_url; }).length;
+      var firstPromptTime = vp.reduce(function(min, p) { return p.created_at && p.created_at < min ? p.created_at : min; }, vp[0]?.created_at || viewingRecord.updated_at);
+      timeline.push({ icon: '🎨', label: 'Visual Prompts Generated', time: firstPromptTime, detail: charCount + ' characters, ' + sceneCount + ' scenes (' + generatedCount + ' images generated)', color: '#f59e0b' });
+    }
+
+    // Each generated image
+    vp.filter(function(p) { return p.image_url; }).forEach(function(p) {
+      timeline.push({ icon: '🖼️', label: (p.type === 'character' ? 'Character' : 'Scene') + ' Image Generated', time: p.created_at, detail: 'Model: ' + (p.model_used || 'unknown') + ' — ' + (p.prompt || '').substring(0, 80), color: p.type === 'character' ? '#8b5cf6' : '#2563eb' });
+    });
+
+    // Edit history entries
+    var editHistory = [];
+    try {
+      if (viewingRecord.edit_history && Array.isArray(viewingRecord.edit_history)) {
+        editHistory = viewingRecord.edit_history;
+      }
+    } catch (e) { editHistory = []; }
+
+    editHistory.forEach(function(entry) {
+      timeline.push({ icon: '✏️', label: 'Content Edited', time: entry.timestamp, detail: 'By ' + (entry.user || 'unknown') + ' — Words: ' + (entry.word_count_before || '?') + ' → ' + (entry.word_count_after || '?'), color: '#ef4444' });
+    });
+
+    // Sort by time descending (newest first)
+    timeline.sort(function(a, b) {
+      return new Date(b.time || 0).getTime() - new Date(a.time || 0).getTime();
+    });
+
+    return (
+      <div style={{ padding: '24px 32px', maxWidth: '700px' }}>
+        <h3 style={{ margin: '0 0 4px 0', fontSize: '16px', fontWeight: '600', color: COLORS.darkText, display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Clock size={18} /> Record Timeline
+        </h3>
+        <p style={{ margin: '0 0 20px 0', fontSize: '12px', color: COLORS.lightText }}>
+          Record ID: {viewingRecord.record_id} • Status: {viewingRecord.status} • Content Type: {viewingRecord.content_type || 'N/A'}
+        </p>
+
+        {/* Timeline */}
+        <div style={{ position: 'relative', paddingLeft: '28px' }}>
+          {/* Vertical line */}
+          <div style={{ position: 'absolute', left: '10px', top: '4px', bottom: '4px', width: '2px', background: COLORS.borderColor }} />
+
+          {timeline.map(function(item, idx) {
+            return (
+              <div key={idx} style={{ position: 'relative', marginBottom: '20px' }}>
+                {/* Dot */}
+                <div style={{
+                  position: 'absolute', left: '-22px', top: '2px',
+                  width: '16px', height: '16px', borderRadius: '50%',
+                  background: item.color, border: '2px solid ' + COLORS.white,
+                  boxShadow: '0 0 0 2px ' + item.color + '33',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: '8px'
+                }} />
+
+                <div style={{
+                  background: COLORS.white, border: '1px solid ' + COLORS.borderColor,
+                  borderRadius: '8px', padding: '12px 14px', borderLeft: '3px solid ' + item.color
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                    <span style={{ fontSize: '13px', fontWeight: '600', color: COLORS.darkText }}>
+                      {item.icon} {item.label}
+                    </span>
+                    <span style={{ fontSize: '10px', color: COLORS.lightText, whiteSpace: 'nowrap', marginLeft: '12px' }}>
+                      {formatDate(item.time)}
+                    </span>
+                  </div>
+                  <p style={{ margin: 0, fontSize: '11px', color: COLORS.lightText, lineHeight: '1.4', wordBreak: 'break-word' }}>
+                    {item.detail}
+                  </p>
+                </div>
+              </div>
+            );
+          })}
+
+          {timeline.length === 0 && (
+            <div style={{ padding: '24px', textAlign: 'center', color: COLORS.lightText, fontSize: '13px' }}>
+              No history available yet.
+            </div>
+          )}
+        </div>
       </div>
     );
   };
@@ -1820,11 +2093,14 @@ export default function App() {
                   <span style={{ background: '#8b5cf6', color: 'white', fontSize: '10px', padding: '1px 6px', borderRadius: '10px', fontWeight: '600' }}>{getVisualPrompts(viewingRecord).length}</span>
                 )}
               </button>
+              <button onClick={() => setViewTab('history')} style={{ padding: '12px 20px', background: 'none', border: 'none', borderBottom: viewTab === 'history' ? '2px solid #f59e0b' : '2px solid transparent', color: viewTab === 'history' ? '#f59e0b' : COLORS.lightText, fontWeight: viewTab === 'history' ? '600' : '500', fontSize: '13px', cursor: 'pointer', fontFamily: FONT_FAMILY, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <Clock size={14} /> History
+              </button>
             </div>
 
             {/* Content */}
             <div style={{ flex: 1, overflowY: 'auto', background: COLORS.white }}>
-              {viewTab === 'content' ? renderContentTab() : renderVisualAssetsTab()}
+              {viewTab === 'content' ? renderContentTab() : viewTab === 'visuals' ? renderVisualAssetsTab() : renderHistoryTab()}
             </div>
 
             {/* Footer */}

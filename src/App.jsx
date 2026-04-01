@@ -52,6 +52,18 @@ const IMAGE_MODELS = [
   { id: 'midjourney', label: 'Midjourney', color: '#7c3aed' },
 ];
 
+// ===== GOOGLE FONTS =====
+const GOOGLE_FONTS = [
+  'Montserrat', 'Lexend', 'Poppins', 'Roboto', 'Open Sans', 'Lato',
+  'Nunito', 'Raleway', 'Playfair Display', 'Merriweather', 'Source Sans 3',
+  'PT Serif', 'Libre Baskerville', 'Crimson Text', 'Work Sans', 'DM Sans',
+  'Inter', 'Outfit', 'Quicksand', 'Josefin Sans', 'Caveat', 'Pacifico',
+  'Dancing Script', 'Comfortaa', 'Bitter', 'Noto Sans', 'Ubuntu',
+  'Mukta', 'Tiro Devanagari Hindi', 'Hind'
+];
+
+const FONT_SIZES = ['10', '12', '13', '14', '16', '18', '20', '24', '28', '32', '36', '48'];
+
 // ===== PAPER SIZES =====
 const PAPER_SIZES = {
   'A4': { width: 210, height: 297, label: 'A4 (210 × 297 mm)' },
@@ -124,6 +136,9 @@ export default function App() {
   const [editContent, setEditContent] = useState('');
   const [savingContent, setSavingContent] = useState(false);
   const contentEditorRef = useRef(null);
+  const [editorFont, setEditorFont] = useState('Montserrat');
+  const [editorFontSize, setEditorFontSize] = useState('13');
+  const [showAssetPicker, setShowAssetPicker] = useState(false);
 
   // ===== VISUAL PROMPTS STATE =====
   const [generatingImageId, setGeneratingImageId] = useState(null);
@@ -150,15 +165,11 @@ export default function App() {
 
   // ===== LOAD FONTS & LIBS =====
   useEffect(() => {
+    const fontFamilies = GOOGLE_FONTS.map(f => 'family=' + f.replace(/ /g, '+') + ':wght@400;500;600;700').join('&');
     const link = document.createElement('link');
-    link.href = 'https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&display=swap';
+    link.href = 'https://fonts.googleapis.com/css2?' + fontFamilies + '&display=swap';
     link.rel = 'stylesheet';
     document.head.appendChild(link);
-
-    const montserratLink = document.createElement('link');
-    montserratLink.href = 'https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap';
-    montserratLink.rel = 'stylesheet';
-    document.head.appendChild(montserratLink);
 
     const script = document.createElement('script');
     script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
@@ -492,12 +503,120 @@ export default function App() {
   const handleStartEditing = () => {
     setEditContent(viewingRecord?.ai_output || '');
     setIsEditing(true);
+    setShowAssetPicker(false);
   };
 
   const handleCancelEditing = () => {
     setIsEditing(false);
     setEditContent('');
+    setShowAssetPicker(false);
   };
+
+  // ===== TOOLBAR FORMATTING HELPERS =====
+  const applyFormat = (prefix, suffix) => {
+    const textarea = contentEditorRef.current;
+    if (!textarea) return;
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const selected = editContent.substring(start, end);
+    const before = editContent.substring(0, start);
+    const after = editContent.substring(end);
+
+    if (selected) {
+      const newContent = before + prefix + selected + suffix + after;
+      setEditContent(newContent);
+      setTimeout(() => {
+        textarea.focus();
+        textarea.setSelectionRange(start + prefix.length, end + prefix.length);
+      }, 50);
+    } else {
+      const placeholder = 'text';
+      const newContent = before + prefix + placeholder + suffix + after;
+      setEditContent(newContent);
+      setTimeout(() => {
+        textarea.focus();
+        textarea.setSelectionRange(start + prefix.length, start + prefix.length + placeholder.length);
+      }, 50);
+    }
+  };
+
+  const applyBold = () => applyFormat('**', '**');
+  const applyItalic = () => applyFormat('*', '*');
+  const applyUnderline = () => applyFormat('<u>', '</u>');
+  const applyStrikethrough = () => applyFormat('~~', '~~');
+  const applyCode = () => applyFormat('`', '`');
+
+  const applyHeading = (level) => {
+    const textarea = contentEditorRef.current;
+    if (!textarea) return;
+    const start = textarea.selectionStart;
+    const lineStart = editContent.lastIndexOf('\n', start - 1) + 1;
+    const lineEnd = editContent.indexOf('\n', start);
+    const end = lineEnd === -1 ? editContent.length : lineEnd;
+    const line = editContent.substring(lineStart, end);
+    const cleanLine = line.replace(/^#{1,6}\s*/, '');
+    const prefix = '#'.repeat(level) + ' ';
+    const newContent = editContent.substring(0, lineStart) + prefix + cleanLine + editContent.substring(end);
+    setEditContent(newContent);
+    setTimeout(() => { textarea.focus(); }, 50);
+  };
+
+  const applyFontWrap = (fontFamily) => {
+    setEditorFont(fontFamily);
+    const textarea = contentEditorRef.current;
+    if (!textarea) return;
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const selected = editContent.substring(start, end);
+    if (selected) {
+      const wrapped = '<span style="font-family:' + fontFamily + '">' + selected + '</span>';
+      const newContent = editContent.substring(0, start) + wrapped + editContent.substring(end);
+      setEditContent(newContent);
+    }
+  };
+
+  const applyFontSizeWrap = (size) => {
+    setEditorFontSize(size);
+    const textarea = contentEditorRef.current;
+    if (!textarea) return;
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const selected = editContent.substring(start, end);
+    if (selected) {
+      const wrapped = '<span style="font-size:' + size + 'px">' + selected + '</span>';
+      const newContent = editContent.substring(0, start) + wrapped + editContent.substring(end);
+      setEditContent(newContent);
+    }
+  };
+
+  const insertHR = () => {
+    const textarea = contentEditorRef.current;
+    if (!textarea) return;
+    const start = textarea.selectionStart;
+    const newContent = editContent.substring(0, start) + '\n\n---\n\n' + editContent.substring(start);
+    setEditContent(newContent);
+    setTimeout(() => { textarea.focus(); }, 50);
+  };
+
+  const insertBulletList = () => {
+    const textarea = contentEditorRef.current;
+    if (!textarea) return;
+    const start = textarea.selectionStart;
+    const newContent = editContent.substring(0, start) + '\n- Item 1\n- Item 2\n- Item 3\n' + editContent.substring(start);
+    setEditContent(newContent);
+    setTimeout(() => { textarea.focus(); }, 50);
+  };
+
+  const insertNumberedList = () => {
+    const textarea = contentEditorRef.current;
+    if (!textarea) return;
+    const start = textarea.selectionStart;
+    const newContent = editContent.substring(0, start) + '\n1. Item 1\n2. Item 2\n3. Item 3\n' + editContent.substring(start);
+    setEditContent(newContent);
+    setTimeout(() => { textarea.focus(); }, 50);
+  };
+
+  const insertBlockquote = () => applyFormat('\n> ', '\n');
 
   const handleSaveContent = async () => {
     if (!viewingRecord) return;
@@ -1070,70 +1189,269 @@ export default function App() {
     );
   };
 
+  // ===== TOOLBAR BUTTON STYLE =====
+  const tbBtn = (active) => ({
+    padding: '5px 8px',
+    background: active ? '#e0e7ff' : 'transparent',
+    color: COLORS.darkText,
+    border: 'none',
+    borderRadius: '4px',
+    cursor: 'pointer',
+    fontSize: '13px',
+    fontWeight: active ? '700' : '500',
+    fontFamily: FONT_FAMILY,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: '28px',
+    height: '28px',
+    transition: 'all 0.15s',
+  });
+
+  const tbSep = () => (
+    <div style={{ width: '1px', height: '20px', background: COLORS.borderColor, margin: '0 4px' }} />
+  );
+
   // ====================================================================
-  // ===== CONTENT TAB WITH EDITOR =====
+  // ===== CONTENT TAB WITH RICH TOOLBAR + IMAGE PICKER =====
   // ====================================================================
   const renderContentTab = () => {
     if (!viewingRecord) return null;
+    const allImages = getVisualPrompts(viewingRecord).filter(p => p.image_url);
 
     return (
-      <div style={{ padding: '28px 32px' }}>
-        {/* Edit / Preview Toggle */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-            {isEditing ? (
-              <>
-                <button onClick={handleSaveContent} disabled={savingContent} style={{ padding: '6px 14px', background: COLORS.navActive, color: 'white', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: '600', cursor: savingContent ? 'not-allowed' : 'pointer', fontFamily: FONT_FAMILY, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  {savingContent ? <><Loader2 size={12} style={{ animation: 'spin 1s linear infinite' }} /> Saving...</> : <><Save size={12} /> Save Changes</>}
+      <div style={{ display: 'flex', height: '100%' }}>
+        {/* ===== MAIN EDITOR AREA ===== */}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          {/* Action Bar */}
+          <div style={{
+            padding: '10px 24px',
+            borderBottom: '1px solid ' + COLORS.borderColor,
+            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+            background: '#fafafa'
+          }}>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              {isEditing ? (
+                <>
+                  <button onClick={handleSaveContent} disabled={savingContent} style={{ padding: '6px 14px', background: COLORS.navActive, color: 'white', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: '600', cursor: savingContent ? 'not-allowed' : 'pointer', fontFamily: FONT_FAMILY, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    {savingContent ? <><Loader2 size={12} style={{ animation: 'spin 1s linear infinite' }} /> Saving...</> : <><Save size={12} /> Save</>}
+                  </button>
+                  <button onClick={handleCancelEditing} style={{ padding: '6px 14px', background: COLORS.filterBg, color: COLORS.darkText, border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: '500', cursor: 'pointer', fontFamily: FONT_FAMILY }}>
+                    Cancel
+                  </button>
+                  {allImages.length > 0 && (
+                    <button onClick={() => setShowAssetPicker(!showAssetPicker)} style={{ padding: '6px 14px', background: showAssetPicker ? '#8b5cf6' : COLORS.filterBg, color: showAssetPicker ? 'white' : COLORS.darkText, border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: '500', cursor: 'pointer', fontFamily: FONT_FAMILY, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <Image size={12} /> {showAssetPicker ? 'Hide' : 'Insert'} Images
+                    </button>
+                  )}
+                </>
+              ) : (
+                <>
+                  <button onClick={handleStartEditing} style={{ padding: '6px 14px', background: COLORS.navActive, color: 'white', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: '600', cursor: 'pointer', fontFamily: FONT_FAMILY, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <Pencil size={12} /> Edit Content
+                  </button>
+                </>
+              )}
+            </div>
+            <span style={{ fontSize: '11px', color: COLORS.lightText }}>{viewingRecord.word_count || 0} words</span>
+          </div>
+
+          {/* ===== FORMATTING TOOLBAR (only in edit mode) ===== */}
+          {isEditing && (
+            <div style={{
+              padding: '6px 16px',
+              borderBottom: '1px solid ' + COLORS.borderColor,
+              display: 'flex', flexWrap: 'wrap', gap: '2px', alignItems: 'center',
+              background: COLORS.white
+            }}>
+              {/* Font Family */}
+              <select
+                value={editorFont}
+                onChange={(e) => applyFontWrap(e.target.value)}
+                style={{
+                  padding: '4px 6px', fontSize: '11px', border: '1px solid ' + COLORS.borderColor,
+                  borderRadius: '4px', fontFamily: FONT_FAMILY, cursor: 'pointer',
+                  maxWidth: '140px', background: COLORS.white
+                }}
+                title="Font Family (select text first)"
+              >
+                {GOOGLE_FONTS.map(f => (
+                  <option key={f} value={f} style={{ fontFamily: f }}>{f}</option>
+                ))}
+              </select>
+
+              {/* Font Size */}
+              <select
+                value={editorFontSize}
+                onChange={(e) => applyFontSizeWrap(e.target.value)}
+                style={{
+                  padding: '4px 4px', fontSize: '11px', border: '1px solid ' + COLORS.borderColor,
+                  borderRadius: '4px', fontFamily: FONT_FAMILY, cursor: 'pointer',
+                  width: '52px', background: COLORS.white
+                }}
+                title="Font Size (select text first)"
+              >
+                {FONT_SIZES.map(s => (
+                  <option key={s} value={s}>{s}px</option>
+                ))}
+              </select>
+
+              {tbSep()}
+
+              {/* Headings */}
+              <button onClick={() => applyHeading(1)} style={tbBtn(false)} title="Heading 1">H1</button>
+              <button onClick={() => applyHeading(2)} style={tbBtn(false)} title="Heading 2">H2</button>
+              <button onClick={() => applyHeading(3)} style={tbBtn(false)} title="Heading 3">H3</button>
+
+              {tbSep()}
+
+              {/* Bold, Italic, Underline, Strikethrough */}
+              <button onClick={applyBold} style={{ ...tbBtn(false), fontWeight: '800' }} title="Bold (**text**)">B</button>
+              <button onClick={applyItalic} style={{ ...tbBtn(false), fontStyle: 'italic' }} title="Italic (*text*)">I</button>
+              <button onClick={applyUnderline} style={{ ...tbBtn(false), textDecoration: 'underline' }} title="Underline">U</button>
+              <button onClick={applyStrikethrough} style={{ ...tbBtn(false), textDecoration: 'line-through' }} title="Strikethrough">S</button>
+
+              {tbSep()}
+
+              {/* Code */}
+              <button onClick={applyCode} style={{ ...tbBtn(false), fontFamily: 'monospace', fontSize: '12px' }} title="Inline Code">&lt;/&gt;</button>
+
+              {/* Lists */}
+              <button onClick={insertBulletList} style={tbBtn(false)} title="Bullet List">• ≡</button>
+              <button onClick={insertNumberedList} style={tbBtn(false)} title="Numbered List">1. ≡</button>
+
+              {/* Blockquote */}
+              <button onClick={insertBlockquote} style={tbBtn(false)} title="Blockquote">❝</button>
+
+              {/* Horizontal Rule */}
+              <button onClick={insertHR} style={tbBtn(false)} title="Horizontal Line">—</button>
+
+              {tbSep()}
+
+              {/* Quick Image Insert */}
+              {allImages.length > 0 && (
+                <button
+                  onClick={() => setShowAssetPicker(!showAssetPicker)}
+                  style={{ ...tbBtn(showAssetPicker), color: showAssetPicker ? '#7c3aed' : COLORS.lightText }}
+                  title="Insert Image from Visual Assets"
+                >
+                  <ImagePlus size={14} />
                 </button>
-                <button onClick={handleCancelEditing} style={{ padding: '6px 14px', background: COLORS.filterBg, color: COLORS.darkText, border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: '500', cursor: 'pointer', fontFamily: FONT_FAMILY }}>
-                  Cancel
-                </button>
-                <span style={{ fontSize: '11px', color: COLORS.lightText, marginLeft: '8px' }}>Editing mode — click in Visual Assets to insert images at cursor</span>
-              </>
-            ) : (
-              <>
-                <button onClick={handleStartEditing} style={{ padding: '6px 14px', background: COLORS.filterBg, color: COLORS.darkText, border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: '500', cursor: 'pointer', fontFamily: FONT_FAMILY, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <Pencil size={12} /> Edit Content
-                </button>
-                <span style={{ fontSize: '11px', color: COLORS.lightText }}>{viewingRecord.word_count || 0} words</span>
-              </>
+              )}
+            </div>
+          )}
+
+          {/* ===== EDITOR / PREVIEW ===== */}
+          <div style={{ flex: 1, overflowY: 'auto', display: 'flex' }}>
+            {/* Text Area / Preview */}
+            <div style={{ flex: 1, overflowY: 'auto' }}>
+              {viewingRecord.ai_output ? (
+                isEditing ? (
+                  <textarea
+                    ref={contentEditorRef}
+                    value={editContent}
+                    onChange={(e) => setEditContent(e.target.value)}
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      minHeight: '500px',
+                      padding: '20px 24px',
+                      fontSize: editorFontSize + 'px',
+                      lineHeight: '1.8',
+                      fontFamily: editorFont + ', monospace',
+                      border: 'none',
+                      borderRight: showAssetPicker ? '1px solid ' + COLORS.borderColor : 'none',
+                      resize: 'none',
+                      outline: 'none',
+                      color: COLORS.darkText,
+                      background: COLORS.white
+                    }}
+                    placeholder="Start typing or paste content here..."
+                  />
+                ) : (
+                  <div style={{ padding: '24px 32px', fontSize: '14px', lineHeight: '1.8', color: COLORS.darkText, fontFamily: 'Montserrat, sans-serif', fontWeight: '400', maxWidth: '850px' }}>
+                    {parseMarkdownToReact(viewingRecord.ai_output)}
+                  </div>
+                )
+              ) : (
+                <div style={{ textAlign: 'center', color: COLORS.lightText, padding: '60px 20px', fontSize: '16px' }}>
+                  ⏳ No content generated yet. Please wait for Claude AI to generate the content.
+                </div>
+              )}
+            </div>
+
+            {/* ===== IMAGE ASSET PICKER SIDEBAR ===== */}
+            {isEditing && showAssetPicker && allImages.length > 0 && (
+              <div style={{
+                width: '220px',
+                borderLeft: '1px solid ' + COLORS.borderColor,
+                background: '#fafafa',
+                overflowY: 'auto',
+                flexShrink: 0
+              }}>
+                <div style={{ padding: '12px', borderBottom: '1px solid ' + COLORS.borderColor }}>
+                  <h4 style={{ margin: 0, fontSize: '12px', fontWeight: '600', color: COLORS.darkText, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <Image size={12} /> Visual Assets
+                  </h4>
+                  <p style={{ margin: '4px 0 0 0', fontSize: '10px', color: COLORS.lightText }}>Click to insert at cursor</p>
+                </div>
+                <div style={{ padding: '8px' }}>
+                  {allImages.map(function(p, idx) {
+                    return (
+                      <div
+                        key={p.id}
+                        onClick={function() { handleInsertImageAtCursor(p.image_url, p.type + ' - ' + (p.prompt || '').substring(0, 25)); }}
+                        style={{
+                          marginBottom: '8px',
+                          borderRadius: '8px',
+                          overflow: 'hidden',
+                          border: '1px solid ' + COLORS.borderColor,
+                          cursor: 'pointer',
+                          transition: 'all 0.2s',
+                          background: COLORS.white
+                        }}
+                        onMouseEnter={function(e) { e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.12)'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+                        onMouseLeave={function(e) { e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.transform = 'none'; }}
+                      >
+                        <img
+                          src={p.image_url}
+                          alt={p.type}
+                          style={{ width: '100%', height: '120px', objectFit: 'cover', display: 'block' }}
+                          onError={function(e) { e.target.style.display = 'none'; }}
+                        />
+                        <div style={{ padding: '6px 8px' }}>
+                          <div style={{
+                            fontSize: '9px',
+                            fontWeight: '600',
+                            textTransform: 'uppercase',
+                            color: p.type === 'character' ? '#7c3aed' : '#2563eb',
+                            marginBottom: '2px'
+                          }}>
+                            {p.type}
+                          </div>
+                          <div style={{ fontSize: '10px', color: COLORS.lightText, lineHeight: '1.3', overflow: 'hidden', maxHeight: '26px' }}>
+                            {(p.prompt || '').substring(0, 50)}
+                          </div>
+                          <div style={{
+                            marginTop: '4px',
+                            fontSize: '9px',
+                            fontWeight: '600',
+                            color: '#2563eb',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '2px'
+                          }}>
+                            <ImagePlus size={9} /> Click to insert
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
             )}
           </div>
         </div>
-
-        {/* Content Display */}
-        {viewingRecord.ai_output ? (
-          isEditing ? (
-            <textarea
-              ref={contentEditorRef}
-              value={editContent}
-              onChange={(e) => setEditContent(e.target.value)}
-              style={{
-                width: '100%',
-                minHeight: '500px',
-                padding: '16px',
-                fontSize: '13px',
-                lineHeight: '1.8',
-                fontFamily: 'Montserrat, monospace',
-                border: `2px solid ${COLORS.navActive}`,
-                borderRadius: '8px',
-                resize: 'vertical',
-                outline: 'none',
-                color: COLORS.darkText,
-                background: '#fafafa'
-              }}
-            />
-          ) : (
-            <div style={{ fontSize: '14px', lineHeight: '1.8', color: COLORS.darkText, fontFamily: 'Montserrat, sans-serif', fontWeight: '400', maxWidth: '800px' }}>
-              {parseMarkdownToReact(viewingRecord.ai_output)}
-            </div>
-          )
-        ) : (
-          <div style={{ textAlign: 'center', color: COLORS.lightText, padding: '60px 20px', fontSize: '16px' }}>
-            ⏳ No content generated yet. Please wait for Claude AI to generate the content.
-          </div>
-        )}
       </div>
     );
   };
@@ -1439,7 +1757,7 @@ export default function App() {
       {/* ===== VIEW MODAL ===== */}
       {viewingRecord && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }} onClick={() => { setViewingRecord(null); setIsEditing(false); }}>
-          <div style={{ background: COLORS.white, width: '95%', maxWidth: '1100px', height: '92vh', display: 'flex', flexDirection: 'column', borderRadius: '12px', boxShadow: '0 20px 60px rgba(0,0,0,0.3)', overflow: 'hidden' }} onClick={e => e.stopPropagation()}>
+          <div style={{ background: COLORS.white, width: '98%', maxWidth: '1400px', height: '95vh', display: 'flex', flexDirection: 'column', borderRadius: '12px', boxShadow: '0 20px 60px rgba(0,0,0,0.3)', overflow: 'hidden' }} onClick={e => e.stopPropagation()}>
             {/* Header */}
             <div style={{ padding: '20px 24px', borderBottom: `1px solid ${COLORS.borderColor}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'linear-gradient(135deg, #f5f6f8 0%, #ffffff 100%)' }}>
               <div>

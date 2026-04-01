@@ -136,6 +136,7 @@ export default function App() {
   const [editContent, setEditContent] = useState('');
   const [savingContent, setSavingContent] = useState(false);
   const contentEditorRef = useRef(null);
+  const selectionRef = useRef({ start: 0, end: 0 });
   const [editorFont, setEditorFont] = useState('Montserrat');
   const [editorFontSize, setEditorFontSize] = useState('13');
   const [showAssetPicker, setShowAssetPicker] = useState(false);
@@ -513,11 +514,19 @@ export default function App() {
   };
 
   // ===== TOOLBAR FORMATTING HELPERS =====
+  // Track selection continuously so it persists when toolbar buttons are clicked
+  const trackSelection = () => {
+    const textarea = contentEditorRef.current;
+    if (textarea) {
+      selectionRef.current = { start: textarea.selectionStart, end: textarea.selectionEnd };
+    }
+  };
+
   const applyFormat = (prefix, suffix) => {
     const textarea = contentEditorRef.current;
     if (!textarea) return;
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
+    const start = selectionRef.current.start;
+    const end = selectionRef.current.end;
     const selected = editContent.substring(start, end);
     const before = editContent.substring(0, start);
     const after = editContent.substring(end);
@@ -528,6 +537,7 @@ export default function App() {
       setTimeout(() => {
         textarea.focus();
         textarea.setSelectionRange(start + prefix.length, end + prefix.length);
+        selectionRef.current = { start: start + prefix.length, end: end + prefix.length };
       }, 50);
     } else {
       const placeholder = 'text';
@@ -535,7 +545,10 @@ export default function App() {
       setEditContent(newContent);
       setTimeout(() => {
         textarea.focus();
-        textarea.setSelectionRange(start + prefix.length, start + prefix.length + placeholder.length);
+        const s = start + prefix.length;
+        const e = s + placeholder.length;
+        textarea.setSelectionRange(s, e);
+        selectionRef.current = { start: s, end: e };
       }, 50);
     }
   };
@@ -549,7 +562,7 @@ export default function App() {
   const applyHeading = (level) => {
     const textarea = contentEditorRef.current;
     if (!textarea) return;
-    const start = textarea.selectionStart;
+    const start = selectionRef.current.start;
     const lineStart = editContent.lastIndexOf('\n', start - 1) + 1;
     const lineEnd = editContent.indexOf('\n', start);
     const end = lineEnd === -1 ? editContent.length : lineEnd;
@@ -565,13 +578,14 @@ export default function App() {
     setEditorFont(fontFamily);
     const textarea = contentEditorRef.current;
     if (!textarea) return;
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
+    const start = selectionRef.current.start;
+    const end = selectionRef.current.end;
     const selected = editContent.substring(start, end);
     if (selected) {
       const wrapped = '<span style="font-family:' + fontFamily + '">' + selected + '</span>';
       const newContent = editContent.substring(0, start) + wrapped + editContent.substring(end);
       setEditContent(newContent);
+      setTimeout(() => { textarea.focus(); }, 50);
     }
   };
 
@@ -579,20 +593,21 @@ export default function App() {
     setEditorFontSize(size);
     const textarea = contentEditorRef.current;
     if (!textarea) return;
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
+    const start = selectionRef.current.start;
+    const end = selectionRef.current.end;
     const selected = editContent.substring(start, end);
     if (selected) {
       const wrapped = '<span style="font-size:' + size + 'px">' + selected + '</span>';
       const newContent = editContent.substring(0, start) + wrapped + editContent.substring(end);
       setEditContent(newContent);
+      setTimeout(() => { textarea.focus(); }, 50);
     }
   };
 
   const insertHR = () => {
     const textarea = contentEditorRef.current;
     if (!textarea) return;
-    const start = textarea.selectionStart;
+    const start = selectionRef.current.start;
     const newContent = editContent.substring(0, start) + '\n\n---\n\n' + editContent.substring(start);
     setEditContent(newContent);
     setTimeout(() => { textarea.focus(); }, 50);
@@ -601,7 +616,7 @@ export default function App() {
   const insertBulletList = () => {
     const textarea = contentEditorRef.current;
     if (!textarea) return;
-    const start = textarea.selectionStart;
+    const start = selectionRef.current.start;
     const newContent = editContent.substring(0, start) + '\n- Item 1\n- Item 2\n- Item 3\n' + editContent.substring(start);
     setEditContent(newContent);
     setTimeout(() => { textarea.focus(); }, 50);
@@ -610,7 +625,7 @@ export default function App() {
   const insertNumberedList = () => {
     const textarea = contentEditorRef.current;
     if (!textarea) return;
-    const start = textarea.selectionStart;
+    const start = selectionRef.current.start;
     const newContent = editContent.substring(0, start) + '\n1. Item 1\n2. Item 2\n3. Item 3\n' + editContent.substring(start);
     setEditContent(newContent);
     setTimeout(() => { textarea.focus(); }, 50);
@@ -1208,6 +1223,9 @@ export default function App() {
     transition: 'all 0.15s',
   });
 
+  // Prevents toolbar clicks from stealing focus from textarea
+  const noFocus = (e) => { e.preventDefault(); };
+
   const tbSep = () => (
     <div style={{ width: '1px', height: '20px', background: COLORS.borderColor, margin: '0 4px' }} />
   );
@@ -1217,7 +1235,8 @@ export default function App() {
   // ====================================================================
   const renderContentTab = () => {
     if (!viewingRecord) return null;
-    const allImages = getVisualPrompts(viewingRecord).filter(p => p.image_url);
+    const allPrompts = getVisualPrompts(viewingRecord);
+    const allImages = allPrompts.filter(p => p.image_url);
 
     return (
       <div style={{ display: 'flex', height: '100%' }}>
@@ -1239,9 +1258,9 @@ export default function App() {
                   <button onClick={handleCancelEditing} style={{ padding: '6px 14px', background: COLORS.filterBg, color: COLORS.darkText, border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: '500', cursor: 'pointer', fontFamily: FONT_FAMILY }}>
                     Cancel
                   </button>
-                  {allImages.length > 0 && (
+                  {allPrompts.length > 0 && (
                     <button onClick={() => setShowAssetPicker(!showAssetPicker)} style={{ padding: '6px 14px', background: showAssetPicker ? '#8b5cf6' : COLORS.filterBg, color: showAssetPicker ? 'white' : COLORS.darkText, border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: '500', cursor: 'pointer', fontFamily: FONT_FAMILY, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <Image size={12} /> {showAssetPicker ? 'Hide' : 'Insert'} Images
+                      <Image size={12} /> {showAssetPicker ? 'Hide' : 'Insert'} Images ({allImages.length}/{allPrompts.length})
                     </button>
                   )}
                 </>
@@ -1299,38 +1318,39 @@ export default function App() {
               {tbSep()}
 
               {/* Headings */}
-              <button onClick={() => applyHeading(1)} style={tbBtn(false)} title="Heading 1">H1</button>
-              <button onClick={() => applyHeading(2)} style={tbBtn(false)} title="Heading 2">H2</button>
-              <button onClick={() => applyHeading(3)} style={tbBtn(false)} title="Heading 3">H3</button>
+              <button onMouseDown={noFocus} onClick={() => applyHeading(1)} style={tbBtn(false)} title="Heading 1">H1</button>
+              <button onMouseDown={noFocus} onClick={() => applyHeading(2)} style={tbBtn(false)} title="Heading 2">H2</button>
+              <button onMouseDown={noFocus} onClick={() => applyHeading(3)} style={tbBtn(false)} title="Heading 3">H3</button>
 
               {tbSep()}
 
               {/* Bold, Italic, Underline, Strikethrough */}
-              <button onClick={applyBold} style={{ ...tbBtn(false), fontWeight: '800' }} title="Bold (**text**)">B</button>
-              <button onClick={applyItalic} style={{ ...tbBtn(false), fontStyle: 'italic' }} title="Italic (*text*)">I</button>
-              <button onClick={applyUnderline} style={{ ...tbBtn(false), textDecoration: 'underline' }} title="Underline">U</button>
-              <button onClick={applyStrikethrough} style={{ ...tbBtn(false), textDecoration: 'line-through' }} title="Strikethrough">S</button>
+              <button onMouseDown={noFocus} onClick={applyBold} style={{ ...tbBtn(false), fontWeight: '800' }} title="Bold (**text**)">B</button>
+              <button onMouseDown={noFocus} onClick={applyItalic} style={{ ...tbBtn(false), fontStyle: 'italic' }} title="Italic (*text*)">I</button>
+              <button onMouseDown={noFocus} onClick={applyUnderline} style={{ ...tbBtn(false), textDecoration: 'underline' }} title="Underline">U</button>
+              <button onMouseDown={noFocus} onClick={applyStrikethrough} style={{ ...tbBtn(false), textDecoration: 'line-through' }} title="Strikethrough">S</button>
 
               {tbSep()}
 
               {/* Code */}
-              <button onClick={applyCode} style={{ ...tbBtn(false), fontFamily: 'monospace', fontSize: '12px' }} title="Inline Code">&lt;/&gt;</button>
+              <button onMouseDown={noFocus} onClick={applyCode} style={{ ...tbBtn(false), fontFamily: 'monospace', fontSize: '12px' }} title="Inline Code">&lt;/&gt;</button>
 
               {/* Lists */}
-              <button onClick={insertBulletList} style={tbBtn(false)} title="Bullet List">• ≡</button>
-              <button onClick={insertNumberedList} style={tbBtn(false)} title="Numbered List">1. ≡</button>
+              <button onMouseDown={noFocus} onClick={insertBulletList} style={tbBtn(false)} title="Bullet List">• ≡</button>
+              <button onMouseDown={noFocus} onClick={insertNumberedList} style={tbBtn(false)} title="Numbered List">1. ≡</button>
 
               {/* Blockquote */}
-              <button onClick={insertBlockquote} style={tbBtn(false)} title="Blockquote">❝</button>
+              <button onMouseDown={noFocus} onClick={insertBlockquote} style={tbBtn(false)} title="Blockquote">❝</button>
 
               {/* Horizontal Rule */}
-              <button onClick={insertHR} style={tbBtn(false)} title="Horizontal Line">—</button>
+              <button onMouseDown={noFocus} onClick={insertHR} style={tbBtn(false)} title="Horizontal Line">—</button>
 
               {tbSep()}
 
-              {/* Quick Image Insert */}
-              {allImages.length > 0 && (
+              {/* Quick Image Insert — show when ANY visual prompts exist */}
+              {allPrompts.length > 0 && (
                 <button
+                  onMouseDown={noFocus}
                   onClick={() => setShowAssetPicker(!showAssetPicker)}
                   style={{ ...tbBtn(showAssetPicker), color: showAssetPicker ? '#7c3aed' : COLORS.lightText }}
                   title="Insert Image from Visual Assets"
@@ -1351,6 +1371,9 @@ export default function App() {
                     ref={contentEditorRef}
                     value={editContent}
                     onChange={(e) => setEditContent(e.target.value)}
+                    onSelect={trackSelection}
+                    onKeyUp={trackSelection}
+                    onClick={trackSelection}
                     style={{
                       width: '100%',
                       height: '100%',
@@ -1381,7 +1404,7 @@ export default function App() {
             </div>
 
             {/* ===== IMAGE ASSET PICKER SIDEBAR ===== */}
-            {isEditing && showAssetPicker && allImages.length > 0 && (
+            {isEditing && showAssetPicker && allPrompts.length > 0 && (
               <div style={{
                 width: '220px',
                 borderLeft: '1px solid ' + COLORS.borderColor,
@@ -1393,32 +1416,49 @@ export default function App() {
                   <h4 style={{ margin: 0, fontSize: '12px', fontWeight: '600', color: COLORS.darkText, display: 'flex', alignItems: 'center', gap: '4px' }}>
                     <Image size={12} /> Visual Assets
                   </h4>
-                  <p style={{ margin: '4px 0 0 0', fontSize: '10px', color: COLORS.lightText }}>Click to insert at cursor</p>
+                  <p style={{ margin: '4px 0 0 0', fontSize: '10px', color: COLORS.lightText }}>Click generated images to insert at cursor</p>
                 </div>
                 <div style={{ padding: '8px' }}>
-                  {allImages.map(function(p, idx) {
+                  {allPrompts.map(function(p, idx) {
+                    const hasImage = !!p.image_url;
                     return (
                       <div
                         key={p.id}
-                        onClick={function() { handleInsertImageAtCursor(p.image_url, p.type + ' - ' + (p.prompt || '').substring(0, 25)); }}
+                        onClick={function() {
+                          if (hasImage) {
+                            handleInsertImageAtCursor(p.image_url, p.type + ' - ' + (p.prompt || '').substring(0, 25));
+                          }
+                        }}
                         style={{
                           marginBottom: '8px',
                           borderRadius: '8px',
                           overflow: 'hidden',
                           border: '1px solid ' + COLORS.borderColor,
-                          cursor: 'pointer',
+                          cursor: hasImage ? 'pointer' : 'default',
                           transition: 'all 0.2s',
-                          background: COLORS.white
+                          background: COLORS.white,
+                          opacity: hasImage ? 1 : 0.6
                         }}
-                        onMouseEnter={function(e) { e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.12)'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+                        onMouseEnter={function(e) { if (hasImage) { e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.12)'; e.currentTarget.style.transform = 'translateY(-1px)'; } }}
                         onMouseLeave={function(e) { e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.transform = 'none'; }}
                       >
-                        <img
-                          src={p.image_url}
-                          alt={p.type}
-                          style={{ width: '100%', height: '120px', objectFit: 'cover', display: 'block' }}
-                          onError={function(e) { e.target.style.display = 'none'; }}
-                        />
+                        {hasImage ? (
+                          <img
+                            src={p.image_url}
+                            alt={p.type}
+                            style={{ width: '100%', height: '120px', objectFit: 'cover', display: 'block' }}
+                            onError={function(e) { e.target.style.display = 'none'; }}
+                          />
+                        ) : (
+                          <div style={{
+                            width: '100%', height: '80px', display: 'flex',
+                            alignItems: 'center', justifyContent: 'center',
+                            background: p.type === 'character' ? '#faf5ff' : '#eff6ff',
+                            color: COLORS.lightText, fontSize: '11px'
+                          }}>
+                            <Sparkles size={14} style={{ marginRight: '4px' }} /> Not generated yet
+                          </div>
+                        )}
                         <div style={{ padding: '6px 8px' }}>
                           <div style={{
                             fontSize: '9px',
@@ -1427,22 +1467,24 @@ export default function App() {
                             color: p.type === 'character' ? '#7c3aed' : '#2563eb',
                             marginBottom: '2px'
                           }}>
-                            {p.type}
+                            {p.type} {hasImage ? '✓' : '○'}
                           </div>
                           <div style={{ fontSize: '10px', color: COLORS.lightText, lineHeight: '1.3', overflow: 'hidden', maxHeight: '26px' }}>
                             {(p.prompt || '').substring(0, 50)}
                           </div>
-                          <div style={{
-                            marginTop: '4px',
-                            fontSize: '9px',
-                            fontWeight: '600',
-                            color: '#2563eb',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '2px'
-                          }}>
-                            <ImagePlus size={9} /> Click to insert
-                          </div>
+                          {hasImage && (
+                            <div style={{
+                              marginTop: '4px',
+                              fontSize: '9px',
+                              fontWeight: '600',
+                              color: '#2563eb',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '2px'
+                            }}>
+                              <ImagePlus size={9} /> Click to insert
+                            </div>
+                          )}
                         </div>
                       </div>
                     );

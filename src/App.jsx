@@ -664,6 +664,8 @@ export default function App() {
         user: currentUser?.email || 'unknown',
         word_count_before: (viewingRecord.ai_output || '').trim().split(/\s+/).length,
         word_count_after: editContent.trim().split(/\s+/).length,
+        content_before: viewingRecord.ai_output || '',
+        content_after: editContent,
       };
 
       // Get existing edit_history or create new array
@@ -1359,6 +1361,8 @@ export default function App() {
   // ====================================================================
   // ===== HISTORY TAB =====
   // ====================================================================
+  const [expandedHistoryIdx, setExpandedHistoryIdx] = useState(null);
+
   const renderHistoryTab = () => {
     if (!viewingRecord) return null;
 
@@ -1411,8 +1415,18 @@ export default function App() {
       }
     } catch (e) { editHistory = []; }
 
-    editHistory.forEach(function(entry) {
-      timeline.push({ icon: '✏️', label: 'Content Edited', time: entry.timestamp, detail: 'By ' + (entry.user || 'unknown') + ' — Words: ' + (entry.word_count_before || '?') + ' → ' + (entry.word_count_after || '?'), color: '#ef4444' });
+    editHistory.forEach(function(entry, idx) {
+      timeline.push({
+        icon: '✏️',
+        label: 'Content Edited',
+        time: entry.timestamp,
+        detail: 'By ' + (entry.user || 'unknown') + ' — Words: ' + (entry.word_count_before || '?') + ' → ' + (entry.word_count_after || '?'),
+        color: '#ef4444',
+        hasChanges: !!(entry.content_before || entry.content_after),
+        editIdx: idx,
+        contentBefore: entry.content_before || '',
+        contentAfter: entry.content_after || ''
+      });
     });
 
     // Sort by time descending (newest first)
@@ -1435,6 +1449,7 @@ export default function App() {
           <div style={{ position: 'absolute', left: '10px', top: '4px', bottom: '4px', width: '2px', background: COLORS.borderColor }} />
 
           {timeline.map(function(item, idx) {
+            var isExpanded = expandedHistoryIdx === idx;
             return (
               <div key={idx} style={{ position: 'relative', marginBottom: '20px' }}>
                 {/* Dot */}
@@ -1462,6 +1477,74 @@ export default function App() {
                   <p style={{ margin: 0, fontSize: '11px', color: COLORS.lightText, lineHeight: '1.4', wordBreak: 'break-word' }}>
                     {item.detail}
                   </p>
+
+                  {/* View Changes button for edits */}
+                  {item.hasChanges && (
+                    <div style={{ marginTop: '8px' }}>
+                      <button
+                        onClick={function() { setExpandedHistoryIdx(isExpanded ? null : idx); }}
+                        style={{
+                          padding: '4px 10px', fontSize: '10px', fontWeight: '600',
+                          background: isExpanded ? '#fef2f2' : COLORS.filterBg,
+                          color: isExpanded ? '#ef4444' : COLORS.darkText,
+                          border: '1px solid ' + (isExpanded ? '#fecaca' : COLORS.borderColor),
+                          borderRadius: '4px', cursor: 'pointer', fontFamily: FONT_FAMILY,
+                          display: 'flex', alignItems: 'center', gap: '4px'
+                        }}
+                      >
+                        <Eye size={10} /> {isExpanded ? 'Hide Changes' : 'View Changes'}
+                      </button>
+
+                      {/* Expanded Before / After view */}
+                      {isExpanded && (
+                        <div style={{ marginTop: '10px', display: 'flex', gap: '10px', flexDirection: 'column' }}>
+                          {/* Before */}
+                          <div style={{
+                            background: '#fef2f2', border: '1px solid #fecaca',
+                            borderRadius: '6px', overflow: 'hidden'
+                          }}>
+                            <div style={{
+                              padding: '6px 10px', background: '#fecaca',
+                              fontSize: '10px', fontWeight: '700', color: '#991b1b',
+                              textTransform: 'uppercase', letterSpacing: '0.5px'
+                            }}>
+                              Before
+                            </div>
+                            <div style={{
+                              padding: '10px', fontSize: '11px', lineHeight: '1.6',
+                              fontFamily: 'Montserrat, monospace', color: '#991b1b',
+                              maxHeight: '200px', overflowY: 'auto', whiteSpace: 'pre-wrap',
+                              wordBreak: 'break-word'
+                            }}>
+                              {item.contentBefore ? item.contentBefore.substring(0, 2000) + (item.contentBefore.length > 2000 ? '\n\n... (truncated)' : '') : '(empty)'}
+                            </div>
+                          </div>
+
+                          {/* After */}
+                          <div style={{
+                            background: '#ecfdf5', border: '1px solid #a7f3d0',
+                            borderRadius: '6px', overflow: 'hidden'
+                          }}>
+                            <div style={{
+                              padding: '6px 10px', background: '#a7f3d0',
+                              fontSize: '10px', fontWeight: '700', color: '#065f46',
+                              textTransform: 'uppercase', letterSpacing: '0.5px'
+                            }}>
+                              After
+                            </div>
+                            <div style={{
+                              padding: '10px', fontSize: '11px', lineHeight: '1.6',
+                              fontFamily: 'Montserrat, monospace', color: '#065f46',
+                              maxHeight: '200px', overflowY: 'auto', whiteSpace: 'pre-wrap',
+                              wordBreak: 'break-word'
+                            }}>
+                              {item.contentAfter ? item.contentAfter.substring(0, 2000) + (item.contentAfter.length > 2000 ? '\n\n... (truncated)' : '') : '(empty)'}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             );

@@ -113,7 +113,8 @@ export default function App() {
   const CONTENT_TYPES = [
     'Textbook', 'Lesson Plan', 'Assignment', 'Project Paper',
     'Practice Questions', 'Flash Cards', 'Mock Exam', 'MCQ QP',
-    'Descriptive QP', 'Interactive Scroll', 'Live Worksheet'
+    'Descriptive QP', 'Interactive Scroll', 'Live Worksheet',
+    'Video', 'Audio', 'Simulation'
   ];
 
   // ===== FORM DATA =====
@@ -2043,7 +2044,7 @@ export default function App() {
                   <div>
                     <label style={{ display: 'block', fontSize: '12px', fontWeight: '500', marginBottom: '6px', textTransform: 'uppercase' }}>CLASS</label>
                     <select value={formClass} onChange={(e) => setFormClass(e.target.value)} style={{ width: '100%', padding: '10px', border: `1px solid ${COLORS.borderColor}`, borderRadius: '6px', fontSize: '14px', fontFamily: FONT_FAMILY }}>
-                      {['1','2','3','4','5'].map(c => <option key={c}>{c}</option>)}
+                      {['Nursery','PP1','PP2','1','2','3','4','5','6','7','8','9','10','11','12'].map(c => <option key={c}>{c}</option>)}
                     </select>
                   </div>
                   <div>
@@ -2087,7 +2088,7 @@ export default function App() {
           <div style={{ background: COLORS.white, borderRadius: '12px', padding: '20px', marginBottom: '24px', border: `1px solid ${COLORS.borderColor}` }}>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '16px' }}>
               {[
-                { label: 'CLASS', value: filterClass, setter: setFilterClass, options: ['All Classes','1','2','3','4','5'] },
+                { label: 'CLASS', value: filterClass, setter: setFilterClass, options: ['All Classes','Nursery','PP1','PP2','1','2','3','4','5','6','7','8','9','10','11','12'] },
                 { label: 'SUBJECT', value: filterSubject, setter: setFilterSubject, options: ['All Subjects', ...subjects] },
                 { label: 'STATUS', value: filterStatus, setter: setFilterStatus, options: ['All Status','pending','generating','generated'] },
                 { label: 'CONTENT TYPE', value: filterContentType, setter: setFilterContentType, options: ['All Types', ...CONTENT_TYPES] },

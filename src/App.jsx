@@ -75,6 +75,29 @@ const PAPER_SIZES = {
 // ===== GENERATE UNIQUE ID =====
 const generateId = () => Math.random().toString(36).substring(2, 10) + Date.now().toString(36);
 
+// ===== MATERIAL ICON HELPER =====
+const MI = ({ name, size, color, style }) => (
+  <span className="material-symbols-rounded" style={{
+    fontSize: size || 18,
+    color: color || 'inherit',
+    verticalAlign: 'middle',
+    lineHeight: 1,
+    fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20",
+    ...style
+  }}>{name}</span>
+);
+
+const MIF = ({ name, size, color, style }) => (
+  <span className="material-symbols-rounded" style={{
+    fontSize: size || 18,
+    color: color || 'inherit',
+    verticalAlign: 'middle',
+    lineHeight: 1,
+    fontVariationSettings: "'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 20",
+    ...style
+  }}>{name}</span>
+);
+
 export default function App() {
   // ===== AUTH & LAYOUT =====
   const [currentUser, setCurrentUser] = useState(null);
@@ -139,8 +162,10 @@ export default function App() {
   const contentEditorRef = useRef(null);
   const selectionRef = useRef({ start: 0, end: 0 });
   const [editorFont, setEditorFont] = useState('Montserrat');
-  const [editorFontSize, setEditorFontSize] = useState('13');
+  const [editorFontSize, setEditorFontSize] = useState('14');
   const [showAssetPicker, setShowAssetPicker] = useState(false);
+  const undoStack = useRef([]);
+  const redoStack = useRef([]);
 
   // ===== VISUAL PROMPTS STATE =====
   const [generatingImageId, setGeneratingImageId] = useState(null);
@@ -172,6 +197,12 @@ export default function App() {
     link.href = 'https://fonts.googleapis.com/css2?' + fontFamilies + '&display=swap';
     link.rel = 'stylesheet';
     document.head.appendChild(link);
+
+    // Material Symbols (Google Icons)
+    const iconLink = document.createElement('link');
+    iconLink.href = 'https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap';
+    iconLink.rel = 'stylesheet';
+    document.head.appendChild(iconLink);
 
     const script = document.createElement('script');
     script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
@@ -653,6 +684,93 @@ export default function App() {
   };
 
   const insertBlockquote = () => applyFormat('\n> ', '\n');
+
+  // ===== UNDO / REDO =====
+  const pushUndo = (content) => {
+    undoStack.current.push(content);
+    if (undoStack.current.length > 50) undoStack.current.shift();
+  };
+
+  const handleUndo = () => {
+    if (undoStack.current.length === 0) return;
+    redoStack.current.push(editContent);
+    var prev = undoStack.current.pop();
+    setEditContent(prev);
+    var textarea = contentEditorRef.current;
+    if (textarea) setTimeout(function() { textarea.focus(); }, 50);
+  };
+
+  const handleRedo = () => {
+    if (redoStack.current.length === 0) return;
+    undoStack.current.push(editContent);
+    var next = redoStack.current.pop();
+    setEditContent(next);
+    var textarea = contentEditorRef.current;
+    if (textarea) setTimeout(function() { textarea.focus(); }, 50);
+  };
+
+  const handleEditorChange = (e) => {
+    pushUndo(editContent);
+    setEditContent(e.target.value);
+    redoStack.current = [];
+  };
+
+  // ===== MORE FORMAT HELPERS =====
+  const insertLink = () => {
+    var url = window.prompt('Enter URL:');
+    if (!url) return;
+    var linkText = editContent.substring(selectionRef.current.start, selectionRef.current.end) || 'link text';
+    var textarea = contentEditorRef.current;
+    if (!textarea) return;
+    var before = editContent.substring(0, selectionRef.current.start);
+    var after = editContent.substring(selectionRef.current.end);
+    pushUndo(editContent);
+    setEditContent(before + '[' + linkText + '](' + url + ')' + after);
+    setTimeout(function() { textarea.focus(); }, 50);
+  };
+
+  const insertTable = () => {
+    var textarea = contentEditorRef.current;
+    if (!textarea) return;
+    var start = selectionRef.current.start;
+    var tableMarkdown = '\n\n| Header 1 | Header 2 | Header 3 |\n| --- | --- | --- |\n| Cell 1 | Cell 2 | Cell 3 |\n| Cell 4 | Cell 5 | Cell 6 |\n\n';
+    pushUndo(editContent);
+    setEditContent(editContent.substring(0, start) + tableMarkdown + editContent.substring(start));
+    setTimeout(function() { textarea.focus(); }, 50);
+  };
+
+  const applySuperscript = () => applyFormat('<sup>', '</sup>');
+  const applySubscript = () => applyFormat('<sub>', '</sub>');
+  const applyHighlight = () => applyFormat('<mark>', '</mark>');
+
+  const clearFormatting = () => {
+    var textarea = contentEditorRef.current;
+    if (!textarea) return;
+    var start = selectionRef.current.start;
+    var end = selectionRef.current.end;
+    var selected = editContent.substring(start, end);
+    if (!selected) return;
+    // Strip common markdown/html formatting
+    var cleaned = selected
+      .replace(/\*\*(.*?)\*\*/g, '$1')
+      .replace(/\*(.*?)\*/g, '$1')
+      .replace(/~~(.*?)~~/g, '$1')
+      .replace(/<[^>]+>/g, '')
+      .replace(/`(.*?)`/g, '$1')
+      .replace(/^#{1,6}\s*/gm, '');
+    pushUndo(editContent);
+    setEditContent(editContent.substring(0, start) + cleaned + editContent.substring(end));
+    setTimeout(function() { textarea.focus(); }, 50);
+  };
+
+  const insertCodeBlock = () => {
+    var textarea = contentEditorRef.current;
+    if (!textarea) return;
+    var start = selectionRef.current.start;
+    pushUndo(editContent);
+    setEditContent(editContent.substring(0, start) + '\n```\ncode here\n```\n' + editContent.substring(start));
+    setTimeout(function() { textarea.focus(); }, 50);
+  };
 
   const handleSaveContent = async () => {
     if (!viewingRecord) return;
@@ -1610,21 +1728,21 @@ export default function App() {
               {isEditing ? (
                 <>
                   <button onClick={handleSaveContent} disabled={savingContent} style={{ padding: '6px 14px', background: COLORS.navActive, color: 'white', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: '600', cursor: savingContent ? 'not-allowed' : 'pointer', fontFamily: FONT_FAMILY, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    {savingContent ? 'Saving...' : 'Save'}
+                    <MI name={savingContent ? "hourglass_empty" : "save"} size={14} color="white" /> {savingContent ? 'Saving...' : 'Save'}
                   </button>
-                  <button onClick={handleCancelEditing} style={{ padding: '6px 14px', background: COLORS.filterBg, color: COLORS.darkText, border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: '500', cursor: 'pointer', fontFamily: FONT_FAMILY }}>
-                    Cancel
+                  <button onClick={handleCancelEditing} style={{ padding: '6px 14px', background: COLORS.filterBg, color: COLORS.darkText, border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: '500', cursor: 'pointer', fontFamily: FONT_FAMILY, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <MI name="close" size={14} /> Cancel
                   </button>
                   {allPrompts.length > 0 && (
                     <button onClick={() => setShowAssetPicker(!showAssetPicker)} style={{ padding: '6px 14px', background: showAssetPicker ? '#8b5cf6' : COLORS.filterBg, color: showAssetPicker ? 'white' : COLORS.darkText, border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: '500', cursor: 'pointer', fontFamily: FONT_FAMILY, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      {showAssetPicker ? 'Hide' : 'Insert'} Images ({allImages.length}/{allPrompts.length})
+                      <MI name="add_photo_alternate" size={14} /> {showAssetPicker ? 'Hide' : 'Insert'} Images ({allImages.length}/{allPrompts.length})
                     </button>
                   )}
                 </>
               ) : (
                 <>
                   <button onClick={handleStartEditing} style={{ padding: '6px 14px', background: COLORS.navActive, color: 'white', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: '600', cursor: 'pointer', fontFamily: FONT_FAMILY, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    Edit Content
+                    <MI name="edit" size={14} color="white" /> Edit Content
                   </button>
                 </>
               )}
@@ -1635,19 +1753,25 @@ export default function App() {
           {/* ===== FORMATTING TOOLBAR (only in edit mode) ===== */}
           {isEditing && (
             <div style={{
-              padding: '6px 16px',
+              padding: '4px 12px',
               borderBottom: '1px solid ' + COLORS.borderColor,
-              display: 'flex', flexWrap: 'wrap', gap: '2px', alignItems: 'center',
-              background: COLORS.white
+              display: 'flex', flexWrap: 'wrap', gap: '1px', alignItems: 'center',
+              background: '#fafbfc'
             }}>
+              {/* Undo / Redo */}
+              <button onMouseDown={noFocus} onClick={handleUndo} style={tbBtn(false)} title="Undo"><MI name="undo" size={16} /></button>
+              <button onMouseDown={noFocus} onClick={handleRedo} style={tbBtn(false)} title="Redo"><MI name="redo" size={16} /></button>
+
+              {tbSep()}
+
               {/* Font Family */}
               <select
                 value={editorFont}
                 onChange={(e) => applyFontWrap(e.target.value)}
                 style={{
-                  padding: '4px 6px', fontSize: '11px', border: '1px solid ' + COLORS.borderColor,
+                  padding: '3px 4px', fontSize: '11px', border: '1px solid ' + COLORS.borderColor,
                   borderRadius: '4px', fontFamily: FONT_FAMILY, cursor: 'pointer',
-                  maxWidth: '140px', background: COLORS.white
+                  maxWidth: '120px', background: COLORS.white, height: '28px'
                 }}
                 title="Font Family (select text first)"
               >
@@ -1661,50 +1785,61 @@ export default function App() {
                 value={editorFontSize}
                 onChange={(e) => applyFontSizeWrap(e.target.value)}
                 style={{
-                  padding: '4px 4px', fontSize: '11px', border: '1px solid ' + COLORS.borderColor,
+                  padding: '3px 2px', fontSize: '11px', border: '1px solid ' + COLORS.borderColor,
                   borderRadius: '4px', fontFamily: FONT_FAMILY, cursor: 'pointer',
-                  width: '52px', background: COLORS.white
+                  width: '48px', background: COLORS.white, height: '28px'
                 }}
                 title="Font Size (select text first)"
               >
                 {FONT_SIZES.map(s => (
-                  <option key={s} value={s}>{s}px</option>
+                  <option key={s} value={s}>{s}</option>
                 ))}
               </select>
 
               {tbSep()}
 
               {/* Headings */}
-              <button onMouseDown={noFocus} onClick={() => applyHeading(1)} style={tbBtn(false)} title="Heading 1">H1</button>
-              <button onMouseDown={noFocus} onClick={() => applyHeading(2)} style={tbBtn(false)} title="Heading 2">H2</button>
-              <button onMouseDown={noFocus} onClick={() => applyHeading(3)} style={tbBtn(false)} title="Heading 3">H3</button>
+              <button onMouseDown={noFocus} onClick={() => applyHeading(1)} style={{ ...tbBtn(false), fontSize: '12px', fontWeight: '700' }} title="Heading 1">H1</button>
+              <button onMouseDown={noFocus} onClick={() => applyHeading(2)} style={{ ...tbBtn(false), fontSize: '11px', fontWeight: '700' }} title="Heading 2">H2</button>
+              <button onMouseDown={noFocus} onClick={() => applyHeading(3)} style={{ ...tbBtn(false), fontSize: '10px', fontWeight: '700' }} title="Heading 3">H3</button>
 
               {tbSep()}
 
-              {/* Bold, Italic, Underline, Strikethrough */}
-              <button onMouseDown={noFocus} onClick={applyBold} style={{ ...tbBtn(false), fontWeight: '800' }} title="Bold (**text**)">B</button>
-              <button onMouseDown={noFocus} onClick={applyItalic} style={{ ...tbBtn(false), fontStyle: 'italic' }} title="Italic (*text*)">I</button>
-              <button onMouseDown={noFocus} onClick={applyUnderline} style={{ ...tbBtn(false), textDecoration: 'underline' }} title="Underline">U</button>
-              <button onMouseDown={noFocus} onClick={applyStrikethrough} style={{ ...tbBtn(false), textDecoration: 'line-through' }} title="Strikethrough">S</button>
+              {/* Text Formatting */}
+              <button onMouseDown={noFocus} onClick={applyBold} style={tbBtn(false)} title="Bold"><MI name="format_bold" size={17} /></button>
+              <button onMouseDown={noFocus} onClick={applyItalic} style={tbBtn(false)} title="Italic"><MI name="format_italic" size={17} /></button>
+              <button onMouseDown={noFocus} onClick={applyUnderline} style={tbBtn(false)} title="Underline"><MI name="format_underlined" size={17} /></button>
+              <button onMouseDown={noFocus} onClick={applyStrikethrough} style={tbBtn(false)} title="Strikethrough"><MI name="format_strikethrough" size={17} /></button>
+              <button onMouseDown={noFocus} onClick={applyHighlight} style={tbBtn(false)} title="Highlight"><MI name="highlight" size={17} /></button>
+              <button onMouseDown={noFocus} onClick={applySuperscript} style={tbBtn(false)} title="Superscript"><MI name="superscript" size={16} /></button>
+              <button onMouseDown={noFocus} onClick={applySubscript} style={tbBtn(false)} title="Subscript"><MI name="subscript" size={16} /></button>
 
               {tbSep()}
 
               {/* Code */}
-              <button onMouseDown={noFocus} onClick={applyCode} style={{ ...tbBtn(false), fontFamily: 'monospace', fontSize: '12px' }} title="Inline Code">&lt;/&gt;</button>
+              <button onMouseDown={noFocus} onClick={applyCode} style={tbBtn(false)} title="Inline Code"><MI name="code" size={17} /></button>
+              <button onMouseDown={noFocus} onClick={insertCodeBlock} style={tbBtn(false)} title="Code Block"><MI name="data_object" size={17} /></button>
 
               {/* Lists */}
-              <button onMouseDown={noFocus} onClick={insertBulletList} style={tbBtn(false)} title="Bullet List">• ≡</button>
-              <button onMouseDown={noFocus} onClick={insertNumberedList} style={tbBtn(false)} title="Numbered List">1. ≡</button>
+              <button onMouseDown={noFocus} onClick={insertBulletList} style={tbBtn(false)} title="Bullet List"><MI name="format_list_bulleted" size={17} /></button>
+              <button onMouseDown={noFocus} onClick={insertNumberedList} style={tbBtn(false)} title="Numbered List"><MI name="format_list_numbered" size={17} /></button>
 
-              {/* Blockquote */}
-              <button onMouseDown={noFocus} onClick={insertBlockquote} style={tbBtn(false)} title="Blockquote">❝</button>
-
-              {/* Horizontal Rule */}
-              <button onMouseDown={noFocus} onClick={insertHR} style={tbBtn(false)} title="Horizontal Line">—</button>
+              {/* Blockquote & HR */}
+              <button onMouseDown={noFocus} onClick={insertBlockquote} style={tbBtn(false)} title="Blockquote"><MI name="format_quote" size={17} /></button>
+              <button onMouseDown={noFocus} onClick={insertHR} style={tbBtn(false)} title="Horizontal Line"><MI name="horizontal_rule" size={17} /></button>
 
               {tbSep()}
 
-              {/* Quick Image Insert — show when ANY visual prompts exist */}
+              {/* Insert */}
+              <button onMouseDown={noFocus} onClick={insertLink} style={tbBtn(false)} title="Insert Link"><MI name="link" size={17} /></button>
+              <button onMouseDown={noFocus} onClick={insertTable} style={tbBtn(false)} title="Insert Table"><MI name="table_chart" size={17} /></button>
+
+              {/* Clear Formatting */}
+              <button onMouseDown={noFocus} onClick={clearFormatting} style={tbBtn(false)} title="Clear Formatting"><MI name="format_clear" size={17} /></button>
+
+              {tbSep()}
+
+              {/* Image Insert */}
               {allPrompts.length > 0 && (
                 <button
                   onMouseDown={noFocus}
@@ -1712,7 +1847,7 @@ export default function App() {
                   style={{ ...tbBtn(showAssetPicker), color: showAssetPicker ? '#7c3aed' : COLORS.lightText }}
                   title="Insert Image from Visual Assets"
                 >
-                  Insert
+                  <MI name="add_photo_alternate" size={17} />
                 </button>
               )}
             </div>
@@ -1727,7 +1862,7 @@ export default function App() {
                   <textarea
                     ref={contentEditorRef}
                     value={editContent}
-                    onChange={(e) => setEditContent(e.target.value)}
+                    onChange={handleEditorChange}
                     onSelect={trackSelection}
                     onKeyUp={trackSelection}
                     onClick={trackSelection}
@@ -1738,7 +1873,7 @@ export default function App() {
                       padding: '20px 24px',
                       fontSize: editorFontSize + 'px',
                       lineHeight: '1.8',
-                      fontFamily: editorFont + ', monospace',
+                      fontFamily: editorFont + ', sans-serif',
                       border: 'none',
                       borderRight: showAssetPicker ? '1px solid ' + COLORS.borderColor : 'none',
                       resize: 'none',
@@ -1860,7 +1995,7 @@ export default function App() {
     const dimensions = getPaperDimensions();
     return (
       <>
-        <button onClick={() => setShowPageSettings(!showPageSettings)} style={{ position: 'fixed', bottom: '20px', right: '20px', width: '60px', height: '60px', background: COLORS.navActive, color: COLORS.white, border: 'none', borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: '600' }} title="PDF Page Settings">PDF</button>
+        <button onClick={() => setShowPageSettings(!showPageSettings)} style={{ position: 'fixed', bottom: '20px', right: '20px', width: '48px', height: '48px', background: COLORS.navActive, color: COLORS.white, border: 'none', borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 12px rgba(0,0,0,0.15)', zIndex: 998, transition: 'transform 0.2s' }} title="PDF Page Settings"><MI name="settings" size={20} color="white" /></button>
         {showPageSettings && (
           <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 999 }} onClick={() => setShowPageSettings(false)}>
             <div style={{ background: COLORS.white, borderRadius: '12px', padding: '24px', width: '100%', maxWidth: '400px', boxShadow: '0 20px 40px rgba(0,0,0,0.2)', fontFamily: FONT_FAMILY, maxHeight: '90vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
@@ -1968,23 +2103,23 @@ export default function App() {
       <div style={{ width: sidebarOpen ? '280px' : '80px', background: COLORS.sidebarBg, borderRight: `1px solid ${COLORS.borderColor}`, padding: '16px', display: 'flex', flexDirection: 'column', transition: 'width 0.3s' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
           <button onClick={() => setSidebarOpen(!sidebarOpen)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '8px', display: 'flex' }}>
-            {sidebarOpen ? "✕" : "☰"}
+            {sidebarOpen ? <X size={18} /> : <Menu size={18} />}
           </button>
           {sidebarOpen && <h3 style={{ margin: 0, fontSize: '14px', fontWeight: '700', color: COLORS.darkText, whiteSpace: 'nowrap' }}>Academic Curator</h3>}
         </div>
         <nav style={{ marginTop: '30px', flex: 1 }}>
           {[
-            { icon: null, label: 'Projects', action: 'textbooks', disabled: false, rolesAllowed: ['central_admin', 'admin', 'content_developer'] },
-            { icon: null, label: 'Manage Users', action: 'manage-users', disabled: true, rolesAllowed: ['central_admin', 'admin'] },
-            { icon: null, label: 'Invites', action: 'invites', disabled: false, rolesAllowed: ['central_admin', 'admin'] }
+            { icon: <BookOpen size={18} />, label: 'Projects', action: 'textbooks', disabled: false, rolesAllowed: ['central_admin', 'admin', 'content_developer'] },
+            { icon: <Users size={18} />, label: 'Manage Users', action: 'manage-users', disabled: true, rolesAllowed: ['central_admin', 'admin'] },
+            { icon: <Mail size={18} />, label: 'Invites', action: 'invites', disabled: false, rolesAllowed: ['central_admin', 'admin'] }
           ].filter(item => (item.rolesAllowed.includes(currentUser?.user_metadata?.role || 'content_developer'))).map((item, i) => (
             <button key={i} onClick={() => { if (item.action === 'invites') { setShowInvitePanel(!showInvitePanel); if (!showInvitePanel) fetchPendingInvites(); } }} disabled={item.disabled} style={{ width: '100%', padding: '12px 16px', background: item.action === 'textbooks' ? COLORS.navActive : 'transparent', color: item.action === 'textbooks' ? COLORS.white : (item.disabled ? COLORS.navDisabled : COLORS.navText), border: 'none', borderRadius: '6px', cursor: item.disabled ? 'not-allowed' : 'pointer', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '12px', fontSize: '14px', fontWeight: '500', fontFamily: FONT_FAMILY, whiteSpace: 'nowrap' }}>
-              {sidebarOpen && item.label}
+              {item.icon}{sidebarOpen && <span style={{ marginLeft: '10px' }}>{item.label}</span>}
             </button>
           ))}
         </nav>
         <button onClick={async () => { await supabase.auth.signOut(); setCurrentUser(null); setAuthPage('login'); }} style={{ width: '100%', padding: '12px 16px', background: COLORS.errorBg, color: COLORS.errorText, border: 'none', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '12px', fontSize: '14px', fontWeight: '500', fontFamily: FONT_FAMILY }}>
-          {sidebarOpen ? 'Logout' : '←'}
+          {sidebarOpen ? 'Logout' : <LogOut size={18} />}
         </button>
       </div>
 
@@ -2024,13 +2159,13 @@ export default function App() {
           {/* Action Buttons */}
           <div style={{ display: 'flex', gap: '12px', marginBottom: '24px', flexWrap: 'wrap' }}>
             {[
-              { label: 'Add Record', icon: null, bg: COLORS.navActive, color: COLORS.white, action: handleOpenAddForm },
-              { label: 'Export', icon: null, bg: COLORS.filterBg, color: COLORS.darkText, action: handleExport },
-              { label: 'Refresh', icon: null, bg: COLORS.filterBg, color: COLORS.darkText, action: fetchRecords },
-              { label: 'Clear', icon: null, bg: COLORS.filterBg, color: COLORS.darkText, action: handleClearFilters },
+              { label: 'Add Record', icon: 'add', bg: COLORS.navActive, color: COLORS.white, action: handleOpenAddForm },
+              { label: 'Export', icon: 'download', bg: COLORS.filterBg, color: COLORS.darkText, action: handleExport },
+              { label: 'Refresh', icon: 'refresh', bg: COLORS.filterBg, color: COLORS.darkText, action: fetchRecords },
+              { label: 'Clear', icon: 'filter_list_off', bg: COLORS.filterBg, color: COLORS.darkText, action: handleClearFilters },
             ].map((btn, i) => (
-              <button key={i} onClick={btn.action} style={{ padding: '10px 16px', background: btn.bg, color: btn.color, border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '400', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px', fontFamily: FONT_FAMILY }}>
-                {btn.label}
+              <button key={i} onClick={btn.action} style={{ padding: '8px 16px', background: btn.bg, color: btn.color, border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '500', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '5px', fontFamily: FONT_FAMILY }}>
+                {btn.icon && <MI name={btn.icon} size={16} />} {btn.label}
               </button>
             ))}
           </div>
@@ -2141,8 +2276,8 @@ export default function App() {
                         )}
                       </td>
                       <td style={{ padding: '12px', fontSize: '13px', display: 'flex', gap: '8px' }}>
-                        <button onClick={() => { setViewingRecord(r); setViewTab('content'); setIsEditing(false); setVisualMessage(''); }} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', color: COLORS.navActive, fontSize: '12px', fontWeight: '500', fontFamily: FONT_FAMILY }}>View</button>
-                        <button onClick={() => handleEditRecord(r)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', color: COLORS.navActive, fontSize: '12px', fontWeight: '500', fontFamily: FONT_FAMILY }}>Edit</button>
+                        <button onClick={() => { setViewingRecord(r); setViewTab('content'); setIsEditing(false); setVisualMessage(''); }} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', color: COLORS.navActive, fontSize: '12px', fontWeight: '500', fontFamily: FONT_FAMILY, display: 'flex', alignItems: 'center', gap: '2px' }}><MI name="visibility" size={15} /> View</button>
+                        <button onClick={() => handleEditRecord(r)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', color: COLORS.navActive, fontSize: '12px', fontWeight: '500', fontFamily: FONT_FAMILY, display: 'flex', alignItems: 'center', gap: '2px' }}><MI name="edit" size={15} /> Edit</button>
                       </td>
                     </tr>
                   );
@@ -2168,17 +2303,17 @@ export default function App() {
 
             {/* Tab Bar */}
             <div style={{ padding: '0 24px', borderBottom: `1px solid ${COLORS.borderColor}`, display: 'flex', background: COLORS.lightBg }}>
-              <button onClick={() => setViewTab('content')} style={{ padding: '12px 20px', background: 'none', border: 'none', borderBottom: viewTab === 'content' ? `2px solid ${COLORS.navActive}` : '2px solid transparent', color: viewTab === 'content' ? COLORS.navActive : COLORS.lightText, fontWeight: viewTab === 'content' ? '600' : '500', fontSize: '13px', cursor: 'pointer', fontFamily: FONT_FAMILY, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                Content
+              <button onClick={() => setViewTab('content')} style={{ padding: '12px 20px', background: 'none', border: 'none', borderBottom: viewTab === 'content' ? `2px solid ${COLORS.navActive}` : '2px solid transparent', color: viewTab === 'content' ? COLORS.navActive : COLORS.lightText, fontWeight: viewTab === 'content' ? '600' : '500', fontSize: '13px', cursor: 'pointer', fontFamily: FONT_FAMILY, display: 'flex', alignItems: 'center', gap: '5px' }}>
+                <MI name="article" size={16} /> Content
               </button>
-              <button onClick={() => setViewTab('visuals')} style={{ padding: '12px 20px', background: 'none', border: 'none', borderBottom: viewTab === 'visuals' ? '2px solid #8b5cf6' : '2px solid transparent', color: viewTab === 'visuals' ? '#8b5cf6' : COLORS.lightText, fontWeight: viewTab === 'visuals' ? '600' : '500', fontSize: '13px', cursor: 'pointer', fontFamily: FONT_FAMILY, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                Visual Assets
+              <button onClick={() => setViewTab('visuals')} style={{ padding: '12px 20px', background: 'none', border: 'none', borderBottom: viewTab === 'visuals' ? '2px solid #8b5cf6' : '2px solid transparent', color: viewTab === 'visuals' ? '#8b5cf6' : COLORS.lightText, fontWeight: viewTab === 'visuals' ? '600' : '500', fontSize: '13px', cursor: 'pointer', fontFamily: FONT_FAMILY, display: 'flex', alignItems: 'center', gap: '5px' }}>
+                <MI name="image" size={16} /> Visual Assets
                 {getVisualPrompts(viewingRecord).length > 0 && (
                   <span style={{ background: '#8b5cf6', color: 'white', fontSize: '10px', padding: '1px 6px', borderRadius: '10px', fontWeight: '600' }}>{getVisualPrompts(viewingRecord).length}</span>
                 )}
               </button>
-              <button onClick={() => setViewTab('history')} style={{ padding: '12px 20px', background: 'none', border: 'none', borderBottom: viewTab === 'history' ? '2px solid #f59e0b' : '2px solid transparent', color: viewTab === 'history' ? '#f59e0b' : COLORS.lightText, fontWeight: viewTab === 'history' ? '600' : '500', fontSize: '13px', cursor: 'pointer', fontFamily: FONT_FAMILY, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                History
+              <button onClick={() => setViewTab('history')} style={{ padding: '12px 20px', background: 'none', border: 'none', borderBottom: viewTab === 'history' ? '2px solid #f59e0b' : '2px solid transparent', color: viewTab === 'history' ? '#f59e0b' : COLORS.lightText, fontWeight: viewTab === 'history' ? '600' : '500', fontSize: '13px', cursor: 'pointer', fontFamily: FONT_FAMILY, display: 'flex', alignItems: 'center', gap: '5px' }}>
+                <MI name="history" size={16} /> History
               </button>
             </div>
 
@@ -2189,10 +2324,10 @@ export default function App() {
 
             {/* Footer */}
             {viewingRecord.ai_output && (
-              <div style={{ padding: '14px 24px', borderTop: `1px solid ${COLORS.borderColor}`, display: 'flex', justifyContent: 'flex-end', gap: '10px', background: COLORS.lightBg }}>
-                <button onClick={handleCopyContent} style={{ padding: '9px 16px', background: '#6366f1', color: COLORS.white, border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '500', fontSize: '12px', fontFamily: FONT_FAMILY, display: 'flex', alignItems: 'center', gap: '6px' }}>Copy</button>
-                <button onClick={handleExportPDF} style={{ padding: '9px 16px', background: COLORS.navActive, color: COLORS.white, border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '500', fontSize: '12px', fontFamily: FONT_FAMILY, display: 'flex', alignItems: 'center', gap: '6px' }}>PDF</button>
-                <button onClick={handleExportWord} style={{ padding: '9px 16px', background: COLORS.navActive, color: COLORS.white, border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '500', fontSize: '12px', fontFamily: FONT_FAMILY, display: 'flex', alignItems: 'center', gap: '6px' }}>Word</button>
+              <div style={{ padding: '12px 24px', borderTop: `1px solid ${COLORS.borderColor}`, display: 'flex', justifyContent: 'flex-end', gap: '8px', background: COLORS.lightBg }}>
+                <button onClick={handleCopyContent} style={{ padding: '7px 14px', background: '#6366f1', color: COLORS.white, border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '500', fontSize: '12px', fontFamily: FONT_FAMILY, display: 'flex', alignItems: 'center', gap: '4px' }}><MI name="content_copy" size={14} color="white" /> Copy</button>
+                <button onClick={handleExportPDF} style={{ padding: '7px 14px', background: COLORS.navActive, color: COLORS.white, border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '500', fontSize: '12px', fontFamily: FONT_FAMILY, display: 'flex', alignItems: 'center', gap: '4px' }}><MI name="picture_as_pdf" size={14} color="white" /> PDF</button>
+                <button onClick={handleExportWord} style={{ padding: '7px 14px', background: COLORS.navActive, color: COLORS.white, border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '500', fontSize: '12px', fontFamily: FONT_FAMILY, display: 'flex', alignItems: 'center', gap: '4px' }}><MI name="description" size={14} color="white" /> Word</button>
               </div>
             )}
           </div>

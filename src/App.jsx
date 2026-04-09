@@ -174,6 +174,13 @@ export default function App() {
   // ===== LIGHTBOX =====
   const [lightboxImage, setLightboxImage] = useState(null);
 
+  // ===== COMMENTS =====
+  const [commentText, setCommentText] = useState('');
+  const [showComments, setShowComments] = useState(false);
+
+  // ===== SHARE =====
+  const [shareMessage, setShareMessage] = useState('');
+
   // ===== SUBJECTS =====
   const subjects = [
     'English', 'Mathematics', 'Science', 'Social Studies', 'Social Science',
@@ -901,7 +908,79 @@ export default function App() {
   // ===== FETCH RECORDS =====
   const fetchRecords = async () => {
     const { data, error } = await supabase.from('textbook_content').select('*').order('updated_at', { ascending: false });
-    if (!error && data) setRecords(data);
+    if (!error && data) {
+      setRecords(data);
+      // Check for deep link (share URL)
+      var params = new URLSearchParams(window.location.search);
+      var sharedRecordId = params.get('record');
+      if (sharedRecordId) {
+        var found = data.find(function(r) { return String(r.record_id) === sharedRecordId; });
+        if (found && !viewingRecord) {
+          setViewingRecord(found);
+          setViewTab('content');
+        }
+      }
+    }
+  };
+
+  // ===== COMMENTS =====
+  const getComments = (record) => {
+    if (!record?.comments) return [];
+    try { return Array.isArray(record.comments) ? record.comments : JSON.parse(record.comments); }
+    catch { return []; }
+  };
+
+  const handleAddComment = async () => {
+    if (!viewingRecord || !commentText.trim()) return;
+    var existingComments = getComments(viewingRecord);
+    var newComment = {
+      id: generateId(),
+      text: commentText.trim(),
+      user: currentUser?.email || 'unknown',
+      timestamp: new Date().toISOString()
+    };
+    var updated = [newComment].concat(existingComments);
+    try {
+      var result = await supabase
+        .from('textbook_content')
+        .update({ comments: updated, updated_at: new Date() })
+        .eq('record_id', viewingRecord.record_id);
+      if (result.error) throw result.error;
+      setViewingRecord({ ...viewingRecord, comments: updated });
+      setCommentText('');
+      fetchRecords();
+    } catch (err) {
+      alert('Failed to add comment: ' + err.message);
+    }
+  };
+
+  const handleDeleteComment = async (commentId) => {
+    if (!viewingRecord) return;
+    var existingComments = getComments(viewingRecord);
+    var updated = existingComments.filter(function(c) { return c.id !== commentId; });
+    try {
+      var result = await supabase
+        .from('textbook_content')
+        .update({ comments: updated, updated_at: new Date() })
+        .eq('record_id', viewingRecord.record_id);
+      if (result.error) throw result.error;
+      setViewingRecord({ ...viewingRecord, comments: updated });
+      fetchRecords();
+    } catch (err) {
+      alert('Failed to delete comment: ' + err.message);
+    }
+  };
+
+  // ===== SHARE =====
+  const handleShareRecord = () => {
+    if (!viewingRecord) return;
+    var shareUrl = window.location.origin + window.location.pathname + '?record=' + viewingRecord.record_id;
+    navigator.clipboard.writeText(shareUrl).then(function() {
+      setShareMessage('Link copied!');
+      setTimeout(function() { setShareMessage(''); }, 2000);
+    }).catch(function() {
+      window.prompt('Copy this link:', shareUrl);
+    });
   };
 
   // ===== APPLY FILTERS =====
@@ -2247,7 +2326,7 @@ export default function App() {
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ background: '#64748b', color: COLORS.white }}>
-                  {['S.NO','ID','CLASS','SUBJECT','TOPIC','TYPE','STATUS','WORDS','IMAGES','ACTION'].map(h => (
+                  {['S.NO','ID','CLASS','SUBJECT','TOPIC','TYPE','STATUS','WORDS','IMAGES','NOTES','ACTION'].map(h => (
                     <th key={h} style={{ padding: '12px', textAlign: 'left', fontSize: '11px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{h}</th>
                   ))}
                 </tr>
@@ -2275,8 +2354,17 @@ export default function App() {
                           <span style={{ color: COLORS.lightText, fontSize: '11px' }}>—</span>
                         )}
                       </td>
+                      <td style={{ padding: '12px', fontSize: '13px' }}>
+                        {(() => { var cc = getComments(r).length; return cc > 0 ? (
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', padding: '4px 8px', borderRadius: '3px', fontSize: '11px', fontWeight: '500', background: '#fef3c7', color: '#92400e', position: 'relative' }}>
+                            <MI name="chat_bubble" size={12} /> {cc}
+                          </span>
+                        ) : (
+                          <span style={{ color: COLORS.lightText, fontSize: '11px' }}>—</span>
+                        ); })()}
+                      </td>
                       <td style={{ padding: '12px', fontSize: '13px', display: 'flex', gap: '8px' }}>
-                        <button onClick={() => { setViewingRecord(r); setViewTab('content'); setIsEditing(false); setVisualMessage(''); }} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', color: COLORS.navActive, fontSize: '12px', fontWeight: '500', fontFamily: FONT_FAMILY, display: 'flex', alignItems: 'center', gap: '2px' }}><MI name="visibility" size={15} /> View</button>
+                        <button onClick={() => { setViewingRecord(r); setViewTab('content'); setIsEditing(false); setVisualMessage(''); setShowComments(false); }} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', color: COLORS.navActive, fontSize: '12px', fontWeight: '500', fontFamily: FONT_FAMILY, display: 'flex', alignItems: 'center', gap: '2px' }}><MI name="visibility" size={15} /> View</button>
                         <button onClick={() => handleEditRecord(r)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', color: COLORS.navActive, fontSize: '12px', fontWeight: '500', fontFamily: FONT_FAMILY, display: 'flex', alignItems: 'center', gap: '2px' }}><MI name="edit" size={15} /> Edit</button>
                       </td>
                     </tr>
@@ -2293,12 +2381,25 @@ export default function App() {
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }} onClick={() => { setViewingRecord(null); setIsEditing(false); }}>
           <div style={{ background: COLORS.white, width: '98%', maxWidth: '1400px', height: '95vh', display: 'flex', flexDirection: 'column', borderRadius: '12px', boxShadow: '0 20px 60px rgba(0,0,0,0.3)', overflow: 'hidden' }} onClick={e => e.stopPropagation()}>
             {/* Header */}
-            <div style={{ padding: '20px 24px', borderBottom: `1px solid ${COLORS.borderColor}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'linear-gradient(135deg, #f5f6f8 0%, #ffffff 100%)' }}>
-              <div>
-                <h2 style={{ margin: '0 0 4px 0', fontSize: '24px', fontWeight: '700', color: COLORS.darkText }}>{viewingRecord.topic}</h2>
-                <p style={{ margin: 0, fontSize: '13px', color: COLORS.lightText }}>Class {viewingRecord.class} • {viewingRecord.subject} • {viewingRecord.sub_topic || 'N/A'}</p>
+            <div style={{ padding: '16px 24px', borderBottom: `1px solid ${COLORS.borderColor}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'linear-gradient(135deg, #f5f6f8 0%, #ffffff 100%)' }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <h2 style={{ margin: '0 0 4px 0', fontSize: '22px', fontWeight: '700', color: COLORS.darkText, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{viewingRecord.topic}</h2>
+                <p style={{ margin: 0, fontSize: '12px', color: COLORS.lightText }}>Class {viewingRecord.class} • {viewingRecord.subject} • {viewingRecord.sub_topic || 'N/A'}</p>
               </div>
-              <button onClick={() => { setViewingRecord(null); setIsEditing(false); }} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '8px', fontSize: '24px', color: COLORS.lightText }}>✕</button>
+              <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexShrink: 0, marginLeft: '16px' }}>
+                <button onClick={handleShareRecord} style={{ padding: '6px 12px', background: COLORS.filterBg, color: COLORS.darkText, border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: '500', cursor: 'pointer', fontFamily: FONT_FAMILY, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <MI name="share" size={14} /> {shareMessage || 'Share'}
+                </button>
+                <button onClick={() => setShowComments(!showComments)} style={{ padding: '6px 12px', background: showComments ? '#f59e0b' : COLORS.filterBg, color: showComments ? 'white' : COLORS.darkText, border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: '500', cursor: 'pointer', fontFamily: FONT_FAMILY, display: 'flex', alignItems: 'center', gap: '4px', position: 'relative' }}>
+                  <MI name="chat_bubble" size={14} /> Comments
+                  {getComments(viewingRecord).length > 0 && (
+                    <span style={{ background: '#ef4444', color: 'white', fontSize: '9px', fontWeight: '700', padding: '1px 5px', borderRadius: '8px', minWidth: '16px', textAlign: 'center' }}>{getComments(viewingRecord).length}</span>
+                  )}
+                </button>
+                <button onClick={() => { setViewingRecord(null); setIsEditing(false); setShowComments(false); }} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '6px', color: COLORS.lightText, display: 'flex' }}>
+                  <MI name="close" size={22} />
+                </button>
+              </div>
             </div>
 
             {/* Tab Bar */}
@@ -2317,9 +2418,97 @@ export default function App() {
               </button>
             </div>
 
-            {/* Content */}
-            <div style={{ flex: 1, overflowY: 'auto', background: COLORS.white }}>
-              {viewTab === 'content' ? renderContentTab() : viewTab === 'visuals' ? renderVisualAssetsTab() : renderHistoryTab()}
+            {/* Content + Comments */}
+            <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+              {/* Main Content */}
+              <div style={{ flex: 1, overflowY: 'auto', background: COLORS.white }}>
+                {viewTab === 'content' ? renderContentTab() : viewTab === 'visuals' ? renderVisualAssetsTab() : renderHistoryTab()}
+              </div>
+
+              {/* Comments Sidebar */}
+              {showComments && (
+                <div style={{ width: '300px', borderLeft: '1px solid ' + COLORS.borderColor, display: 'flex', flexDirection: 'column', background: '#fafbfc', flexShrink: 0 }}>
+                  <div style={{ padding: '14px 16px', borderBottom: '1px solid ' + COLORS.borderColor, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: '13px', fontWeight: '600', color: COLORS.darkText, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <MI name="chat_bubble" size={15} /> Comments ({getComments(viewingRecord).length})
+                    </span>
+                    <button onClick={() => setShowComments(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px' }}>
+                      <MI name="close" size={16} color={COLORS.lightText} />
+                    </button>
+                  </div>
+
+                  {/* Comment Input */}
+                  <div style={{ padding: '12px', borderBottom: '1px solid ' + COLORS.borderColor }}>
+                    <textarea
+                      value={commentText}
+                      onChange={function(e) { setCommentText(e.target.value); }}
+                      placeholder="Add a comment..."
+                      rows={3}
+                      style={{
+                        width: '100%', padding: '10px', fontSize: '12px', lineHeight: '1.5',
+                        border: '1px solid ' + COLORS.borderColor, borderRadius: '6px',
+                        fontFamily: FONT_FAMILY, resize: 'none', outline: 'none',
+                        background: COLORS.white
+                      }}
+                    />
+                    <button
+                      onClick={handleAddComment}
+                      disabled={!commentText.trim()}
+                      style={{
+                        marginTop: '6px', padding: '6px 14px', width: '100%',
+                        background: commentText.trim() ? COLORS.navActive : COLORS.filterBg,
+                        color: commentText.trim() ? 'white' : COLORS.lightText,
+                        border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: '500',
+                        cursor: commentText.trim() ? 'pointer' : 'not-allowed',
+                        fontFamily: FONT_FAMILY, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px'
+                      }}
+                    >
+                      <MI name="send" size={13} /> Post
+                    </button>
+                  </div>
+
+                  {/* Comment List */}
+                  <div style={{ flex: 1, overflowY: 'auto', padding: '8px' }}>
+                    {getComments(viewingRecord).length === 0 ? (
+                      <div style={{ padding: '20px', textAlign: 'center', color: COLORS.lightText, fontSize: '12px' }}>
+                        No comments yet
+                      </div>
+                    ) : (
+                      getComments(viewingRecord).map(function(c) {
+                        var isOwn = c.user === (currentUser?.email || '');
+                        var commentDate = '';
+                        try {
+                          var d = new Date(c.timestamp);
+                          commentDate = d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }) + ' ' + d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+                        } catch(e) { commentDate = ''; }
+
+                        return (
+                          <div key={c.id} style={{
+                            padding: '10px 12px', marginBottom: '6px',
+                            background: COLORS.white, borderRadius: '8px',
+                            border: '1px solid ' + COLORS.borderColor
+                          }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '4px' }}>
+                              <div>
+                                <span style={{ fontSize: '11px', fontWeight: '600', color: COLORS.navActive }}>{c.user ? c.user.split('@')[0] : 'User'}</span>
+                                <span style={{ fontSize: '10px', color: COLORS.lightText, marginLeft: '6px' }}>{commentDate}</span>
+                              </div>
+                              {isOwn && (
+                                <button onClick={function() { handleDeleteComment(c.id); }} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0', opacity: 0.4 }}>
+                                  <MI name="delete" size={13} color={COLORS.errorText} />
+                                </button>
+                              )}
+                            </div>
+                            <p style={{ margin: 0, fontSize: '12px', lineHeight: '1.5', color: COLORS.darkText, wordBreak: 'break-word' }}>
+                              {c.text}
+                            </p>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Footer */}

@@ -42,7 +42,7 @@ const COLORS = {
   errorText: '#991b1b',
 };
 
-const FONT_FAMILY = 'Lexend, sans-serif';
+const FONT_FAMILY = 'Inter, sans-serif';
 
 // ===== IMAGE GENERATION MODELS =====
 const IMAGE_MODELS = [
@@ -973,7 +973,7 @@ export default function App() {
       var element = document.createElement('div');
       element.style.width = '100%';
       element.style.padding = pageSettings.margins + 'mm';
-      element.innerHTML = '<div style="font-family:Montserrat,Lexend,sans-serif;color:#0f172a;max-width:100%;word-wrap:break-word;">'
+      element.innerHTML = '<div style="font-family:Inter,Montserrat,sans-serif;color:#0f172a;max-width:100%;word-wrap:break-word;">'
         + '<h1 style="font-size:26px;margin-bottom:4px;font-weight:700;page-break-after:avoid;">' + viewingRecord.topic + '</h1>'
         + '<p style="color:#6b7280;margin-bottom:4px;font-size:13px;">Class ' + viewingRecord.class + ' | ' + viewingRecord.subject + (viewingRecord.sub_topic ? ' | ' + viewingRecord.sub_topic : '') + '</p>'
         + '<p style="color:#9ca3af;margin-bottom:16px;font-size:11px;">' + (viewingRecord.content_type || '') + '</p>'
@@ -1073,7 +1073,7 @@ export default function App() {
               background: isScene ? '#2563eb' : '#8b5cf6',
               display: 'flex', alignItems: 'center', justifyContent: 'center'
             }}>
-              {isScene ? <Layers size={14} color="white" /> : <Palette size={14} color="white" />}
+              
             </div>
             <div>
               <span style={{ fontSize: '12px', fontWeight: '600', color: COLORS.darkText }}>
@@ -1092,7 +1092,7 @@ export default function App() {
             </div>
           </div>
           <button onClick={() => handleDeleteVisualPrompt(prompt.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', opacity: 0.5 }} title="Delete prompt">
-            <Trash2 size={14} color={COLORS.errorText} />
+            Delete
           </button>
         </div>
 
@@ -1118,7 +1118,7 @@ export default function App() {
               />
               <div style={{ display: 'flex', gap: '6px', marginTop: '6px' }}>
                 <button onClick={handleSavePromptEdit} style={{ padding: '4px 10px', background: COLORS.navActive, color: 'white', border: 'none', borderRadius: '4px', fontSize: '11px', fontWeight: '600', cursor: 'pointer', fontFamily: FONT_FAMILY, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <Save size={10} /> Save
+                  Save
                 </button>
                 <button onClick={() => { setLocalPrompt(prompt.prompt); setIsEditingPrompt(false); }} style={{ padding: '4px 10px', background: COLORS.filterBg, color: COLORS.darkText, border: 'none', borderRadius: '4px', fontSize: '11px', cursor: 'pointer', fontFamily: FONT_FAMILY }}>
                   Cancel
@@ -1143,7 +1143,7 @@ export default function App() {
               title="Click to edit"
             >
               {prompt.prompt || 'Click to write a description...'}
-              <Pencil size={10} style={{ marginLeft: '6px', opacity: 0.4, verticalAlign: 'middle' }} />
+              
             </div>
           )}
 
@@ -1208,9 +1208,9 @@ export default function App() {
               }}
             >
               {isGenerating ? (
-                <><Loader2 size={12} style={{ animation: 'spin 1s linear infinite' }} /> Generating...</>
+                'Generating...'
               ) : (
-                <><Sparkles size={12} /> Generate</>
+                'Generate'
               )}
             </button>
           </div>
@@ -1234,19 +1234,19 @@ export default function App() {
                   onClick={() => setLightboxImage(prompt.image_url)}
                   style={{ padding: '4px 10px', background: COLORS.filterBg, color: COLORS.darkText, border: 'none', borderRadius: '4px', fontSize: '10px', fontWeight: '600', cursor: 'pointer', fontFamily: FONT_FAMILY, display: 'flex', alignItems: 'center', gap: '3px' }}
                 >
-                  <ZoomIn size={10} /> Full Size
+                  Full Size
                 </button>
                 <button
                   onClick={() => handleInsertImageAtCursor(prompt.image_url, `${prompt.type} - ${prompt.prompt?.substring(0, 30) || 'image'}`)}
                   style={{ padding: '4px 10px', background: '#2563eb', color: 'white', border: 'none', borderRadius: '4px', fontSize: '10px', fontWeight: '600', cursor: 'pointer', fontFamily: FONT_FAMILY, display: 'flex', alignItems: 'center', gap: '3px' }}
                 >
-                  <ImagePlus size={10} /> Insert into Content
+                  Insert into Content
                 </button>
                 <button
                   onClick={() => { navigator.clipboard.writeText(prompt.image_url); setVisualMessage('✅ Image URL copied!'); }}
                   style={{ padding: '4px 10px', background: COLORS.filterBg, color: COLORS.darkText, border: 'none', borderRadius: '4px', fontSize: '10px', fontWeight: '600', cursor: 'pointer', fontFamily: FONT_FAMILY, display: 'flex', alignItems: 'center', gap: '3px' }}
                 >
-                  <Link size={10} /> Copy URL
+                  Copy URL
                 </button>
               </div>
             </div>
@@ -1285,7 +1285,7 @@ export default function App() {
         <div style={{ marginBottom: '28px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
             <h3 style={{ margin: 0, fontSize: '15px', fontWeight: '600', color: COLORS.darkText, display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Palette size={18} color="#8b5cf6" /> Characters / Visuals
+              Characters / Visuals
               <span style={{ fontSize: '11px', fontWeight: '400', color: COLORS.lightText }}>({characters.length})</span>
             </h3>
             <button
@@ -1296,7 +1296,7 @@ export default function App() {
                 cursor: 'pointer', fontFamily: FONT_FAMILY, display: 'flex', alignItems: 'center', gap: '4px'
               }}
             >
-              <Plus size={12} /> Add Character
+              + Add Character
             </button>
           </div>
 
@@ -1313,7 +1313,7 @@ export default function App() {
         <div style={{ marginBottom: '28px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
             <h3 style={{ margin: 0, fontSize: '15px', fontWeight: '600', color: COLORS.darkText, display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Layers size={18} color="#2563eb" /> Scene Images
+              Scene Images
               <span style={{ fontSize: '11px', fontWeight: '400', color: COLORS.lightText }}>({scenes.length})</span>
             </h3>
             <button
@@ -1324,7 +1324,7 @@ export default function App() {
                 cursor: 'pointer', fontFamily: FONT_FAMILY, display: 'flex', alignItems: 'center', gap: '4px'
               }}
             >
-              <Plus size={12} /> Add Scene
+              + Add Scene
             </button>
           </div>
 
@@ -1341,7 +1341,7 @@ export default function App() {
         {getGeneratedImages(viewingRecord).length > 0 && (
           <div style={{ background: '#f0fdf4', border: `1px solid ${COLORS.successBorder}`, borderRadius: '10px', padding: '16px' }}>
             <h4 style={{ margin: '0 0 10px 0', fontSize: '13px', fontWeight: '600', color: COLORS.successText, display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <Image size={14} /> All Generated Images ({getGeneratedImages(viewingRecord).length})
+              All Generated Images ({getGeneratedImages(viewingRecord).length})
             </h4>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', gap: '8px' }}>
               {getGeneratedImages(viewingRecord).map((p, idx) => (
@@ -1380,17 +1380,17 @@ export default function App() {
 
     // Record created
     if (viewingRecord.created_at) {
-      timeline.push({ icon: '📝', label: 'Record Created', time: viewingRecord.created_at, detail: 'Class ' + viewingRecord.class + ' • ' + viewingRecord.subject + ' • ' + viewingRecord.topic, color: '#2563eb' });
+      timeline.push({ icon: '', label: 'Record Created', time: viewingRecord.created_at, detail: 'Class ' + viewingRecord.class + ' • ' + viewingRecord.subject + ' • ' + viewingRecord.topic, color: '#2563eb' });
     }
 
     // Prompt info
     if (viewingRecord.prompt) {
-      timeline.push({ icon: '⚡', label: 'Prompt Submitted', time: viewingRecord.created_at, detail: viewingRecord.prompt.substring(0, 120) + (viewingRecord.prompt.length > 120 ? '...' : ''), color: '#8b5cf6' });
+      timeline.push({ icon: '', label: 'Prompt Submitted', time: viewingRecord.created_at, detail: viewingRecord.prompt.substring(0, 120) + (viewingRecord.prompt.length > 120 ? '...' : ''), color: '#8b5cf6' });
     }
 
     // AI output generated
     if (viewingRecord.status === 'generated' && viewingRecord.ai_output) {
-      timeline.push({ icon: '🤖', label: 'AI Content Generated', time: viewingRecord.updated_at, detail: (viewingRecord.word_count || 0) + ' words generated', color: '#10b981' });
+      timeline.push({ icon: '', label: 'AI Content Generated', time: viewingRecord.updated_at, detail: (viewingRecord.word_count || 0) + ' words generated', color: '#10b981' });
     }
 
     // Visual prompts generated
@@ -1400,12 +1400,12 @@ export default function App() {
       var sceneCount = vp.filter(function(p) { return p.type === 'scene'; }).length;
       var generatedCount = vp.filter(function(p) { return p.image_url; }).length;
       var firstPromptTime = vp.reduce(function(min, p) { return p.created_at && p.created_at < min ? p.created_at : min; }, vp[0]?.created_at || viewingRecord.updated_at);
-      timeline.push({ icon: '🎨', label: 'Visual Prompts Generated', time: firstPromptTime, detail: charCount + ' characters, ' + sceneCount + ' scenes (' + generatedCount + ' images generated)', color: '#f59e0b' });
+      timeline.push({ icon: '', label: 'Visual Prompts Generated', time: firstPromptTime, detail: charCount + ' characters, ' + sceneCount + ' scenes (' + generatedCount + ' images generated)', color: '#f59e0b' });
     }
 
     // Each generated image
     vp.filter(function(p) { return p.image_url; }).forEach(function(p) {
-      timeline.push({ icon: '🖼️', label: (p.type === 'character' ? 'Character' : 'Scene') + ' Image Generated', time: p.created_at, detail: 'Model: ' + (p.model_used || 'unknown') + ' — ' + (p.prompt || '').substring(0, 80), color: p.type === 'character' ? '#8b5cf6' : '#2563eb' });
+      timeline.push({ icon: '', label: (p.type === 'character' ? 'Character' : 'Scene') + ' Image Generated', time: p.created_at, detail: 'Model: ' + (p.model_used || 'unknown') + ' — ' + (p.prompt || '').substring(0, 80), color: p.type === 'character' ? '#8b5cf6' : '#2563eb' });
     });
 
     // Edit history entries
@@ -1418,7 +1418,7 @@ export default function App() {
 
     editHistory.forEach(function(entry, idx) {
       timeline.push({
-        icon: '✏️',
+        icon: '',
         label: 'Content Edited',
         time: entry.timestamp,
         detail: 'By ' + (entry.user || 'unknown') + ' — Words: ' + (entry.word_count_before || '?') + ' → ' + (entry.word_count_after || '?'),
@@ -1438,7 +1438,7 @@ export default function App() {
     return (
       <div style={{ padding: '24px 32px', maxWidth: '700px' }}>
         <h3 style={{ margin: '0 0 4px 0', fontSize: '16px', fontWeight: '600', color: COLORS.darkText, display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Clock size={18} /> Record Timeline
+          Record Timeline
         </h3>
         <p style={{ margin: '0 0 20px 0', fontSize: '12px', color: COLORS.lightText }}>
           Record ID: {viewingRecord.record_id} • Status: {viewingRecord.status} • Content Type: {viewingRecord.content_type || 'N/A'}
@@ -1493,7 +1493,7 @@ export default function App() {
                           display: 'flex', alignItems: 'center', gap: '4px'
                         }}
                       >
-                        <Eye size={10} /> {isExpanded ? 'Hide Changes' : 'View Changes'}
+                        {isExpanded ? 'Hide Changes' : 'View Changes'}
                       </button>
 
                       {/* Expanded Before / After view */}
@@ -1610,21 +1610,21 @@ export default function App() {
               {isEditing ? (
                 <>
                   <button onClick={handleSaveContent} disabled={savingContent} style={{ padding: '6px 14px', background: COLORS.navActive, color: 'white', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: '600', cursor: savingContent ? 'not-allowed' : 'pointer', fontFamily: FONT_FAMILY, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    {savingContent ? <><Loader2 size={12} style={{ animation: 'spin 1s linear infinite' }} /> Saving...</> : <><Save size={12} /> Save</>}
+                    {savingContent ? 'Saving...' : 'Save'}
                   </button>
                   <button onClick={handleCancelEditing} style={{ padding: '6px 14px', background: COLORS.filterBg, color: COLORS.darkText, border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: '500', cursor: 'pointer', fontFamily: FONT_FAMILY }}>
                     Cancel
                   </button>
                   {allPrompts.length > 0 && (
                     <button onClick={() => setShowAssetPicker(!showAssetPicker)} style={{ padding: '6px 14px', background: showAssetPicker ? '#8b5cf6' : COLORS.filterBg, color: showAssetPicker ? 'white' : COLORS.darkText, border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: '500', cursor: 'pointer', fontFamily: FONT_FAMILY, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <Image size={12} /> {showAssetPicker ? 'Hide' : 'Insert'} Images ({allImages.length}/{allPrompts.length})
+                      {showAssetPicker ? 'Hide' : 'Insert'} Images ({allImages.length}/{allPrompts.length})
                     </button>
                   )}
                 </>
               ) : (
                 <>
                   <button onClick={handleStartEditing} style={{ padding: '6px 14px', background: COLORS.navActive, color: 'white', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: '600', cursor: 'pointer', fontFamily: FONT_FAMILY, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <Pencil size={12} /> Edit Content
+                    Edit Content
                   </button>
                 </>
               )}
@@ -1712,7 +1712,7 @@ export default function App() {
                   style={{ ...tbBtn(showAssetPicker), color: showAssetPicker ? '#7c3aed' : COLORS.lightText }}
                   title="Insert Image from Visual Assets"
                 >
-                  <ImagePlus size={14} />
+                  Insert
                 </button>
               )}
             </div>
@@ -1755,7 +1755,7 @@ export default function App() {
                 )
               ) : (
                 <div style={{ textAlign: 'center', color: COLORS.lightText, padding: '60px 20px', fontSize: '16px' }}>
-                  ⏳ No content generated yet. Please wait for Claude AI to generate the content.
+                  No content generated yet. Please wait for Claude AI to generate the content.
                 </div>
               )}
             </div>
@@ -1771,7 +1771,7 @@ export default function App() {
               }}>
                 <div style={{ padding: '12px', borderBottom: '1px solid ' + COLORS.borderColor }}>
                   <h4 style={{ margin: 0, fontSize: '12px', fontWeight: '600', color: COLORS.darkText, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <Image size={12} /> Visual Assets
+                    Visual Assets
                   </h4>
                   <p style={{ margin: '4px 0 0 0', fontSize: '10px', color: COLORS.lightText }}>Click generated images to insert at cursor</p>
                 </div>
@@ -1813,7 +1813,7 @@ export default function App() {
                             background: p.type === 'character' ? '#faf5ff' : '#eff6ff',
                             color: COLORS.lightText, fontSize: '11px'
                           }}>
-                            <Sparkles size={14} style={{ marginRight: '4px' }} /> Not generated yet
+                            Not generated yet
                           </div>
                         )}
                         <div style={{ padding: '6px 8px' }}>
@@ -1839,7 +1839,7 @@ export default function App() {
                               alignItems: 'center',
                               gap: '2px'
                             }}>
-                              <ImagePlus size={9} /> Click to insert
+                              Click to insert
                             </div>
                           )}
                         </div>
@@ -1860,12 +1860,12 @@ export default function App() {
     const dimensions = getPaperDimensions();
     return (
       <>
-        <button onClick={() => setShowPageSettings(!showPageSettings)} style={{ position: 'fixed', bottom: '20px', right: '20px', width: '60px', height: '60px', background: COLORS.navActive, color: COLORS.white, border: 'none', borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '28px', boxShadow: '0 4px 12px rgba(0,0,0,0.2)', zIndex: 998, transition: 'transform 0.2s', fontFamily: FONT_FAMILY }} title="PDF Page Settings">📄</button>
+        <button onClick={() => setShowPageSettings(!showPageSettings)} style={{ position: 'fixed', bottom: '20px', right: '20px', width: '60px', height: '60px', background: COLORS.navActive, color: COLORS.white, border: 'none', borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: '600' }} title="PDF Page Settings">PDF</button>
         {showPageSettings && (
           <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 999 }} onClick={() => setShowPageSettings(false)}>
             <div style={{ background: COLORS.white, borderRadius: '12px', padding: '24px', width: '100%', maxWidth: '400px', boxShadow: '0 20px 40px rgba(0,0,0,0.2)', fontFamily: FONT_FAMILY, maxHeight: '90vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                <h2 style={{ margin: 0, fontSize: '18px', fontWeight: '600' }}>📄 PDF Settings</h2>
+                <h2 style={{ margin: 0, fontSize: '18px', fontWeight: '600' }}>PDF Settings</h2>
                 <button onClick={() => setShowPageSettings(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '20px' }}>✕</button>
               </div>
               <div style={{ marginBottom: '16px' }}>
@@ -1880,7 +1880,7 @@ export default function App() {
                 <div style={{ display: 'flex', gap: '8px' }}>
                   {['portrait', 'landscape'].map(o => (
                     <button key={o} onClick={() => setPageSettings({ ...pageSettings, orientation: o })} style={{ flex: 1, padding: '8px', background: pageSettings.orientation === o ? COLORS.navActive : COLORS.filterBg, color: pageSettings.orientation === o ? COLORS.white : COLORS.darkText, border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px', fontWeight: '500', fontFamily: FONT_FAMILY }}>
-                      {o === 'portrait' ? '📗 Portrait' : '📕 Landscape'}
+                      {o === 'portrait' ? 'Portrait' : 'Landscape'}
                     </button>
                   ))}
                 </div>
@@ -1901,7 +1901,7 @@ export default function App() {
               </div>
               <div style={{ borderTop: `1px solid ${COLORS.borderColor}`, paddingTop: '16px' }}>
                 <div style={{ background: COLORS.lightBg, padding: '12px', borderRadius: '4px', fontSize: '11px', color: COLORS.lightText }}>
-                  <strong>Current:</strong> {dimensions.width} × {dimensions.height} mm • {pageSettings.orientation === 'portrait' ? '📗 Portrait' : '📕 Landscape'} • Margins: {pageSettings.margins}mm
+                  <strong>Current:</strong> {dimensions.width} × {dimensions.height} mm • {pageSettings.orientation === 'portrait' ? 'Portrait' : 'Landscape'} • Margins: {pageSettings.margins}mm
                 </div>
               </div>
             </div>
@@ -1916,7 +1916,7 @@ export default function App() {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', background: '#f5f6f8', fontFamily: FONT_FAMILY }}>
         <div style={{ width: '100%', maxWidth: '400px', padding: '20px' }}>
-          <h1 style={{ textAlign: 'center', marginBottom: '30px', color: COLORS.darkText }}>🎓 AI Content Studio</h1>
+          <h1 style={{ textAlign: 'center', marginBottom: '30px', color: COLORS.darkText }}>AI Content Studio</h1>
           <form onSubmit={handleLogin} style={{ background: COLORS.white, padding: '24px', borderRadius: '8px', border: `1px solid ${COLORS.borderColor}` }}>
             <div style={{ marginBottom: '16px' }}>
               <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '500' }}>Email</label>
@@ -1938,7 +1938,7 @@ export default function App() {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', background: '#f5f6f8', fontFamily: FONT_FAMILY }}>
         <div style={{ width: '100%', maxWidth: '400px', padding: '20px' }}>
-          <h1 style={{ textAlign: 'center', marginBottom: '30px', color: COLORS.darkText }}>🎓 Setup Your Password</h1>
+          <h1 style={{ textAlign: 'center', marginBottom: '30px', color: COLORS.darkText }}>Setup Your Password</h1>
           <form onSubmit={handleSetupPassword} style={{ background: COLORS.white, padding: '24px', borderRadius: '8px', border: `1px solid ${COLORS.borderColor}` }}>
             <div style={{ marginBottom: '16px' }}>
               <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '500' }}>Password</label>
@@ -1968,23 +1968,23 @@ export default function App() {
       <div style={{ width: sidebarOpen ? '280px' : '80px', background: COLORS.sidebarBg, borderRight: `1px solid ${COLORS.borderColor}`, padding: '16px', display: 'flex', flexDirection: 'column', transition: 'width 0.3s' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
           <button onClick={() => setSidebarOpen(!sidebarOpen)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '8px', display: 'flex' }}>
-            {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
+            {sidebarOpen ? "✕" : "☰"}
           </button>
           {sidebarOpen && <h3 style={{ margin: 0, fontSize: '14px', fontWeight: '700', color: COLORS.darkText, whiteSpace: 'nowrap' }}>Academic Curator</h3>}
         </div>
         <nav style={{ marginTop: '30px', flex: 1 }}>
           {[
-            { icon: <BookOpen size={20} />, label: 'Projects', action: 'textbooks', disabled: false, rolesAllowed: ['central_admin', 'admin', 'content_developer'] },
-            { icon: <Users size={20} />, label: 'Manage Users', action: 'manage-users', disabled: true, rolesAllowed: ['central_admin', 'admin'] },
-            { icon: <Mail size={20} />, label: 'Invites', action: 'invites', disabled: false, rolesAllowed: ['central_admin', 'admin'] }
+            { icon: null, label: 'Projects', action: 'textbooks', disabled: false, rolesAllowed: ['central_admin', 'admin', 'content_developer'] },
+            { icon: null, label: 'Manage Users', action: 'manage-users', disabled: true, rolesAllowed: ['central_admin', 'admin'] },
+            { icon: null, label: 'Invites', action: 'invites', disabled: false, rolesAllowed: ['central_admin', 'admin'] }
           ].filter(item => (item.rolesAllowed.includes(currentUser?.user_metadata?.role || 'content_developer'))).map((item, i) => (
             <button key={i} onClick={() => { if (item.action === 'invites') { setShowInvitePanel(!showInvitePanel); if (!showInvitePanel) fetchPendingInvites(); } }} disabled={item.disabled} style={{ width: '100%', padding: '12px 16px', background: item.action === 'textbooks' ? COLORS.navActive : 'transparent', color: item.action === 'textbooks' ? COLORS.white : (item.disabled ? COLORS.navDisabled : COLORS.navText), border: 'none', borderRadius: '6px', cursor: item.disabled ? 'not-allowed' : 'pointer', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '12px', fontSize: '14px', fontWeight: '500', fontFamily: FONT_FAMILY, whiteSpace: 'nowrap' }}>
-              {item.icon}{sidebarOpen && item.label}
+              {sidebarOpen && item.label}
             </button>
           ))}
         </nav>
         <button onClick={async () => { await supabase.auth.signOut(); setCurrentUser(null); setAuthPage('login'); }} style={{ width: '100%', padding: '12px 16px', background: COLORS.errorBg, color: COLORS.errorText, border: 'none', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '12px', fontSize: '14px', fontWeight: '500', fontFamily: FONT_FAMILY }}>
-          <LogOut size={20} />{sidebarOpen && 'Logout'}
+          {sidebarOpen ? 'Logout' : '←'}
         </button>
       </div>
 
@@ -1999,7 +1999,7 @@ export default function App() {
           {/* Invite Panel */}
           {showInvitePanel && (currentUser?.user_metadata?.role === 'central_admin' || currentUser?.user_metadata?.role === 'admin') && (
             <div style={{ background: COLORS.white, border: `1px solid ${COLORS.borderColor}`, borderRadius: '8px', padding: '20px', marginBottom: '24px' }}>
-              <h2 style={{ margin: '0 0 16px 0', fontSize: '16px', fontWeight: '600' }}>📧 Send Invite</h2>
+              <h2 style={{ margin: '0 0 16px 0', fontSize: '16px', fontWeight: '600' }}>Send Invite</h2>
               <form onSubmit={handleSendInvite} style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
                 <input type="email" value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)} placeholder="user@example.com" required style={{ flex: 1, padding: '10px 12px', border: `1px solid ${COLORS.borderColor}`, borderRadius: '6px', fontSize: '14px', fontFamily: FONT_FAMILY }} />
                 <button type="submit" disabled={inviteSending} style={{ padding: '10px 20px', background: COLORS.navActive, color: COLORS.white, border: 'none', borderRadius: '6px', cursor: inviteSending ? 'not-allowed' : 'pointer', fontWeight: '500', fontSize: '14px', fontFamily: FONT_FAMILY }}>{inviteSending ? 'Sending...' : 'Send Invite'}</button>
@@ -2024,13 +2024,13 @@ export default function App() {
           {/* Action Buttons */}
           <div style={{ display: 'flex', gap: '12px', marginBottom: '24px', flexWrap: 'wrap' }}>
             {[
-              { label: 'Add Record', icon: <Plus size={16} />, bg: COLORS.navActive, color: COLORS.white, action: handleOpenAddForm },
-              { label: 'Export', icon: <Download size={16} />, bg: COLORS.filterBg, color: COLORS.darkText, action: handleExport },
-              { label: 'Refresh', icon: <RefreshCw size={16} />, bg: COLORS.filterBg, color: COLORS.darkText, action: fetchRecords },
-              { label: 'Clear', icon: <X size={16} />, bg: COLORS.filterBg, color: COLORS.darkText, action: handleClearFilters },
+              { label: 'Add Record', icon: null, bg: COLORS.navActive, color: COLORS.white, action: handleOpenAddForm },
+              { label: 'Export', icon: null, bg: COLORS.filterBg, color: COLORS.darkText, action: handleExport },
+              { label: 'Refresh', icon: null, bg: COLORS.filterBg, color: COLORS.darkText, action: fetchRecords },
+              { label: 'Clear', icon: null, bg: COLORS.filterBg, color: COLORS.darkText, action: handleClearFilters },
             ].map((btn, i) => (
               <button key={i} onClick={btn.action} style={{ padding: '10px 16px', background: btn.bg, color: btn.color, border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '400', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px', fontFamily: FONT_FAMILY }}>
-                {btn.icon} {btn.label}
+                {btn.label}
               </button>
             ))}
           </div>
@@ -2038,7 +2038,7 @@ export default function App() {
           {/* Add/Edit Form */}
           {showAddForm && (
             <div data-form="edit-add" style={{ background: editingId ? '#fef3c7' : COLORS.white, borderRadius: '12px', padding: '20px', marginBottom: '24px', border: editingId ? '2px solid #f59e0b' : `1px solid ${COLORS.borderColor}`, transition: 'all 0.3s ease' }}>
-              <h3 style={{ margin: '0 0 16px 0', fontSize: '16px', fontWeight: '600', color: editingId ? '#d97706' : COLORS.darkText }}>{editingId ? '✏️ Edit Record' : '➕ Add New Record'}</h3>
+              <h3 style={{ margin: '0 0 16px 0', fontSize: '16px', fontWeight: '600', color: editingId ? '#d97706' : COLORS.darkText }}>{editingId ? 'Edit Record' : 'Add New Record'}</h3>
               <form onSubmit={handleSaveRecord}>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
                   <div>
@@ -2074,11 +2074,11 @@ export default function App() {
                   <textarea value={formPrompt} onChange={(e) => setFormPrompt(e.target.value.substring(0, 20000))} rows="12" style={{ width: '100%', padding: '12px', border: `1px solid ${COLORS.borderColor}`, borderRadius: '6px', fontSize: '13px', fontFamily: FONT_FAMILY, resize: 'vertical', minHeight: '240px', lineHeight: '1.5' }} />
                 </div>
                 <div style={{ background: '#f0f9ff', border: '1px solid #a7f3d0', borderRadius: '6px', padding: '12px', marginBottom: '16px', fontSize: '12px', color: '#065f46' }}>
-                  ⚡ Claude AI will generate: lesson content + character descriptions + scene descriptions automatically
+                  Claude AI will generate: lesson content + character descriptions + scene descriptions automatically
                 </div>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <button type="button" onClick={handleCancelForm} style={{ flex: 1, padding: '10px', background: COLORS.filterBg, color: COLORS.darkText, border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '500', fontSize: '14px', fontFamily: FONT_FAMILY }}>Cancel</button>
-                  <button type="submit" disabled={formLoading} style={{ flex: 1, padding: '10px', background: COLORS.navActive, color: COLORS.white, border: 'none', borderRadius: '6px', cursor: formLoading ? 'not-allowed' : 'pointer', fontWeight: '500', fontSize: '14px', fontFamily: FONT_FAMILY }}>{formLoading ? '⏳ Saving...' : '⚡ Save & Generate'}</button>
+                <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                  <button type="button" onClick={handleCancelForm} style={{ padding: '8px 20px', background: COLORS.filterBg, color: COLORS.darkText, border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '500', fontSize: '13px', fontFamily: FONT_FAMILY }}>Cancel</button>
+                  <button type="submit" disabled={formLoading} style={{ padding: '8px 24px', background: COLORS.navActive, color: COLORS.white, border: 'none', borderRadius: '6px', cursor: formLoading ? 'not-allowed' : 'pointer', fontWeight: '500', fontSize: '13px', fontFamily: FONT_FAMILY }}>{formLoading ? 'Saving...' : 'Save & Generate'}</button>
                 </div>
               </form>
             </div>
@@ -2133,7 +2133,7 @@ export default function App() {
                       <td style={{ padding: '12px', fontSize: '13px' }}>{r.word_count || 0}</td>
                       <td style={{ padding: '12px', fontSize: '13px' }}>
                         {imgCount > 0 ? (
-                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', padding: '4px 8px', borderRadius: '3px', fontSize: '11px', fontWeight: '500', background: '#dbeafe', color: '#1e40af' }}><Image size={11} /> {imgCount}/{promptCount}</span>
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', padding: '4px 8px', borderRadius: '3px', fontSize: '11px', fontWeight: '500', background: '#dbeafe', color: '#1e40af' }}>{imgCount}/{promptCount}</span>
                         ) : promptCount > 0 ? (
                           <span style={{ fontSize: '11px', color: COLORS.lightText }}>{promptCount} prompts</span>
                         ) : (
@@ -2141,8 +2141,8 @@ export default function App() {
                         )}
                       </td>
                       <td style={{ padding: '12px', fontSize: '13px', display: 'flex', gap: '8px' }}>
-                        <button onClick={() => { setViewingRecord(r); setViewTab('content'); setIsEditing(false); setVisualMessage(''); }} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', display: 'flex' }}><Eye size={18} color={COLORS.navActive} /></button>
-                        <button onClick={() => handleEditRecord(r)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', display: 'flex' }}><Edit2 size={18} color={COLORS.navActive} /></button>
+                        <button onClick={() => { setViewingRecord(r); setViewTab('content'); setIsEditing(false); setVisualMessage(''); }} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', color: COLORS.navActive, fontSize: '12px', fontWeight: '500', fontFamily: FONT_FAMILY }}>View</button>
+                        <button onClick={() => handleEditRecord(r)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', color: COLORS.navActive, fontSize: '12px', fontWeight: '500', fontFamily: FONT_FAMILY }}>Edit</button>
                       </td>
                     </tr>
                   );
@@ -2169,16 +2169,16 @@ export default function App() {
             {/* Tab Bar */}
             <div style={{ padding: '0 24px', borderBottom: `1px solid ${COLORS.borderColor}`, display: 'flex', background: COLORS.lightBg }}>
               <button onClick={() => setViewTab('content')} style={{ padding: '12px 20px', background: 'none', border: 'none', borderBottom: viewTab === 'content' ? `2px solid ${COLORS.navActive}` : '2px solid transparent', color: viewTab === 'content' ? COLORS.navActive : COLORS.lightText, fontWeight: viewTab === 'content' ? '600' : '500', fontSize: '13px', cursor: 'pointer', fontFamily: FONT_FAMILY, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <BookOpen size={14} /> Content
+                Content
               </button>
               <button onClick={() => setViewTab('visuals')} style={{ padding: '12px 20px', background: 'none', border: 'none', borderBottom: viewTab === 'visuals' ? '2px solid #8b5cf6' : '2px solid transparent', color: viewTab === 'visuals' ? '#8b5cf6' : COLORS.lightText, fontWeight: viewTab === 'visuals' ? '600' : '500', fontSize: '13px', cursor: 'pointer', fontFamily: FONT_FAMILY, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <Image size={14} /> Visual Assets
+                Visual Assets
                 {getVisualPrompts(viewingRecord).length > 0 && (
                   <span style={{ background: '#8b5cf6', color: 'white', fontSize: '10px', padding: '1px 6px', borderRadius: '10px', fontWeight: '600' }}>{getVisualPrompts(viewingRecord).length}</span>
                 )}
               </button>
               <button onClick={() => setViewTab('history')} style={{ padding: '12px 20px', background: 'none', border: 'none', borderBottom: viewTab === 'history' ? '2px solid #f59e0b' : '2px solid transparent', color: viewTab === 'history' ? '#f59e0b' : COLORS.lightText, fontWeight: viewTab === 'history' ? '600' : '500', fontSize: '13px', cursor: 'pointer', fontFamily: FONT_FAMILY, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <Clock size={14} /> History
+                History
               </button>
             </div>
 
@@ -2190,9 +2190,9 @@ export default function App() {
             {/* Footer */}
             {viewingRecord.ai_output && (
               <div style={{ padding: '14px 24px', borderTop: `1px solid ${COLORS.borderColor}`, display: 'flex', justifyContent: 'flex-end', gap: '10px', background: COLORS.lightBg }}>
-                <button onClick={handleCopyContent} style={{ padding: '9px 16px', background: '#6366f1', color: COLORS.white, border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '500', fontSize: '12px', fontFamily: FONT_FAMILY, display: 'flex', alignItems: 'center', gap: '6px' }}><Copy size={14} /> Copy</button>
-                <button onClick={handleExportPDF} style={{ padding: '9px 16px', background: COLORS.navActive, color: COLORS.white, border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '500', fontSize: '12px', fontFamily: FONT_FAMILY, display: 'flex', alignItems: 'center', gap: '6px' }}><Download size={14} /> PDF</button>
-                <button onClick={handleExportWord} style={{ padding: '9px 16px', background: COLORS.navActive, color: COLORS.white, border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '500', fontSize: '12px', fontFamily: FONT_FAMILY, display: 'flex', alignItems: 'center', gap: '6px' }}><Download size={14} /> Word</button>
+                <button onClick={handleCopyContent} style={{ padding: '9px 16px', background: '#6366f1', color: COLORS.white, border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '500', fontSize: '12px', fontFamily: FONT_FAMILY, display: 'flex', alignItems: 'center', gap: '6px' }}>Copy</button>
+                <button onClick={handleExportPDF} style={{ padding: '9px 16px', background: COLORS.navActive, color: COLORS.white, border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '500', fontSize: '12px', fontFamily: FONT_FAMILY, display: 'flex', alignItems: 'center', gap: '6px' }}>PDF</button>
+                <button onClick={handleExportWord} style={{ padding: '9px 16px', background: COLORS.navActive, color: COLORS.white, border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '500', fontSize: '12px', fontFamily: FONT_FAMILY, display: 'flex', alignItems: 'center', gap: '6px' }}>Word</button>
               </div>
             )}
           </div>
@@ -2206,13 +2206,13 @@ export default function App() {
             <img src={lightboxImage} alt="Full size" style={{ maxWidth: '90vw', maxHeight: '85vh', objectFit: 'contain', borderRadius: '8px', boxShadow: '0 0 40px rgba(0,0,0,0.5)' }} />
             <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', marginTop: '12px' }}>
               <button onClick={() => { navigator.clipboard.writeText(lightboxImage); setVisualMessage('✅ URL copied!'); }} style={{ padding: '8px 16px', background: 'rgba(255,255,255,0.15)', color: 'white', border: '1px solid rgba(255,255,255,0.3)', borderRadius: '6px', fontSize: '12px', fontWeight: '600', cursor: 'pointer', fontFamily: FONT_FAMILY, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <Copy size={12} /> Copy URL
+                Copy URL
               </button>
               <button onClick={() => handleInsertImageAtCursor(lightboxImage, 'image')} style={{ padding: '8px 16px', background: '#2563eb', color: 'white', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: '600', cursor: 'pointer', fontFamily: FONT_FAMILY, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <ImagePlus size={12} /> Insert into Content
+                Insert into Content
               </button>
               <button onClick={() => window.open(lightboxImage, '_blank')} style={{ padding: '8px 16px', background: 'rgba(255,255,255,0.15)', color: 'white', border: '1px solid rgba(255,255,255,0.3)', borderRadius: '6px', fontSize: '12px', fontWeight: '600', cursor: 'pointer', fontFamily: FONT_FAMILY, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <Maximize2 size={12} /> Open Original
+                Open Original
               </button>
               <button onClick={() => setLightboxImage(null)} style={{ padding: '8px 16px', background: 'rgba(255,255,255,0.15)', color: 'white', border: '1px solid rgba(255,255,255,0.3)', borderRadius: '6px', fontSize: '12px', fontWeight: '600', cursor: 'pointer', fontFamily: FONT_FAMILY }}>
                 ✕ Close

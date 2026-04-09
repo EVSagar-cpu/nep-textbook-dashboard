@@ -166,6 +166,9 @@ export default function App() {
   const [showAssetPicker, setShowAssetPicker] = useState(false);
   const undoStack = useRef([]);
   const redoStack = useRef([]);
+  const [viewMode, setViewMode] = useState('markdown'); // 'markdown' | 'normal'
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const fileInputRef = useRef(null);
 
   // ===== VISUAL PROMPTS STATE =====
   const [generatingImageId, setGeneratingImageId] = useState(null);
@@ -777,6 +780,166 @@ export default function App() {
     pushUndo(editContent);
     setEditContent(editContent.substring(0, start) + '\n```\ncode here\n```\n' + editContent.substring(start));
     setTimeout(function() { textarea.focus(); }, 50);
+  };
+
+  // ===== LOCAL IMAGE UPLOAD =====
+  const handleLocalImageUpload = async (e) => {
+    var file = e.target.files && e.target.files[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      alert('Please select an image file (PNG, JPG, GIF, WebP)');
+      return;
+    }
+
+    // Validate file size (max 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      alert('Image too large. Maximum 10MB.');
+      return;
+    }
+
+    setUploadingImage(true);
+
+    try {
+      var recordId = viewingRecord ? viewingRecord.record_id : 'misc';
+      var ext = file.name.split('.').pop() || 'png';
+      var filename = recordId + '/upload_' + Date.now() + '.' + ext;
+
+      var { data, error } = await supabase.storage
+        .from('generated-images')
+        .upload(filename, file, { contentType: file.type, upsert: true });
+
+      if (error) throw error;
+
+      var { data: urlData } = supabase.storage
+        .from('generated-images')
+        .getPublicUrl(filename);
+
+      var publicUrl = urlData.publicUrl;
+
+      if (!publicUrl) throw new Error('Failed to get public URL');
+
+      // Insert into content at cursor
+      handleInsertImageAtCursor(publicUrl, file.name.replace(/\.[^.]+$/, ''));
+      setVisualMessage('Image uploaded and inserted!');
+    } catch (err) {
+      console.error('Upload error:', err);
+      alert('Upload failed: ' + err.message);
+    } finally {
+      setUploadingImage(false);
+      // Reset file input
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  // ===== PRINT PREVIEW =====
+  const handlePrintPreview = () => {
+    if (!viewingRecord || !viewingRecord.ai_output) return;
+
+    var content = viewingRecord.ai_output;
+    var lines = content.split('\n');
+    var html = '';
+    var i = 0;
+    var inCodeBlock = false;
+    var codeContent = [];
+    var tableLines = [];
+
+    var flushTable = function() {
+      if (tableLines.length > 0) {
+        var filtered = tableLines.filter(function(l) { return !/^[\s|:-]+$/.test(l); });
+        var rows = filtered.map(function(l) { return l.split('|').map(function(c) { return c.trim(); }).filter(function(c) { return c; }); });
+        if (rows.length > 1) {
+          var colCount = rows[0].length;
+          html += '<table style="width:100%;border-collapse:collapse;margin:14px 0;border:1px solid #d1d5db;page-break-inside:avoid;">';
+          html += '<thead><tr style="background:#1e293b;color:white;">';
+          rows[0].forEach(function(cell, ci) {
+            html += '<th style="padding:8px 12px;text-align:left;font-weight:600;font-size:11px;border-bottom:2px solid #475569;border-right:' + (ci < colCount - 1 ? '1px solid #334155' : 'none') + ';">' + cell + '</th>';
+          });
+          html += '</tr></thead><tbody>';
+          rows.slice(1).forEach(function(row, ri) {
+            html += '<tr style="background:' + (ri % 2 === 0 ? '#fff' : '#f8fafc') + ';border-bottom:1px solid #e5e7eb;">';
+            for (var ci = 0; ci < colCount; ci++) { html += '<td style="padding:8px 12px;border-right:' + (ci < colCount - 1 ? '1px solid #e5e7eb' : 'none') + ';font-size:12px;vertical-align:top;">' + (row[ci] || '') + '</td>'; }
+            html += '</tr>';
+          });
+          html += '</tbody></table>';
+        }
+        tableLines = [];
+      }
+    };
+
+    while (i < lines.length) {
+      var line = lines[i];
+      if (line.trim().indexOf('```') === 0) {
+        if (inCodeBlock) { html += '<pre style="background:#1f2937;color:#e5e7eb;padding:12px;border-radius:6px;margin:10px 0;font-size:11px;page-break-inside:avoid;"><code>' + codeContent.join('\n') + '</code></pre>'; codeContent = []; inCodeBlock = false; }
+        else { flushTable(); inCodeBlock = true; }
+        i++; continue;
+      }
+      if (inCodeBlock) { codeContent.push(line); i++; continue; }
+      if (line.indexOf('|') !== -1 && line.trim().length > 2) { tableLines.push(line); i++; continue; }
+      if (tableLines.length > 0) { flushTable(); }
+
+      var imgMatch = line.match(/!\[([^\]]*)\]\(([^)]+)\)/);
+      if (imgMatch) { html += '<div style="margin:16px 0;text-align:center;page-break-inside:avoid;"><img src="' + imgMatch[2] + '" alt="' + imgMatch[1] + '" style="max-width:80%;max-height:400px;border-radius:4px;" />' + (imgMatch[1] ? '<p style="font-size:10px;color:#666;margin-top:4px;">' + imgMatch[1] + '</p>' : '') + '</div>'; i++; continue; }
+
+      if (line.indexOf('### ') === 0) { flushTable(); html += '<h3 style="font-size:15px;margin:14px 0 6px;font-weight:600;page-break-after:avoid;">' + line.replace(/^#+\s*/, '') + '</h3>'; i++; continue; }
+      if (line.indexOf('## ') === 0) { flushTable(); html += '<h2 style="font-size:17px;margin:16px 0 8px;font-weight:600;page-break-after:avoid;">' + line.replace(/^#+\s*/, '') + '</h2>'; i++; continue; }
+      if (line.indexOf('# ') === 0) { flushTable(); html += '<h1 style="font-size:20px;margin:18px 0 10px;font-weight:700;page-break-after:avoid;">' + line.replace(/^#+\s*/, '') + '</h1>'; i++; continue; }
+      if (/^---+$/.test(line.trim())) { html += '<hr style="border:none;border-top:1px solid #ddd;margin:14px 0;">'; i++; continue; }
+
+      if (line.trim().indexOf('- ') === 0 || line.trim().indexOf('* ') === 0 || /^\d+\.\s/.test(line.trim())) {
+        var items = [];
+        while (i < lines.length && (lines[i].trim().indexOf('- ') === 0 || lines[i].trim().indexOf('* ') === 0 || /^\d+\.\s/.test(lines[i].trim()))) {
+          var item = lines[i].replace(/^[\s\-\*]+|\d+\.\s*/, '').trim();
+          if (item) items.push(item);
+          i++;
+        }
+        if (items.length > 0) { html += '<ul style="margin-left:20px;margin-bottom:10px;">'; items.forEach(function(it) { html += '<li style="margin-bottom:4px;line-height:1.6;font-size:13px;">' + it.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\*(.*?)\*/g, '<em>$1</em>') + '</li>'; }); html += '</ul>'; }
+        continue;
+      }
+
+      if (line.indexOf('>') === 0) { html += '<blockquote style="border-left:3px solid #2563eb;padding:8px 12px;margin:10px 0;background:#f0f9ff;font-style:italic;color:#475569;font-size:12px;">' + line.replace(/^>\s*/, '') + '</blockquote>'; i++; continue; }
+      if (!line.trim()) { html += '<div style="height:4px;"></div>'; i++; continue; }
+
+      var text = line.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\*(.*?)\*/g, '<em>$1</em>').replace(/<u>(.*?)<\/u>/g, '<u>$1</u>').replace(/~~(.*?)~~/g, '<s>$1</s>').replace(/`(.*?)`/g, '<code style="background:#f3f4f6;padding:1px 4px;border-radius:2px;font-size:11px;">$1</code>');
+      html += '<p style="margin:6px 0;line-height:1.7;font-size:13px;">' + text + '</p>';
+      i++;
+    }
+    flushTable();
+
+    // Open print window
+    var printWindow = window.open('', '_blank', 'width=900,height=700');
+    if (!printWindow) { alert('Pop-up blocked. Please allow pop-ups for this site.'); return; }
+
+    printWindow.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>' + viewingRecord.topic + '</title>');
+    printWindow.document.write('<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">');
+    printWindow.document.write('<style>');
+    printWindow.document.write('* { margin: 0; padding: 0; box-sizing: border-box; }');
+    printWindow.document.write('body { font-family: Montserrat, Inter, sans-serif; color: #0f172a; padding: 40px; max-width: 800px; margin: 0 auto; }');
+    printWindow.document.write('.header { margin-bottom: 24px; padding-bottom: 16px; border-bottom: 2px solid #2563eb; }');
+    printWindow.document.write('.header h1 { font-size: 24px; font-weight: 700; margin-bottom: 4px; }');
+    printWindow.document.write('.header p { font-size: 13px; color: #6b7280; }');
+    printWindow.document.write('.print-bar { display: flex; gap: 8px; margin-bottom: 20px; padding: 12px; background: #f3f4f6; border-radius: 8px; align-items: center; }');
+    printWindow.document.write('.print-bar button { padding: 8px 20px; border: none; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: Inter, sans-serif; }');
+    printWindow.document.write('.print-btn { background: #2563eb; color: white; }');
+    printWindow.document.write('.close-btn { background: #e5e7eb; color: #374151; }');
+    printWindow.document.write('@media print { .print-bar { display: none !important; } body { padding: 20px; } }');
+    printWindow.document.write('img { max-width: 100%; }');
+    printWindow.document.write('table { page-break-inside: avoid; }');
+    printWindow.document.write('h1, h2, h3 { page-break-after: avoid; }');
+    printWindow.document.write('</style></head><body>');
+    printWindow.document.write('<div class="print-bar">');
+    printWindow.document.write('<button class="print-btn" onclick="window.print()">Print (Ctrl+P)</button>');
+    printWindow.document.write('<button class="close-btn" onclick="window.close()">Close Preview</button>');
+    printWindow.document.write('<span style="margin-left:auto;font-size:12px;color:#6b7280;">Use browser print settings for paper size, orientation, margins, headers & footers</span>');
+    printWindow.document.write('</div>');
+    printWindow.document.write('<div class="header">');
+    printWindow.document.write('<h1>' + viewingRecord.topic + '</h1>');
+    printWindow.document.write('<p>Class ' + viewingRecord.class + ' | ' + viewingRecord.subject + (viewingRecord.sub_topic ? ' | ' + viewingRecord.sub_topic : '') + (viewingRecord.content_type ? ' | ' + viewingRecord.content_type : '') + '</p>');
+    printWindow.document.write('</div>');
+    printWindow.document.write(html);
+    printWindow.document.write('</body></html>');
+    printWindow.document.close();
   };
 
   const handleSaveContent = async () => {
@@ -1826,8 +1989,28 @@ export default function App() {
                 </>
               )}
             </div>
-            <span style={{ fontSize: '11px', color: COLORS.lightText }}>{viewingRecord.word_count || 0} words</span>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              {/* View Mode Toggle */}
+              <div style={{ display: 'flex', background: COLORS.filterBg, borderRadius: '6px', padding: '2px' }}>
+                <button onClick={() => setViewMode('markdown')} style={{ padding: '4px 10px', borderRadius: '4px', border: 'none', fontSize: '11px', fontWeight: '500', cursor: 'pointer', fontFamily: FONT_FAMILY, background: viewMode === 'markdown' ? COLORS.white : 'transparent', color: viewMode === 'markdown' ? COLORS.navActive : COLORS.lightText, boxShadow: viewMode === 'markdown' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none' }}>
+                  Markdown
+                </button>
+                <button onClick={() => setViewMode('normal')} style={{ padding: '4px 10px', borderRadius: '4px', border: 'none', fontSize: '11px', fontWeight: '500', cursor: 'pointer', fontFamily: FONT_FAMILY, background: viewMode === 'normal' ? COLORS.white : 'transparent', color: viewMode === 'normal' ? COLORS.navActive : COLORS.lightText, boxShadow: viewMode === 'normal' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none' }}>
+                  Normal Text
+                </button>
+              </div>
+              <span style={{ fontSize: '11px', color: COLORS.lightText }}>{viewingRecord.word_count || 0} words</span>
+            </div>
           </div>
+
+          {/* Hidden file input for local upload */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            style={{ display: 'none' }}
+            onChange={handleLocalImageUpload}
+          />
 
           {/* ===== FORMATTING TOOLBAR (only in edit mode) ===== */}
           {isEditing && (
@@ -1918,7 +2101,17 @@ export default function App() {
 
               {tbSep()}
 
-              {/* Image Insert */}
+              {/* Upload Image from Device */}
+              <button
+                onMouseDown={noFocus}
+                onClick={function() { if (fileInputRef.current) fileInputRef.current.click(); }}
+                style={{ ...tbBtn(false), color: uploadingImage ? COLORS.navActive : COLORS.lightText }}
+                title="Upload Image from Device"
+              >
+                <MI name={uploadingImage ? "hourglass_empty" : "upload_file"} size={17} />
+              </button>
+
+              {/* Image Insert from Visual Assets */}
               {allPrompts.length > 0 && (
                 <button
                   onMouseDown={noFocus}
@@ -1929,6 +2122,13 @@ export default function App() {
                   <MI name="add_photo_alternate" size={17} />
                 </button>
               )}
+
+              {tbSep()}
+
+              {/* Print Preview */}
+              <button onMouseDown={noFocus} onClick={handlePrintPreview} style={tbBtn(false)} title="Print Preview">
+                <MI name="print" size={17} />
+              </button>
             </div>
           )}
 
@@ -1962,9 +2162,40 @@ export default function App() {
                     }}
                     placeholder="Start typing or paste content here..."
                   />
-                ) : (
+                ) : viewMode === 'markdown' ? (
                   <div style={{ padding: '24px 32px', fontSize: '14px', lineHeight: '1.8', color: COLORS.darkText, fontFamily: 'Montserrat, sans-serif', fontWeight: '400', maxWidth: '850px' }}>
                     {parseMarkdownToReact(viewingRecord.ai_output)}
+                  </div>
+                ) : (
+                  <div style={{ padding: '24px 32px', maxWidth: '850px' }}>
+                    {viewingRecord.ai_output.split('\n').map(function(line, idx) {
+                      // Render images inline in normal text view
+                      var imgMatch = line.match(/!\[([^\]]*)\]\(([^)]+)\)/);
+                      if (imgMatch) {
+                        return (
+                          <div key={idx} style={{ margin: '12px 0', textAlign: 'center' }}>
+                            <img src={imgMatch[2]} alt={imgMatch[1]} style={{ maxWidth: '100%', maxHeight: '400px', borderRadius: '6px', border: '1px solid ' + COLORS.borderColor, cursor: 'pointer' }} onClick={function() { setLightboxImage(imgMatch[2]); }} />
+                            {imgMatch[1] && <p style={{ fontSize: '11px', color: COLORS.lightText, marginTop: '4px', fontStyle: 'italic' }}>{imgMatch[1]}</p>}
+                          </div>
+                        );
+                      }
+                      if (!line.trim()) return <div key={idx} style={{ height: '10px' }} />;
+                      // Strip markdown syntax for clean text
+                      var clean = line
+                        .replace(/^#{1,6}\s*/, '')
+                        .replace(/\*\*(.*?)\*\*/g, '$1')
+                        .replace(/\*(.*?)\*/g, '$1')
+                        .replace(/~~(.*?)~~/g, '$1')
+                        .replace(/`(.*?)`/g, '$1')
+                        .replace(/<[^>]+>/g, '')
+                        .replace(/^[-*]\s+/, '• ')
+                        .replace(/^>\s*/, '');
+                      return (
+                        <p key={idx} style={{ margin: '4px 0', lineHeight: '1.7', fontSize: '14px', color: COLORS.darkText, fontFamily: 'Inter, sans-serif' }}>
+                          {clean}
+                        </p>
+                      );
+                    })}
                   </div>
                 )
               ) : (
@@ -2517,6 +2748,7 @@ export default function App() {
                 <button onClick={handleCopyContent} style={{ padding: '7px 14px', background: '#6366f1', color: COLORS.white, border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '500', fontSize: '12px', fontFamily: FONT_FAMILY, display: 'flex', alignItems: 'center', gap: '4px' }}><MI name="content_copy" size={14} color="white" /> Copy</button>
                 <button onClick={handleExportPDF} style={{ padding: '7px 14px', background: COLORS.navActive, color: COLORS.white, border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '500', fontSize: '12px', fontFamily: FONT_FAMILY, display: 'flex', alignItems: 'center', gap: '4px' }}><MI name="picture_as_pdf" size={14} color="white" /> PDF</button>
                 <button onClick={handleExportWord} style={{ padding: '7px 14px', background: COLORS.navActive, color: COLORS.white, border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '500', fontSize: '12px', fontFamily: FONT_FAMILY, display: 'flex', alignItems: 'center', gap: '4px' }}><MI name="description" size={14} color="white" /> Word</button>
+                <button onClick={handlePrintPreview} style={{ padding: '7px 14px', background: '#059669', color: COLORS.white, border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '500', fontSize: '12px', fontFamily: FONT_FAMILY, display: 'flex', alignItems: 'center', gap: '4px' }}><MI name="print" size={14} color="white" /> Print</button>
               </div>
             )}
           </div>

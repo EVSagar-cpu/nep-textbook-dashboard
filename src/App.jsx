@@ -1894,7 +1894,7 @@ const handleSavePlagiarismResult = async (result) => {
             <table style={{ width:'100%', borderCollapse:'collapse' }}>
               <thead>
                 <tr style={{ background:'#64748b', color:COLORS.white }}>
-                  {['S.NO','ID','CLASS','SUBJECT','TOPIC','TYPE','STATUS','WORDS','IMAGES','NOTES','ACTION'].map(h => <th key={h} style={{ padding:'12px', textAlign:'left', fontSize:'11px', fontWeight:'600', textTransform:'uppercase', letterSpacing:'0.5px' }}>{h}</th>)}
+                  {['S.NO','ID','CLASS','SUBJECT','TOPIC','TYPE','STATUS','WORDS','PLAGIARISM','IMAGES','NOTES','ACTION'].map(h =>
                 </tr>
               </thead>
               <tbody>
@@ -1916,12 +1916,53 @@ const handleSavePlagiarismResult = async (result) => {
                         {r.text_model && r.text_model !== 'claude' && <span style={{ marginLeft:'4px', fontSize:'9px', fontWeight:'700', padding:'1px 5px', borderRadius:'8px', background:r.text_model==='openai'?'#ecfdf5':'#fef9c3', color:r.text_model==='openai'?'#059669':'#ca8a04', border:'1px solid '+(r.text_model==='openai'?'#a7f3d0':'#fde68a') }}>{r.text_model==='openai'?'GPT-4o':'Gemini'}</span>}
                       </td>
                       <td style={{ padding:'12px', fontSize:'13px' }}>{r.word_count||0}</td>
-                      <td style={{ padding:'12px', fontSize:'13px' }}>{imgCount>0?<span style={{ display:'inline-flex', alignItems:'center', gap:'3px', padding:'4px 8px', borderRadius:'3px', fontSize:'11px', fontWeight:'500', background:'#dbeafe', color:'#1e40af' }}>{imgCount}/{promptCount}</span>:promptCount>0?<span style={{ fontSize:'11px', color:COLORS.lightText }}>{promptCount} prompts</span>:<span style={{ color:COLORS.lightText, fontSize:'11px' }}>—</span>}</td>
-                      <td style={{ padding:'12px', fontSize:'13px' }}>{cc>0?<span style={{ display:'inline-flex', alignItems:'center', gap:'3px', padding:'4px 8px', borderRadius:'3px', fontSize:'11px', fontWeight:'500', background:'#fef3c7', color:'#92400e' }}><MI name="chat_bubble" size={12} /> {cc}</span>:<span style={{ color:COLORS.lightText, fontSize:'11px' }}>—</span>}</td>
-                      <td style={{ padding:'12px', fontSize:'13px', display:'flex', gap:'8px' }}>
-                        <button onClick={() => { setViewingRecord(r); setViewTab('content'); setIsEditing(false); setVisualMessage(''); setShowComments(false); setImgWidthMap({}); }} style={{ background:'none', border:'none', cursor:'pointer', padding:'4px', color:COLORS.navActive, fontSize:'12px', fontWeight:'500', fontFamily:FONT_FAMILY, display:'flex', alignItems:'center', gap:'2px' }}><MI name="visibility" size={15} /> View</button>
-                        <button onClick={() => handleEditRecord(r)} style={{ background:'none', border:'none', cursor:'pointer', padding:'4px', color:COLORS.navActive, fontSize:'12px', fontWeight:'500', fontFamily:FONT_FAMILY, display:'flex', alignItems:'center', gap:'2px' }}><MI name="edit" size={15} /> Edit</button>
-                      </td>
+                      {/* PLAGIARISM SCORE */}
+<td style={{ padding:'12px', fontSize:'13px' }}>
+  {r.plagiarism_result ? (
+    <button onClick={(e) => { e.stopPropagation(); setPlagiarismRecord(r); }}
+      style={{ display:'inline-flex', alignItems:'center', gap:'4px', padding:'4px 9px', borderRadius:'6px', border:'none', cursor:'pointer', fontFamily:FONT_FAMILY, fontSize:'11px', fontWeight:'700',
+        background: r.plagiarism_result.overall_score >= 70 ? '#fef2f2' : r.plagiarism_result.overall_score >= 40 ? '#fffbeb' : r.plagiarism_result.overall_score >= 20 ? '#eff6ff' : '#f0fdf4',
+        color: r.plagiarism_result.overall_score >= 70 ? '#dc2626' : r.plagiarism_result.overall_score >= 40 ? '#d97706' : r.plagiarism_result.overall_score >= 20 ? '#2563eb' : '#16a34a'
+      }}
+      title="Click to view plagiarism report">
+      <MI name="policy" size={13} /> {r.plagiarism_result.overall_score}%
+    </button>
+  ) : (
+    <span style={{ color:COLORS.lightText, fontSize:'11px' }}>—</span>
+  )}
+</td>
+{/* IMAGES */}
+<td style={{ padding:'12px', fontSize:'13px' }}>{imgCount>0?<span style={{ display:'inline-flex', alignItems:'center', gap:'3px', padding:'4px 8px', borderRadius:'3px', fontSize:'11px', fontWeight:'500', background:'#dbeafe', color:'#1e40af' }}>{imgCount}/{promptCount}</span>:promptCount>0?<span style={{ fontSize:'11px', color:COLORS.lightText }}>{promptCount} prompts</span>:<span style={{ color:COLORS.lightText, fontSize:'11px' }}>—</span>}</td>
+{/* NOTES */}
+<td style={{ padding:'12px', fontSize:'13px' }}>{cc>0?<span style={{ display:'inline-flex', alignItems:'center', gap:'3px', padding:'4px 8px', borderRadius:'3px', fontSize:'11px', fontWeight:'500', background:'#fef3c7', color:'#92400e' }}><MI name="chat_bubble" size={12} /> {cc}</span>:<span style={{ color:COLORS.lightText, fontSize:'11px' }}>—</span>}</td>
+{/* ACTION — icons only */}
+<td style={{ padding:'12px', fontSize:'13px' }}>
+  <div style={{ display:'flex', gap:'4px', alignItems:'center' }}>
+    <button onClick={() => { setViewingRecord(r); setViewTab('content'); setIsEditing(false); setVisualMessage(''); setShowComments(false); setImgWidthMap({}); }}
+      title="View record"
+      style={{ background:'none', border:'1px solid transparent', borderRadius:'6px', cursor:'pointer', padding:'5px', color:COLORS.navActive, display:'flex', alignItems:'center' }}
+      onMouseEnter={e => { e.currentTarget.style.background='#eff6ff'; e.currentTarget.style.borderColor='#bfdbfe'; }}
+      onMouseLeave={e => { e.currentTarget.style.background='none'; e.currentTarget.style.borderColor='transparent'; }}>
+      <MI name="visibility" size={17} />
+    </button>
+    <button onClick={() => handleEditRecord(r)}
+      title="Edit record"
+      style={{ background:'none', border:'1px solid transparent', borderRadius:'6px', cursor:'pointer', padding:'5px', color:'#7c3aed', display:'flex', alignItems:'center' }}
+      onMouseEnter={e => { e.currentTarget.style.background='#f5f3ff'; e.currentTarget.style.borderColor='#ddd6fe'; }}
+      onMouseLeave={e => { e.currentTarget.style.background='none'; e.currentTarget.style.borderColor='transparent'; }}>
+      <MI name="edit" size={17} />
+    </button>
+    {r.ai_output && (
+      <button onClick={() => setPlagiarismRecord(r)}
+        title="Check plagiarism"
+        style={{ background:'none', border:'1px solid transparent', borderRadius:'6px', cursor:'pointer', padding:'5px', color:'#6366f1', display:'flex', alignItems:'center' }}
+        onMouseEnter={e => { e.currentTarget.style.background='#eef2ff'; e.currentTarget.style.borderColor='#c7d2fe'; }}
+        onMouseLeave={e => { e.currentTarget.style.background='none'; e.currentTarget.style.borderColor='transparent'; }}>
+        <MI name="policy" size={17} />
+      </button>
+    )}
+  </div>
+</td>
                     </tr>
                   );
                 })}
@@ -2041,11 +2082,13 @@ const handleSavePlagiarismResult = async (result) => {
       {/* ===== PLAGIARISM MODAL (NEW) ===== */}
       {plagiarismRecord && (
         <PlagiarismCheckModal
-          record={plagiarismRecord}
-          onClose={() => setPlagiarismRecord(null)}
-          supabaseUrl="https://syacvhjmcgpgxvczassp.supabase.co"
-          supabaseAnonKey="sb_publishable_tmoQwBjJYHyMnOSGAzts2w_v-aG0iYl"
-        />
+  record={plagiarismRecord}
+  onClose={() => setPlagiarismRecord(null)}
+  supabaseUrl="https://syacvhjmcgpgxvczassp.supabase.co"
+  supabaseAnonKey="sb_publishable_tmoQwBjJYHyMnOSGAzts2w_v-aG0iYl"
+  initialResult={plagiarismRecord.plagiarism_result || null}
+  onResultSaved={handleSavePlagiarismResult}
+/>
       )}
       {/* ===== END PLAGIARISM MODAL ===== */}
 

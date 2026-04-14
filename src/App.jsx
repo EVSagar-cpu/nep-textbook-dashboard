@@ -1894,7 +1894,7 @@ const handleSavePlagiarismResult = async (result) => {
             <table style={{ width:'100%', borderCollapse:'collapse' }}>
               <thead>
                 <tr style={{ background:'#64748b', color:COLORS.white }}>
-                  {['S.NO','ID','CLASS','SUBJECT','TOPIC','TYPE','STATUS','WORDS','PLAGIARISM','IMAGES','NOTES','ACTION'].map(h =>
+                  {['S.NO','ID','CLASS','SUBJECT','TOPIC','TYPE','STATUS','WORDS','PLAGIARISM','IMAGES','NOTES','ACTION'].map(h => <th key={h} style={{ padding:'12px', textAlign:'left', fontSize:'11px', fontWeight:'600', textTransform:'uppercase', letterSpacing:'0.5px' }}>{h}</th>)}
                 </tr>
               </thead>
               <tbody>

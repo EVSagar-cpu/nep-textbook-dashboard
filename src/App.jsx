@@ -1028,7 +1028,20 @@ export default function App() {
     setEditingId(record.record_id); setFormClass(record.class || '1'); setFormSubject(record.subject || 'English'); setFormTopic(record.topic || ''); setFormSubTopic(record.sub_topic || ''); setFormContentType(record.content_type || ''); setFormPrompt(record.prompt || ''); setFormTextModel(record.text_model || 'claude'); setShowAddForm(true);
     setTimeout(() => { const f = document.querySelector('[data-form="edit-add"]'); if (f) { f.scrollIntoView({ behavior: 'smooth', block: 'start' }); } }, 100);
   };
-
+const handleSavePlagiarismResult = async (result) => {
+  if (!plagiarismRecord) return;
+  try {
+    await supabase.from('textbook_content')
+      .update({ plagiarism_result: result, updated_at: new Date() })
+      .eq('record_id', plagiarismRecord.record_id);
+    const updated = { ...plagiarismRecord, plagiarism_result: result };
+    setPlagiarismRecord(updated);
+    if (viewingRecord && viewingRecord.record_id === plagiarismRecord.record_id) {
+      setViewingRecord({ ...viewingRecord, plagiarism_result: result });
+    }
+    fetchRecords();
+  } catch(err) { console.error('Failed to save plagiarism result:', err); }
+};
   const [showPageSettings, setShowPageSettings] = useState(false);
 
   // ====================================================================

@@ -59,6 +59,218 @@ const MIF = ({ name, size, color, style }) => (
   }}>{name}</span>
 );
 
+// ============================================================
+// PLAGIARISM CHECK MODAL
+// ============================================================
+function PlagiarismCheckModal({ record, onClose, supabaseUrl, supabaseAnonKey }) {
+  const [checking, setChecking] = useState(false);
+  const [result, setResult] = useState(null);
+  const [error, setError] = useState('');
+  const [selectedMatch, setSelectedMatch] = useState(null);
+
+  const runCheck = async () => {
+    if (!record.ai_output || record.ai_output.trim().length < 50) {
+      setError('No content to check. Please generate content first.');
+      return;
+    }
+    setChecking(true); setError(''); setResult(null); setSelectedMatch(null);
+    try {
+      const res = await fetch(supabaseUrl + '/functions/v1/check-plagiarism', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'apikey': supabaseAnonKey, 'Authorization': 'Bearer ' + supabaseAnonKey },
+        body: JSON.stringify({ content: record.ai_output, record_id: record.record_id })
+      });
+      const data = await res.json();
+      if (data.error && !data.overall_score && data.overall_score !== 0) { setError(data.error); }
+      else { setResult(data); }
+    } catch (e) { setError('Check failed: ' + e.message); }
+    setChecking(false);
+  };
+
+  const getScoreColor = (score) => {
+    if (score >= 70) return '#ef4444';
+    if (score >= 40) return '#f59e0b';
+    if (score >= 20) return '#3b82f6';
+    return '#22c55e';
+  };
+  const getScoreLabel = (score) => {
+    if (score >= 70) return 'High Similarity';
+    if (score >= 40) return 'Moderate Similarity';
+    if (score >= 20) return 'Low Similarity';
+    return 'Unique Content';
+  };
+  const getMatchBadgeStyle = (type) => {
+    if (type === 'exact') return { background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca' };
+    if (type === 'paraphrase') return { background: '#fffbeb', color: '#d97706', border: '1px solid #fde68a' };
+    return { background: '#eff6ff', color: '#2563eb', border: '1px solid #bfdbfe' };
+  };
+
+  const renderHighlightedContent = () => {
+    if (!result || !result.matches || result.matches.length === 0) {
+      return <pre style={{ whiteSpace: 'pre-wrap', fontFamily: 'Montserrat, sans-serif', fontSize: 13, lineHeight: 1.8, color: '#374151' }}>{record.ai_output || 'No content available.'}</pre>;
+    }
+    const text = record.ai_output || '';
+    const highlights = [];
+    result.matches.forEach((match, mi) => {
+      if (!match.fragment) return;
+      const frag = match.fragment.trim().substring(0, 120);
+      const idx = text.indexOf(frag);
+      if (idx !== -1) highlights.push({ start: idx, end: idx + frag.length, matchIndex: mi, type: match.type });
+    });
+    highlights.sort((a, b) => a.start - b.start);
+    const parts = [];
+    let lastIdx = 0;
+    const bgMap = { exact: '#fecaca', paraphrase: '#fde68a', similar: '#bfdbfe' };
+    highlights.forEach((h) => {
+      if (h.start >= lastIdx) {
+        if (h.start > lastIdx) parts.push(<span key={'t' + lastIdx}>{text.substring(lastIdx, h.start)}</span>);
+        parts.push(
+          <span key={'h' + h.start} onClick={() => setSelectedMatch(h.matchIndex)}
+            style={{ background: bgMap[h.type] || '#fde68a', cursor: 'pointer', borderBottom: '2px solid ' + getScoreColor(result.matches[h.matchIndex].similarity_score || 50), borderRadius: 2, padding: '0 2px' }}
+            title={'Match ' + (h.matchIndex + 1) + ': ' + (result.matches[h.matchIndex].source_title || 'Source')}>
+            {text.substring(h.start, h.end)}
+          </span>
+        );
+        lastIdx = h.end;
+      }
+    });
+    if (lastIdx < text.length) parts.push(<span key="tail">{text.substring(lastIdx)}</span>);
+    return <div style={{ whiteSpace: 'pre-wrap', fontFamily: 'Montserrat, sans-serif', fontSize: 13, lineHeight: 1.8, color: '#374151' }}>{parts}</div>;
+  };
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 9999, display: 'flex', flexDirection: 'column' }}>
+      <style>{'@keyframes plagSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }'}</style>
+      <div style={{ background: '#1e1b4b', padding: '12px 20px', display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
+        <MI name="policy" size={22} color="#a5b4fc" />
+        <div>
+          <div style={{ color: '#fff', fontWeight: 700, fontSize: 15, fontFamily: 'Lexend, sans-serif' }}>Plagiarism &amp; Copyright Check</div>
+          <div style={{ color: '#a5b4fc', fontSize: 12 }}>Record #{record.record_id} — {record.subject} / {record.topic}</div>
+        </div>
+        <div style={{ marginLeft: 'auto', display: 'flex', gap: 10, alignItems: 'center' }}>
+          {!checking && !result && <button onClick={runCheck} style={{ background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 18px', fontWeight: 700, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontFamily: FONT_FAMILY }}><MI name="search" size={16} color="white" /> Run Check</button>}
+          {result && <button onClick={runCheck} style={{ background: '#374151', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 14px', fontWeight: 600, fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontFamily: FONT_FAMILY }}><MI name="refresh" size={15} color="white" /> Re-Check</button>}
+          <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.1)', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 12px', cursor: 'pointer', display: 'flex', alignItems: 'center', fontFamily: FONT_FAMILY }}><MI name="close" size={18} color="white" /></button>
+        </div>
+      </div>
+      <div style={{ flex: 1, display: 'flex', overflow: 'hidden', background: '#f8fafc' }}>
+        {/* LEFT — Content */}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', borderRight: '2px solid #e2e8f0', overflow: 'hidden' }}>
+          <div style={{ padding: '10px 16px', background: '#fff', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: 8 }}>
+            <MI name="article" size={17} color="#6366f1" />
+            <span style={{ fontSize: 13, fontWeight: 600, color: '#374151', fontFamily: 'Lexend, sans-serif' }}>Content</span>
+            {result && (
+              <div style={{ marginLeft: 'auto', display: 'flex', gap: 6 }}>
+                <span style={{ padding: '2px 8px', borderRadius: 20, fontSize: 11, background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca', fontWeight: 600 }}>■ Exact</span>
+                <span style={{ padding: '2px 8px', borderRadius: 20, fontSize: 11, background: '#fffbeb', color: '#d97706', border: '1px solid #fde68a', fontWeight: 600 }}>■ Paraphrase</span>
+                <span style={{ padding: '2px 8px', borderRadius: 20, fontSize: 11, background: '#eff6ff', color: '#2563eb', border: '1px solid #bfdbfe', fontWeight: 600 }}>■ Similar</span>
+              </div>
+            )}
+          </div>
+          <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>
+            {checking ? (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: 16 }}>
+                <div style={{ width: 48, height: 48, border: '4px solid #e2e8f0', borderTop: '4px solid #6366f1', borderRadius: '50%', animation: 'plagSpin 1s linear infinite' }} />
+                <div style={{ color: '#6366f1', fontWeight: 700, fontSize: 15, fontFamily: 'Lexend, sans-serif' }}>Searching internet for matches...</div>
+                <div style={{ color: '#94a3b8', fontSize: 13 }}>This may take 20–40 seconds</div>
+              </div>
+            ) : renderHighlightedContent()}
+          </div>
+        </div>
+        {/* RIGHT — Results */}
+        <div style={{ width: 360, display: 'flex', flexDirection: 'column', overflow: 'hidden', background: '#fff' }}>
+          {!result && !checking && (
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16, padding: 32 }}>
+              <MI name="plagiarism" size={56} color="#c7d2fe" />
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: 16, fontWeight: 700, color: '#374151', fontFamily: 'Lexend, sans-serif', marginBottom: 8 }}>Ready to Check</div>
+                <div style={{ fontSize: 13, color: '#94a3b8', lineHeight: 1.6 }}>Analyze this content against internet sources to detect plagiarism and copyright issues.</div>
+              </div>
+              {error && <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, padding: '10px 14px', color: '#dc2626', fontSize: 13, textAlign: 'center', width: '100%' }}>{error}</div>}
+              <button onClick={runCheck} style={{ background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', color: '#fff', border: 'none', borderRadius: 10, padding: '12px 28px', fontWeight: 700, fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, fontFamily: FONT_FAMILY }}>
+                <MI name="search" size={18} color="white" /> Run Plagiarism Check
+              </button>
+            </div>
+          )}
+          {checking && (
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12, padding: 32 }}>
+              <div style={{ width: 56, height: 56, border: '5px solid #e0e7ff', borderTop: '5px solid #6366f1', borderRadius: '50%', animation: 'plagSpin 1s linear infinite' }} />
+              <div style={{ fontSize: 14, fontWeight: 700, color: '#6366f1', fontFamily: 'Lexend, sans-serif' }}>Analyzing...</div>
+              <div style={{ fontSize: 12, color: '#94a3b8', textAlign: 'center', lineHeight: 1.6 }}>Checking key phrases against online sources using AI web search.</div>
+            </div>
+          )}
+          {result && !checking && (
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+              <div style={{ padding: '20px 20px 16px', borderBottom: '1px solid #e2e8f0', background: '#fafafa' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                  <div style={{ position: 'relative', width: 80, height: 80, flexShrink: 0 }}>
+                    <svg width="80" height="80" viewBox="0 0 80 80">
+                      <circle cx="40" cy="40" r="34" fill="none" stroke="#e2e8f0" strokeWidth="8" />
+                      <circle cx="40" cy="40" r="34" fill="none" stroke={getScoreColor(result.overall_score)} strokeWidth="8"
+                        strokeDasharray={2 * Math.PI * 34}
+                        strokeDashoffset={2 * Math.PI * 34 * (1 - result.overall_score / 100)}
+                        strokeLinecap="round" transform="rotate(-90 40 40)" />
+                    </svg>
+                    <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                      <span style={{ fontSize: 20, fontWeight: 800, color: getScoreColor(result.overall_score), fontFamily: 'Lexend, sans-serif' }}>{result.overall_score}%</span>
+                    </div>
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 16, fontWeight: 800, color: getScoreColor(result.overall_score), fontFamily: 'Lexend, sans-serif' }}>{getScoreLabel(result.overall_score)}</div>
+                    <div style={{ fontSize: 12, color: '#64748b', marginTop: 4 }}>Similarity Score</div>
+                    <div style={{ marginTop: 8, display: 'flex', gap: 8 }}>
+                      <div style={{ background: '#f0fdf4', borderRadius: 6, padding: '4px 10px', fontSize: 12, color: '#16a34a', fontWeight: 600 }}>{result.unique_percentage || (100 - result.overall_score)}% Unique</div>
+                      <div style={{ background: '#fef9c3', borderRadius: 6, padding: '4px 10px', fontSize: 12, color: '#ca8a04', fontWeight: 600 }}>{result.matches ? result.matches.length : 0} Sources</div>
+                    </div>
+                  </div>
+                </div>
+                {result.summary && <div style={{ marginTop: 12, background: '#f8fafc', borderRadius: 8, padding: '10px 12px', fontSize: 12, color: '#475569', lineHeight: 1.6, border: '1px solid #e2e8f0' }}>{result.summary}</div>}
+              </div>
+              <div style={{ overflowY: 'auto', flex: 1 }}>
+                <div style={{ padding: '12px 16px 6px', fontSize: 12, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: 1, fontFamily: 'Lexend, sans-serif' }}>Match Overview</div>
+                {(!result.matches || result.matches.length === 0) && <div style={{ padding: '20px 16px', textAlign: 'center', color: '#94a3b8', fontSize: 13 }}>No matching sources found online.</div>}
+                {result.matches && result.matches.map((match, idx) => (
+                  <div key={idx} onClick={() => setSelectedMatch(selectedMatch === idx ? null : idx)}
+                    style={{ padding: '12px 16px', borderBottom: '1px solid #f1f5f9', cursor: 'pointer', background: selectedMatch === idx ? '#f0f4ff' : 'transparent' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                      <div style={{ width: 28, height: 28, borderRadius: 6, background: getScoreColor(match.similarity_score || 50) + '20', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <span style={{ fontSize: 11, fontWeight: 800, color: getScoreColor(match.similarity_score || 50) }}>{idx + 1}</span>
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 12, fontWeight: 600, color: '#1e293b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{match.source_title || 'Unknown Source'}</div>
+                        <div style={{ fontSize: 11, color: '#94a3b8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{match.source_url || ''}</div>
+                      </div>
+                      <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 3 }}>
+                        <span style={{ fontSize: 14, fontWeight: 800, color: getScoreColor(match.similarity_score || 0) }}>{match.similarity_score || 0}%</span>
+                        <span style={{ ...getMatchBadgeStyle(match.match_type), borderRadius: 4, padding: '1px 6px', fontSize: 10, fontWeight: 700 }}>{(match.match_type || 'similar').toUpperCase()}</span>
+                      </div>
+                    </div>
+                    {selectedMatch === idx && match.fragment && (
+                      <div style={{ marginTop: 8, padding: '8px 10px', background: '#fff', borderRadius: 6, border: '1px solid #e2e8f0', fontSize: 12, color: '#475569', lineHeight: 1.6, fontStyle: 'italic' }}>
+                        "...{match.fragment.substring(0, 180)}{match.fragment.length > 180 ? '...' : ''}"
+                        {match.source_url && (
+                          <div style={{ marginTop: 6 }}>
+                            <a href={match.source_url} target="_blank" rel="noopener noreferrer" style={{ color: '#6366f1', fontSize: 11, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}>
+                              <MI name="open_in_new" size={13} color="#6366f1" /> View Source
+                            </a>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+// ============================================================
+// END PLAGIARISM CHECK MODAL
+// ============================================================
+
 export default function App() {
   const [currentUser, setCurrentUser] = useState(null);
   const [authPage, setAuthPage] = useState('login');
@@ -98,9 +310,11 @@ export default function App() {
   const [formSubTopic, setFormSubTopic] = useState('');
   const [formContentType, setFormContentType] = useState('');
   const [formPrompt, setFormPrompt] = useState('');
+  const [formTextModel, setFormTextModel] = useState('claude'); // NEW: multi-model selector
   const [formLoading, setFormLoading] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [viewingRecord, setViewingRecord] = useState(null);
+  const [plagiarismRecord, setPlagiarismRecord] = useState(null); // NEW: plagiarism modal
   const [viewTab, setViewTab] = useState('content');
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState('');
@@ -121,7 +335,6 @@ export default function App() {
   const [commentText, setCommentText] = useState('');
   const [showComments, setShowComments] = useState(false);
   const [shareMessage, setShareMessage] = useState('');
-  // Image resize map: { url: widthPercent }
   const [imgWidthMap, setImgWidthMap] = useState({});
 
   const subjects = [
@@ -135,7 +348,6 @@ export default function App() {
     return saved ? JSON.parse(saved) : { paperSize: 'A4', orientation: 'portrait', customWidth: 210, customHeight: 297, margins: 10 };
   });
 
-  // Layout Builder state
   const [layoutBlocks, setLayoutBlocks] = useState([]);
   const [draggedBlockIdx, setDraggedBlockIdx] = useState(null);
   const [dragOverIdx, setDragOverIdx] = useState(null);
@@ -268,12 +480,7 @@ export default function App() {
         result.push(
           <div key={i} style={{ margin: '16px 0', textAlign: 'center', pageBreakInside: 'avoid', breakInside: 'avoid' }}>
             <div style={{ position: 'relative', display: 'inline-block', maxWidth: currentWidth + '%', width: currentWidth + '%' }}>
-              <img
-                src={imgUrl} alt={imgAlt}
-                style={{ width: '100%', maxHeight: '500px', objectFit: 'contain', borderRadius: '8px', border: '1px solid ' + COLORS.borderColor, boxShadow: '0 2px 8px rgba(0,0,0,0.08)', cursor: 'pointer', display: 'block' }}
-                onClick={() => setLightboxImage(imgUrl)}
-              />
-              {/* Resize controls */}
+              <img src={imgUrl} alt={imgAlt} style={{ width: '100%', maxHeight: '500px', objectFit: 'contain', borderRadius: '8px', border: '1px solid ' + COLORS.borderColor, boxShadow: '0 2px 8px rgba(0,0,0,0.08)', cursor: 'pointer', display: 'block' }} onClick={() => setLightboxImage(imgUrl)} />
               <div style={{ display: 'flex', gap: '4px', justifyContent: 'center', marginTop: '6px', flexWrap: 'wrap' }}>
                 {[25, 50, 75, 100].map(pct => (
                   <button key={pct} onClick={(e) => { e.stopPropagation(); setImgWidthMap(prev => ({ ...prev, [imgUrl]: pct })); }}
@@ -519,7 +726,6 @@ export default function App() {
   };
 
   // ===== EXPORT / PRINT =====
-  // Shared CSS for page-break protection on images
   const IMG_EXPORT_CSS = `
     img { max-width: 100%; page-break-inside: avoid !important; break-inside: avoid !important; display: block; }
     .img-wrap { page-break-inside: avoid !important; break-inside: avoid !important; display: block; clear: both; }
@@ -527,7 +733,6 @@ export default function App() {
     h1,h2,h3 { page-break-after: avoid; }
   `;
 
-  // Shared markdown-to-HTML converter (used by PDF and Print)
   const mdToHtml = (markdown) => {
     const lines = markdown.split('\n');
     let html = '', i = 0, inCode = false, codeBuf = [], tableBuf = [];
@@ -564,7 +769,6 @@ export default function App() {
       const imgM = line.match(/!\[([^\]]*)\]\(([^)]+)\)/);
       if (imgM) {
         flushTbl();
-        // Use explicit width:auto and max-width to prevent breaking across pages
         html += '<div class="img-wrap" style="margin:20px 0;text-align:center;page-break-inside:avoid;break-inside:avoid;"><img src="' + imgM[2] + '" alt="' + imgM[1] + '" style="max-width:90%;max-height:480px;object-fit:contain;border-radius:6px;border:1px solid #e5e7eb;page-break-inside:avoid;break-inside:avoid;" />' + (imgM[1] ? '<p style="font-size:10px;color:#6b7280;margin-top:4px;font-style:italic;">' + imgM[1] + '</p>' : '') + '</div>';
         i++; continue;
       }
@@ -771,12 +975,14 @@ export default function App() {
       if (!formClass || !formSubject || !formTopic || !formContentType || !formPrompt) { alert('Please fill all required fields'); setFormLoading(false); return; }
       let result;
       if (editingId) {
-        result = await supabase.from('textbook_content').update({ class: formClass, subject: formSubject, topic: formTopic, sub_topic: formSubTopic, content_type: formContentType, prompt: formPrompt, status: 'generating', updated_at: new Date() }).eq('record_id', editingId);
+        // NEW: include text_model in update
+        result = await supabase.from('textbook_content').update({ class: formClass, subject: formSubject, topic: formTopic, sub_topic: formSubTopic, content_type: formContentType, prompt: formPrompt, text_model: formTextModel, status: 'generating', updated_at: new Date() }).eq('record_id', editingId);
       } else {
-        result = await supabase.from('textbook_content').insert([{ class: formClass, subject: formSubject, topic: formTopic, sub_topic: formSubTopic, content_type: formContentType, prompt: formPrompt, status: 'generating' }]);
+        // NEW: include text_model in insert
+        result = await supabase.from('textbook_content').insert([{ class: formClass, subject: formSubject, topic: formTopic, sub_topic: formSubTopic, content_type: formContentType, prompt: formPrompt, text_model: formTextModel, status: 'generating' }]);
       }
       if (result.error) { logError('handleSaveRecord', result.error, {}); showDetailedError(result.error); setFormLoading(false); return; }
-      setFormClass('1'); setFormSubject('English'); setFormTopic(''); setFormSubTopic(''); setFormContentType(''); setFormPrompt(''); setShowAddForm(false); setEditingId(null);
+      setFormClass('1'); setFormSubject('English'); setFormTopic(''); setFormSubTopic(''); setFormContentType(''); setFormPrompt(''); setFormTextModel('claude'); setShowAddForm(false); setEditingId(null);
       setTimeout(() => { fetchRecords(); alert('Record saved! Status: generating'); }, 500);
     } catch (err) { logError('handleSaveRecord', err, {}); showDetailedError(err); setFormLoading(false); }
     finally { setFormLoading(false); }
@@ -800,13 +1006,14 @@ export default function App() {
     setPendingInvites(data || []);
   };
 
+  // NEW: reset formTextModel in all form open/close/edit handlers
   const handleOpenAddForm = () => {
-    setEditingId(null); setFormClass('1'); setFormSubject('English'); setFormTopic(''); setFormSubTopic(''); setFormContentType(''); setFormPrompt(''); setShowAddForm(!showAddForm);
+    setEditingId(null); setFormClass('1'); setFormSubject('English'); setFormTopic(''); setFormSubTopic(''); setFormContentType(''); setFormPrompt(''); setFormTextModel('claude'); setShowAddForm(!showAddForm);
     setTimeout(() => { const f = document.querySelector('[data-form="edit-add"]'); if (f) { f.scrollIntoView({ behavior: 'smooth', block: 'start' }); const inp = f.querySelector('input,select,textarea'); if (inp) inp.focus(); } }, 100);
   };
-  const handleCancelForm = () => { setShowAddForm(false); setEditingId(null); setFormClass('1'); setFormSubject('English'); setFormTopic(''); setFormSubTopic(''); setFormContentType(''); setFormPrompt(''); };
+  const handleCancelForm = () => { setShowAddForm(false); setEditingId(null); setFormClass('1'); setFormSubject('English'); setFormTopic(''); setFormSubTopic(''); setFormContentType(''); setFormPrompt(''); setFormTextModel('claude'); };
   const handleEditRecord = (record) => {
-    setEditingId(record.record_id); setFormClass(record.class || '1'); setFormSubject(record.subject || 'English'); setFormTopic(record.topic || ''); setFormSubTopic(record.sub_topic || ''); setFormContentType(record.content_type || ''); setFormPrompt(record.prompt || ''); setShowAddForm(true);
+    setEditingId(record.record_id); setFormClass(record.class || '1'); setFormSubject(record.subject || 'English'); setFormTopic(record.topic || ''); setFormSubTopic(record.sub_topic || ''); setFormContentType(record.content_type || ''); setFormPrompt(record.prompt || ''); setFormTextModel(record.text_model || 'claude'); setShowAddForm(true);
     setTimeout(() => { const f = document.querySelector('[data-form="edit-add"]'); if (f) { f.scrollIntoView({ behavior: 'smooth', block: 'start' }); } }, 100);
   };
 
@@ -945,7 +1152,7 @@ export default function App() {
     let timeline = [];
     if (viewingRecord.created_at) timeline.push({ label:'Record Created', time:viewingRecord.created_at, detail:'Class '+viewingRecord.class+' • '+viewingRecord.subject+' • '+viewingRecord.topic, color:'#2563eb' });
     if (viewingRecord.prompt) timeline.push({ label:'Prompt Submitted', time:viewingRecord.created_at, detail:viewingRecord.prompt.substring(0,120)+(viewingRecord.prompt.length>120?'...':''), color:'#8b5cf6' });
-    if (viewingRecord.status==='generated'&&viewingRecord.ai_output) timeline.push({ label:'AI Content Generated', time:viewingRecord.updated_at, detail:(viewingRecord.word_count||0)+' words generated', color:'#10b981' });
+    if (viewingRecord.status==='generated'&&viewingRecord.ai_output) timeline.push({ label:'AI Content Generated', time:viewingRecord.updated_at, detail:(viewingRecord.word_count||0)+' words generated' + (viewingRecord.text_model && viewingRecord.text_model !== 'claude' ? ' via ' + viewingRecord.text_model.toUpperCase() : ' via Claude'), color:'#10b981' });
     const vp = getVisualPrompts(viewingRecord);
     if (vp.length>0) timeline.push({ label:'Visual Prompts Generated', time:vp[0]?.created_at||viewingRecord.updated_at, detail:vp.filter(p=>p.type==='character').length+' characters, '+vp.filter(p=>p.type==='scene').length+' scenes ('+vp.filter(p=>p.image_url).length+' generated)', color:'#f59e0b' });
     vp.filter(p=>p.image_url).forEach(p => timeline.push({ label:(p.type==='character'?'Character':'Scene')+' Image Generated', time:p.created_at, detail:'Model: '+(p.model_used||'unknown')+' — '+(p.prompt||'').substring(0,80), color:p.type==='character'?'#8b5cf6':'#2563eb' }));
@@ -1145,7 +1352,6 @@ export default function App() {
       pw.document.write(html); pw.document.write('</body></html>'); pw.document.close();
     };
 
-    // ---- Block canvas renderer ----
     const renderBlockPreview = (block) => {
       const styles = { heading: { 1:{fontSize:'26px',fontWeight:'700'}, 2:{fontSize:'20px',fontWeight:'600'}, 3:{fontSize:'16px',fontWeight:'600'} } };
       if (block.type === 'heading') return <div style={{ ...styles.heading[block.level]||styles.heading[2], color:COLORS.darkText, textAlign:block.align||'left', fontFamily:'Montserrat,sans-serif', paddingRight:'130px', minHeight:'24px' }}>{block.content || <span style={{ color:COLORS.lightText, fontStyle:'italic', fontWeight:'400', fontSize:'14px' }}>Empty heading — click to edit</span>}</div>;
@@ -1165,7 +1371,6 @@ export default function App() {
       return null;
     };
 
-    // ---- Properties panel ----
     const upd = (changes) => { if (selectedBlock) updateBlock(selectedBlock.id, changes); };
     const labelSt = { display:'block', fontSize:'10px', fontWeight:'700', color:COLORS.lightText, marginBottom:'5px', textTransform:'uppercase', letterSpacing:'0.5px' };
     const inputSt = { width:'100%', padding:'7px 9px', fontSize:'12px', border:'1px solid '+COLORS.borderColor, borderRadius:'6px', fontFamily:FONT_FAMILY, outline:'none', boxSizing:'border-box' };
@@ -1237,7 +1442,6 @@ export default function App() {
 
     return (
       <div style={{ display:'flex', height:'100%', fontFamily:FONT_FAMILY }}>
-        {/* ===== LEFT TOOLBOX ===== */}
         <div style={{ width:'196px', borderRight:'1px solid '+COLORS.borderColor, background:'#f8fafc', display:'flex', flexDirection:'column', flexShrink:0, overflowY:'auto' }}>
           <div style={{ padding:'11px 14px', borderBottom:'1px solid '+COLORS.borderColor, background:COLORS.white }}>
             <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
@@ -1266,7 +1470,6 @@ export default function App() {
           </div>
         </div>
 
-        {/* ===== CENTER A4 CANVAS ===== */}
         <div style={{ flex:1, overflowY:'auto', background:'#cbd5e1', padding:'24px 20px', display:'flex', flexDirection:'column', alignItems:'center' }}>
           {layoutBlocks.length === 0 ? (
             <div style={{ width:'100%', maxWidth:'794px', minHeight:'400px', background:COLORS.white, borderRadius:'8px', border:'2px dashed '+COLORS.borderColor, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:'48px 32px', boxShadow:'0 4px 20px rgba(0,0,0,0.08)', textAlign:'center' }}>
@@ -1310,7 +1513,6 @@ export default function App() {
           )}
         </div>
 
-        {/* ===== RIGHT PROPERTIES ===== */}
         <div style={{ width:'220px', borderLeft:'1px solid '+COLORS.borderColor, background:'#f8fafc', flexShrink:0, overflowY:'auto' }}>
           <div style={{ padding:'11px 14px', borderBottom:'1px solid '+COLORS.borderColor, background:COLORS.white }}>
             <span style={{ fontSize:'12px', fontWeight:'700', color:COLORS.darkText }}>Properties</span>
@@ -1335,7 +1537,6 @@ export default function App() {
     return (
       <div style={{ display:'flex', height:'100%' }}>
         <div style={{ flex:1, display:'flex', flexDirection:'column', overflow:'hidden' }}>
-          {/* Action Bar */}
           <div style={{ padding:'10px 24px', borderBottom:'1px solid '+COLORS.borderColor, display:'flex', justifyContent:'space-between', alignItems:'center', background:'#fafafa' }}>
             <div style={{ display:'flex', gap:'8px', alignItems:'center' }}>
               {isEditing ? (<>
@@ -1356,7 +1557,6 @@ export default function App() {
 
           <input ref={fileInputRef} type="file" accept="image/*" style={{ display:'none' }} onChange={handleLocalImageUpload} />
 
-          {/* Formatting Toolbar */}
           {isEditing && (
             <div style={{ padding:'4px 12px', borderBottom:'1px solid '+COLORS.borderColor, display:'flex', flexWrap:'wrap', gap:'1px', alignItems:'center', background:'#fafbfc' }}>
               <button onMouseDown={noFocus} onClick={handleUndo} style={tbBtn(false)} title="Undo"><MI name="undo" size={16} /></button>
@@ -1399,7 +1599,6 @@ export default function App() {
             </div>
           )}
 
-          {/* Editor / Preview */}
           <div style={{ flex:1, overflowY:'auto', display:'flex' }}>
             <div style={{ flex:1, overflowY:'auto' }}>
               {viewingRecord.ai_output ? (
@@ -1426,7 +1625,6 @@ export default function App() {
                 <div style={{ textAlign:'center', color:COLORS.lightText, padding:'60px 20px', fontSize:'16px' }}>No content generated yet. Waiting for Claude AI.</div>
               )}
             </div>
-            {/* Asset Picker Sidebar */}
             {isEditing && showAssetPicker && allPrompts.length > 0 && (
               <div style={{ width:'220px', borderLeft:'1px solid '+COLORS.borderColor, background:'#fafafa', overflowY:'auto', flexShrink:0 }}>
                 <div style={{ padding:'12px', borderBottom:'1px solid '+COLORS.borderColor }}>
@@ -1571,7 +1769,6 @@ export default function App() {
         </div>
 
         <div style={{ flex:1, overflow:'auto', padding:'24px' }}>
-          {/* Invite Panel */}
           {showInvitePanel && (currentUser?.user_metadata?.role==='central_admin'||currentUser?.user_metadata?.role==='admin') && (
             <div style={{ background:COLORS.white, border:'1px solid '+COLORS.borderColor, borderRadius:'8px', padding:'20px', marginBottom:'24px' }}>
               <h2 style={{ margin:'0 0 16px 0', fontSize:'16px', fontWeight:'600' }}>Send Invite</h2>
@@ -1587,7 +1784,6 @@ export default function App() {
           <h1 style={{ margin:'0 0 8px 0', fontSize:'32px', fontWeight:'700', color:COLORS.darkText }}>Projects</h1>
           <p style={{ margin:'0 0 24px 0', color:COLORS.lightText, fontSize:'14px' }}>Manage and curate AI-generated curriculum materials.</p>
 
-          {/* Action Buttons */}
           <div style={{ display:'flex', gap:'12px', marginBottom:'24px', flexWrap:'wrap' }}>
             {[
               { label:'Add Record', icon:'add', bg:COLORS.navActive, color:COLORS.white, action:handleOpenAddForm },
@@ -1613,7 +1809,26 @@ export default function App() {
                   <label style={{ display:'flex', justifyContent:'space-between', fontSize:'12px', fontWeight:'500', marginBottom:'6px', textTransform:'uppercase' }}>AI PROMPT <span style={{ fontSize:'11px', color:COLORS.lightText }}>{formPrompt.length} / 20000</span></label>
                   <textarea value={formPrompt} onChange={e => setFormPrompt(e.target.value.substring(0,20000))} rows="12" style={{ width:'100%', padding:'12px', border:'1px solid '+COLORS.borderColor, borderRadius:'6px', fontSize:'13px', fontFamily:FONT_FAMILY, resize:'vertical', minHeight:'240px', lineHeight:'1.5' }} />
                 </div>
-                <div style={{ background:'#f0f9ff', border:'1px solid #a7f3d0', borderRadius:'6px', padding:'12px', marginBottom:'16px', fontSize:'12px', color:'#065f46' }}>Claude AI will generate: lesson content + character descriptions + scene descriptions</div>
+
+                {/* ===== AI MODEL SELECTOR (NEW) ===== */}
+                <div style={{ marginBottom:'16px' }}>
+                  <label style={{ display:'block', fontSize:'12px', fontWeight:'500', marginBottom:'6px', textTransform:'uppercase' }}>AI Model for Text Generation</label>
+                  <select value={formTextModel} onChange={e => setFormTextModel(e.target.value)} style={{ width:'100%', padding:'10px', border:'1px solid '+COLORS.borderColor, borderRadius:'6px', fontSize:'14px', fontFamily:FONT_FAMILY, background:COLORS.white }}>
+                    <option value="claude">🤖 Claude Sonnet (Anthropic) — Default</option>
+                    <option value="openai">⚡ GPT-4o (OpenAI)</option>
+                    <option value="gemini">✨ Gemini 1.5 Pro (Google)</option>
+                  </select>
+                  <div style={{ fontSize:'11px', color:COLORS.lightText, marginTop:'4px' }}>
+                    {formTextModel === 'claude' && 'Best for educational NEP content generation'}
+                    {formTextModel === 'openai' && 'Requires OPENAI_API_KEY set in Edge Function secrets'}
+                    {formTextModel === 'gemini' && 'Requires GEMINI_API_KEY set in Edge Function secrets'}
+                  </div>
+                </div>
+                {/* ===== END AI MODEL SELECTOR ===== */}
+
+                <div style={{ background:'#f0f9ff', border:'1px solid #a7f3d0', borderRadius:'6px', padding:'12px', marginBottom:'16px', fontSize:'12px', color:'#065f46' }}>
+                  {formTextModel === 'claude' ? 'Claude AI' : formTextModel === 'openai' ? 'GPT-4o' : 'Gemini'} will generate: lesson content + character descriptions + scene descriptions
+                </div>
                 <div style={{ display:'flex', gap:'8px', justifyContent:'flex-end' }}>
                   <button type="button" onClick={handleCancelForm} style={{ padding:'8px 20px', background:COLORS.filterBg, color:COLORS.darkText, border:'none', borderRadius:'6px', cursor:'pointer', fontWeight:'500', fontSize:'13px', fontFamily:FONT_FAMILY }}>Cancel</button>
                   <button type="submit" disabled={formLoading} style={{ padding:'8px 24px', background:COLORS.navActive, color:COLORS.white, border:'none', borderRadius:'6px', cursor:formLoading?'not-allowed':'pointer', fontWeight:'500', fontSize:'13px', fontFamily:FONT_FAMILY }}>{formLoading?'Saving...':'Save & Generate'}</button>
@@ -1670,7 +1885,11 @@ export default function App() {
                       <td style={{ padding:'12px', fontSize:'13px' }}>{r.subject}</td>
                       <td style={{ padding:'12px', fontSize:'13px' }}>{r.topic}</td>
                       <td style={{ padding:'12px', fontSize:'13px' }}><span style={{ display:'inline-block', padding:'4px 8px', borderRadius:'4px', fontSize:'11px', fontWeight:'500', background:'#e0e7ff', color:'#3730a3' }}>{r.content_type||'N/A'}</span></td>
-                      <td style={{ padding:'12px', fontSize:'13px' }}><span style={{ display:'inline-block', padding:'4px 8px', borderRadius:'3px', fontSize:'11px', fontWeight:'500', background:r.status==='generated'?COLORS.successBg:r.status==='generating'?'#f3e8ff':COLORS.filterBg, color:r.status==='generated'?COLORS.successText:r.status==='generating'?'#7c3aed':COLORS.lightText }}>{r.status}</span></td>
+                      <td style={{ padding:'12px', fontSize:'13px' }}>
+                        <span style={{ display:'inline-block', padding:'4px 8px', borderRadius:'3px', fontSize:'11px', fontWeight:'500', background:r.status==='generated'?COLORS.successBg:r.status==='generating'?'#f3e8ff':COLORS.filterBg, color:r.status==='generated'?COLORS.successText:r.status==='generating'?'#7c3aed':COLORS.lightText }}>{r.status}</span>
+                        {/* NEW: show model badge for non-Claude records */}
+                        {r.text_model && r.text_model !== 'claude' && <span style={{ marginLeft:'4px', fontSize:'9px', fontWeight:'700', padding:'1px 5px', borderRadius:'8px', background:r.text_model==='openai'?'#ecfdf5':'#fef9c3', color:r.text_model==='openai'?'#059669':'#ca8a04', border:'1px solid '+(r.text_model==='openai'?'#a7f3d0':'#fde68a') }}>{r.text_model==='openai'?'GPT-4o':'Gemini'}</span>}
+                      </td>
                       <td style={{ padding:'12px', fontSize:'13px' }}>{r.word_count||0}</td>
                       <td style={{ padding:'12px', fontSize:'13px' }}>{imgCount>0?<span style={{ display:'inline-flex', alignItems:'center', gap:'3px', padding:'4px 8px', borderRadius:'3px', fontSize:'11px', fontWeight:'500', background:'#dbeafe', color:'#1e40af' }}>{imgCount}/{promptCount}</span>:promptCount>0?<span style={{ fontSize:'11px', color:COLORS.lightText }}>{promptCount} prompts</span>:<span style={{ color:COLORS.lightText, fontSize:'11px' }}>—</span>}</td>
                       <td style={{ padding:'12px', fontSize:'13px' }}>{cc>0?<span style={{ display:'inline-flex', alignItems:'center', gap:'3px', padding:'4px 8px', borderRadius:'3px', fontSize:'11px', fontWeight:'500', background:'#fef3c7', color:'#92400e' }}><MI name="chat_bubble" size={12} /> {cc}</span>:<span style={{ color:COLORS.lightText, fontSize:'11px' }}>—</span>}</td>
@@ -1706,6 +1925,13 @@ export default function App() {
                   <MI name="chat_bubble" size={14} /> Comments
                   {getComments(viewingRecord).length>0 && <span style={{ background:'#ef4444', color:'white', fontSize:'9px', fontWeight:'700', padding:'1px 5px', borderRadius:'8px' }}>{getComments(viewingRecord).length}</span>}
                 </button>
+                {/* ===== PLAGIARISM CHECK BUTTON (NEW) ===== */}
+                {viewingRecord.ai_output && (
+                  <button onClick={() => setPlagiarismRecord(viewingRecord)} style={{ padding:'6px 12px', background:'linear-gradient(135deg,#6366f1,#8b5cf6)', color:'white', border:'none', borderRadius:'6px', fontSize:'12px', fontWeight:'600', cursor:'pointer', fontFamily:FONT_FAMILY, display:'flex', alignItems:'center', gap:'4px' }}>
+                    <MI name="policy" size={14} color="white" /> Plagiarism Check
+                  </button>
+                )}
+                {/* ===== END PLAGIARISM BUTTON ===== */}
                 <button onClick={() => { setViewingRecord(null); setIsEditing(false); setShowComments(false); }} style={{ background:'none', border:'none', cursor:'pointer', padding:'6px', color:COLORS.lightText, display:'flex' }}><MI name="close" size={22} /></button>
               </div>
             </div>
@@ -1726,7 +1952,6 @@ export default function App() {
               <div style={{ flex:1, overflowY:'auto', background:COLORS.white }}>
                 {viewTab==='content' ? renderContentTab() : viewTab==='visuals' ? renderVisualAssetsTab() : viewTab==='history' ? renderHistoryTab() : renderLayoutTab()}
               </div>
-              {/* Comments Sidebar */}
               {showComments && (
                 <div style={{ width:'300px', borderLeft:'1px solid '+COLORS.borderColor, display:'flex', flexDirection:'column', background:'#fafbfc', flexShrink:0 }}>
                   <div style={{ padding:'14px 16px', borderBottom:'1px solid '+COLORS.borderColor, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
@@ -1787,6 +2012,17 @@ export default function App() {
           </div>
         </div>
       )}
+
+      {/* ===== PLAGIARISM MODAL (NEW) ===== */}
+      {plagiarismRecord && (
+        <PlagiarismCheckModal
+          record={plagiarismRecord}
+          onClose={() => setPlagiarismRecord(null)}
+          supabaseUrl="https://syacvhjmcgpgxvczassp.supabase.co"
+          supabaseAnonKey="sb_publishable_tmoQwBjJYHyMnOSGAzts2w_v-aG0iYl"
+        />
+      )}
+      {/* ===== END PLAGIARISM MODAL ===== */}
 
       {authPage === 'dashboard' && renderPageSettingsPanel()}
     </div>

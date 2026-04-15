@@ -310,10 +310,27 @@ export default function App() {
   const [filterContentType, setFilterContentType] = useState('All Types');
 
   const CONTENT_TYPES = [
-    'Textbook','Lesson Plan','Assignment','Project Paper','Practice Questions',
-    'Flash Cards','Mock Exam','MCQ QP','Descriptive QP','Interactive Scroll',
-    'Live Worksheet','Video','Audio','Simulation'
-  ];
+  'Textbook',
+  'Textbook - Chapter Content',
+  'Textbook - Chapter Activity',
+  'Textbook - Chapter Assessment',
+  'Textbook - Chapter Practice',
+  'Textbook - Chapter Teacher Track',
+  'Textbook - Project Content',
+  'Lesson Plan',
+  'Assignment',
+  'Project Paper',
+  'Practice Questions',
+  'Flash Cards',
+  'Mock Exam',
+  'MCQ QP',
+  'Descriptive QP',
+  'Interactive Scroll',
+  'Live Worksheet',
+  'Video',
+  'Audio',
+  'Simulation'
+];
 
   const [showAddForm, setShowAddForm] = useState(false);
   const [formClass, setFormClass] = useState('1');

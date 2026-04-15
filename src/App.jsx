@@ -73,22 +73,19 @@ function PlagiarismCheckModal({ record, onClose, supabaseUrl, supabaseAnonKey, i
       setError('No content to check. Please generate content first.');
       return;
     }
-    setChecking(true); setError(''); setResult(null); setSelectedMatch(null);
-    try {
-      const res = await fetch(supabaseUrl + '/functions/v1/copyleaks-check-plagiarism', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'apikey': supabaseAnonKey, 'Authorization': 'Bearer ' + supabaseAnonKey },
-        body: JSON.stringify({ content: record.ai_output, record_id: record.record_id })
-      });
-      const data = await res.json();
-      if (data.error && !data.overall_score && data.overall_score !== 0) { setError(data.error); }
-      else {
-        setResult(data);
-        if (onResultSaved) onResultSaved(data);
-      }
-    } catch (e) { setError('Check failed: ' + e.message); }
-    setChecking(false);
-  };
+   setChecking(true); setError(''); setResult(null); setSelectedMatch(null);
+try {
+  const { data, error: invokeError } = await supabase.functions.invoke('check-plagiarism', {
+    body: { content: record.ai_output, record_id: record.record_id }
+  });
+  if (invokeError) throw invokeError;
+  if (data.error && !data.overall_score && data.overall_score !== 0) { setError(data.error); }
+  else {
+    setResult(data);
+    if (onResultSaved) onResultSaved(data);
+  }
+} catch (e) { setError('Check failed: ' + e.message); }
+setChecking(false);
 
   const getScoreColor = (score) => {
     if (score >= 70) return '#ef4444';

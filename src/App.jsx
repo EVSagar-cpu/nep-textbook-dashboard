@@ -73,19 +73,20 @@ function PlagiarismCheckModal({ record, onClose, supabaseUrl, supabaseAnonKey, i
       setError('No content to check. Please generate content first.');
       return;
     }
-   setChecking(true); setError(''); setResult(null); setSelectedMatch(null);
-try {
-  const { data, error: invokeError } = await supabase.functions.invoke('check-plagiarism', {
-    body: { content: record.ai_output, record_id: record.record_id }
-  });
-  if (invokeError) throw invokeError;
-  if (data.error && !data.overall_score && data.overall_score !== 0) { setError(data.error); }
-  else {
-    setResult(data);
-    if (onResultSaved) onResultSaved(data);
-  }
-} catch (e) { setError('Check failed: ' + e.message); }
-setChecking(false);
+    setChecking(true); setError(''); setResult(null); setSelectedMatch(null);
+    try {
+      const { data, error: invokeError } = await supabase.functions.invoke('check-plagiarism', {
+        body: { content: record.ai_output, record_id: record.record_id }
+      });
+      if (invokeError) throw invokeError;
+      if (data.error && !data.overall_score && data.overall_score !== 0) { setError(data.error); }
+      else {
+        setResult(data);
+        if (onResultSaved) onResultSaved(data);
+      }
+    } catch (e) { setError('Check failed: ' + e.message); }
+    setChecking(false);
+  };
 
   const getScoreColor = (score) => {
     if (score >= 70) return '#ef4444';
@@ -143,7 +144,6 @@ setChecking(false);
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 9999, display: 'flex', flexDirection: 'column' }}>
       <style>{'@keyframes plagSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }'}</style>
-      {/* Header */}
       <div style={{ background: '#1e1b4b', padding: '12px 20px', display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
         <MI name="policy" size={22} color="#a5b4fc" />
         <div>
@@ -159,9 +159,7 @@ setChecking(false);
           <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.1)', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 12px', cursor: 'pointer', display: 'flex', alignItems: 'center', fontFamily: 'Inter,sans-serif' }}><MI name="close" size={18} color="white" /></button>
         </div>
       </div>
-      {/* Body */}
       <div style={{ flex: 1, display: 'flex', overflow: 'hidden', background: '#f8fafc' }}>
-        {/* LEFT — Content */}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', borderRight: '2px solid #e2e8f0', overflow: 'hidden' }}>
           <div style={{ padding: '10px 16px', background: '#fff', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: 8 }}>
             <MI name="article" size={17} color="#6366f1" />
@@ -179,12 +177,11 @@ setChecking(false);
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: 16 }}>
                 <div style={{ width: 48, height: 48, border: '4px solid #e2e8f0', borderTop: '4px solid #6366f1', borderRadius: '50%', animation: 'plagSpin 1s linear infinite' }} />
                 <div style={{ color: '#6366f1', fontWeight: 700, fontSize: 15, fontFamily: 'Lexend, sans-serif' }}>Searching internet for matches...</div>
-                <div style={{ color: '#94a3b8', fontSize: 13 }}>This may take 20–40 seconds</div>
+                <div style={{ color: '#94a3b8', fontSize: 13 }}>This may take 30–90 seconds</div>
               </div>
             ) : renderHighlightedContent()}
           </div>
         </div>
-        {/* RIGHT — Results */}
         <div style={{ width: 360, display: 'flex', flexDirection: 'column', overflow: 'hidden', background: '#fff' }}>
           {!result && !checking && (
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16, padding: 32 }}>
@@ -203,12 +200,11 @@ setChecking(false);
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12, padding: 32 }}>
               <div style={{ width: 56, height: 56, border: '5px solid #e0e7ff', borderTop: '5px solid #6366f1', borderRadius: '50%', animation: 'plagSpin 1s linear infinite' }} />
               <div style={{ fontSize: 14, fontWeight: 700, color: '#6366f1', fontFamily: 'Lexend, sans-serif' }}>Analyzing...</div>
-              <div style={{ fontSize: 12, color: '#94a3b8', textAlign: 'center', lineHeight: 1.6 }}>Checking key phrases against online sources using AI web search.</div>
+              <div style={{ fontSize: 12, color: '#94a3b8', textAlign: 'center', lineHeight: 1.6 }}>Checking key phrases against online sources using Copyleaks.</div>
             </div>
           )}
           {result && !checking && (
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-              {/* Score */}
               <div style={{ padding: '20px 20px 16px', borderBottom: '1px solid #e2e8f0', background: '#fafafa' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
                   <div style={{ position: 'relative', width: 80, height: 80, flexShrink: 0 }}>
@@ -234,7 +230,6 @@ setChecking(false);
                 </div>
                 {result.summary && <div style={{ marginTop: 12, background: '#f8fafc', borderRadius: 8, padding: '10px 12px', fontSize: 12, color: '#475569', lineHeight: 1.6, border: '1px solid #e2e8f0' }}>{result.summary}</div>}
               </div>
-              {/* Matches */}
               <div style={{ overflowY: 'auto', flex: 1 }}>
                 <div style={{ padding: '12px 16px 6px', fontSize: 12, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: 1, fontFamily: 'Lexend, sans-serif' }}>Match Overview</div>
                 {(!result.matches || result.matches.length === 0) && <div style={{ padding: '20px 16px', textAlign: 'center', color: '#94a3b8', fontSize: 13 }}>No matching sources found online.</div>}

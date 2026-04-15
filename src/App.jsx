@@ -279,7 +279,6 @@ setChecking(false);
 // ============================================================
 // END PLAGIARISM CHECK MODAL
 // ============================================================
-
 export default function App() {
   const [currentUser, setCurrentUser] = useState(null);
   const [authPage, setAuthPage] = useState('login');

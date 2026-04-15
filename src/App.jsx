@@ -2139,9 +2139,10 @@ const handleSavePlagiarismResult = async (result) => {
           const plagHigh = records.filter(r => r.plagiarism_result && r.plagiarism_result.overall_score >= 50).length;
           const cards = [
             { label:'Total Records', value:records.length, sub:generated.length+' generated', icon:'article', color:'#6366f1', bg:'#eef2ff' },
-            { label:'Total AI Spend', value:'$'+totalCost.toFixed(4), sub:'USD across all models', icon:'payments', color:'#10b981', bg:'#ecfdf5' },
+            { label:'Total AI Spend', value:'$'+(totalCost + generated.reduce((s,r)=>s+(r.image_generation_cost||0),0)).toFixed(4), sub:'Text + image generation', icon:'payments', color:'#10b981', bg:'#ecfdf5' },
             { label:'Total Tokens', value:((totalTokensIn+totalTokensOut)/1000).toFixed(1)+'K', sub:totalTokensIn.toLocaleString()+' in / '+totalTokensOut.toLocaleString()+' out', icon:'token', color:'#f59e0b', bg:'#fffbeb' },
             { label:'Plagiarism Scans', value:plagChecked, sub:plagHigh+' high similarity found', icon:'policy', color:'#ef4444', bg:'#fef2f2' },
+{ label:'Image Spend', value:'$'+(generated.reduce((s,r)=>s+(r.image_generation_cost||0),0)).toFixed(4), sub:generated.reduce((s,r)=>s+(r.images_generated||0),0)+' images generated', icon:'image', color:'#8b5cf6', bg:'#f5f3ff' },
           ];
           return (
             <>
@@ -2200,7 +2201,7 @@ const handleSavePlagiarismResult = async (result) => {
                 <h3 style={{ margin:'0 0 16px 0', fontSize:'15px', fontWeight:'700', color:'#0f172a' }}>Recent Generations</h3>
                 <table style={{ width:'100%', borderCollapse:'collapse', fontSize:'13px' }}>
                   <thead><tr style={{ borderBottom:'2px solid #f1f5f9' }}>
-                    {['Record','Subject','Model','Tokens In','Tokens Out','Cost (USD)','Plagiarism'].map(h => <th key={h} style={{ padding:'8px 12px', textAlign:'left', fontSize:'11px', fontWeight:'700', color:'#64748b', textTransform:'uppercase', letterSpacing:'0.5px' }}>{h}</th>)}
+                    {['Record','Subject','Model','Tokens In','Tokens Out','Text Cost','Images','Img Cost','Plagiarism'].map(h => <th key={h} style={{ padding:'8px 12px', textAlign:'left', fontSize:'11px', fontWeight:'700', color:'#64748b', textTransform:'uppercase', letterSpacing:'0.5px' }}>{h}</th>)}
                   </tr></thead>
                   <tbody>
                     {generated.slice(0,20).map((r,i) => (
@@ -2211,6 +2212,8 @@ const handleSavePlagiarismResult = async (result) => {
                         <td style={{ padding:'10px 12px', color:'#374151', fontFamily:'monospace', fontSize:'12px' }}>{(r.tokens_input||0).toLocaleString()}</td>
                         <td style={{ padding:'10px 12px', color:'#374151', fontFamily:'monospace', fontSize:'12px' }}>{(r.tokens_output||0).toLocaleString()}</td>
                         <td style={{ padding:'10px 12px', fontWeight:'700', fontFamily:'monospace', fontSize:'12px', color:(r.generation_cost||0)>0.01?'#ef4444':(r.generation_cost||0)>0.005?'#f59e0b':'#10b981' }}>${(r.generation_cost||0).toFixed(5)}</td>
+<td style={{ padding:'10px 12px', color:'#374151', fontFamily:'monospace', fontSize:'12px' }}>{r.images_generated||0}</td>
+<td style={{ padding:'10px 12px', fontWeight:'700', fontFamily:'monospace', fontSize:'12px', color:'#8b5cf6' }}>${(r.image_generation_cost||0).toFixed(4)}</td>
                         <td style={{ padding:'10px 12px' }}>{r.plagiarism_result?<span style={{ padding:'2px 8px', borderRadius:'20px', fontSize:'11px', fontWeight:'700', background:r.plagiarism_result.overall_score>=50?'#fef2f2':r.plagiarism_result.overall_score>=20?'#fffbeb':'#f0fdf4', color:r.plagiarism_result.overall_score>=50?'#dc2626':r.plagiarism_result.overall_score>=20?'#d97706':'#16a34a' }}>{r.plagiarism_result.overall_score}%</span>:<span style={{ color:'#94a3b8', fontSize:'11px' }}>—</span>}</td>
                       </tr>
                     ))}

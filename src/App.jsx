@@ -75,7 +75,7 @@ function PlagiarismCheckModal({ record, onClose, supabaseUrl, supabaseAnonKey, i
     }
     setChecking(true); setError(''); setResult(null); setSelectedMatch(null);
     try {
-      const res = await fetch(supabaseUrl + '/functions/v1/check-plagiarism', {
+      const res = await fetch(supabaseUrl + '/functions/v1/copyleaks-check-plagiarism', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'apikey': supabaseAnonKey, 'Authorization': 'Bearer ' + supabaseAnonKey },
         body: JSON.stringify({ content: record.ai_output, record_id: record.record_id })

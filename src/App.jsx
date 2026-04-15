@@ -327,6 +327,9 @@ export default function App() {
   const [editingId, setEditingId] = useState(null);
   const [viewingRecord, setViewingRecord] = useState(null);
   const [plagiarismRecord, setPlagiarismRecord] = useState(null); // NEW: plagiarism modal
+const [userName, setUserName] = useState(() => sessionStorage.getItem('acs_user_name') || '');
+const [showNameModal, setShowNameModal] = useState(false);
+const [showAnalytics, setShowAnalytics] = useState(false);
   const [viewTab, setViewTab] = useState('content');
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState('');
@@ -405,7 +408,7 @@ export default function App() {
     if (user) {
       const { data: roleData } = await supabase.from('user_roles').select('role').eq('user_id', user.id).single();
       setCurrentUser({ ...user, user_metadata: { ...user.user_metadata, role: roleData?.role || 'content_developer' } });
-      setAuthPage('dashboard'); fetchRecords();
+      setAuthPage('dashboard'); fetchRecords(); if (!sessionStorage.getItem('acs_user_name')) setShowNameModal(true);
     }
   };
 
@@ -721,7 +724,7 @@ export default function App() {
     setSavingContent(true);
     try {
       const historyEntry = {
-        action: 'content_edited', timestamp: new Date().toISOString(), user: currentUser?.email || 'unknown',
+        action: 'content_edited', timestamp: new Date().toISOString(), user: (userName ? userName + ' (' + (currentUser?.email || '') + ')' : currentUser?.email || 'unknown'),
         word_count_before: (viewingRecord.ai_output || '').trim().split(/\s+/).length,
         word_count_after: editContent.trim().split(/\s+/).length,
         content_before: viewingRecord.ai_output || '', content_after: editContent,
@@ -904,7 +907,7 @@ export default function App() {
       if (!user) throw new Error('Failed to get user session');
       const { data: roleData } = await supabase.from('user_roles').select('role').eq('user_id', user.id).single();
       setCurrentUser({ ...user, user_metadata: { ...user.user_metadata, role: roleData?.role || 'content_developer' } });
-      setAuthPage('dashboard'); fetchRecords();
+      setAuthPage('dashboard'); fetchRecords(); if (!sessionStorage.getItem('acs_user_name')) setShowNameModal(true);
     } catch (err) { setSetupError(err.message || 'Setup failed.'); }
     finally { setSetupLoading(false); }
   };
@@ -916,7 +919,7 @@ export default function App() {
       if (error) throw error;
       const { data: roleData } = await supabase.from('user_roles').select('role').eq('user_id', data.user.id).single();
       setCurrentUser({ ...data.user, user_metadata: { ...data.user.user_metadata, role: roleData?.role || 'content_developer' } });
-      setAuthPage('dashboard'); fetchRecords();
+      setAuthPage('dashboard'); fetchRecords(); if (!sessionStorage.getItem('acs_user_name')) setShowNameModal(true);
     } catch (err) { setLoginError(err.message || 'Login failed'); }
     finally { setLoginLoading(false); }
   };
@@ -1773,9 +1776,10 @@ const handleSavePlagiarismResult = async (result) => {
           {[
             { icon:<BookOpen size={18} />, label:'Projects', action:'textbooks', disabled:false, rolesAllowed:['central_admin','admin','content_developer'] },
             { icon:<Users size={18} />, label:'Manage Users', action:'manage-users', disabled:true, rolesAllowed:['central_admin','admin'] },
-            { icon:<Mail size={18} />, label:'Invites', action:'invites', disabled:false, rolesAllowed:['central_admin','admin'] }
+            { icon:<Mail size={18} />, label:'Invites', action:'invites', disabled:false, rolesAllowed:['central_admin','admin'] },
+{ icon:<MI name="bar_chart" size={18} />, label:'Analytics', action:'analytics', disabled:false, rolesAllowed:['central_admin','admin','content_developer'] }
           ].filter(item => item.rolesAllowed.includes(currentUser?.user_metadata?.role||'content_developer')).map((item, i) => (
-            <button key={i} onClick={() => { if (item.action==='invites') { setShowInvitePanel(!showInvitePanel); if (!showInvitePanel) fetchPendingInvites(); } }} disabled={item.disabled}
+            <button key={i} onClick={() => { if (item.action==='invites') { setShowInvitePanel(!showInvitePanel); if (!showInvitePanel) fetchPendingInvites(); } if (item.action==='analytics') setShowAnalytics(true); if (item.action==='analytics') setShowAnalytics(true); if (item.action==='analytics') setShowAnalytics(true); if (item.action==='analytics') setShowAnalytics(true);if (item.action==='analytics') setShowAnalytics(true); }} disabled={item.disabled}
               style={{ width:'100%', padding:'12px 16px', background:item.action==='textbooks'?COLORS.navActive:'transparent', color:item.action==='textbooks'?COLORS.white:(item.disabled?COLORS.navDisabled:COLORS.navText), border:'none', borderRadius:'6px', cursor:item.disabled?'not-allowed':'pointer', marginBottom:'8px', display:'flex', alignItems:'center', gap:'12px', fontSize:'14px', fontWeight:'500', fontFamily:FONT_FAMILY, whiteSpace:'nowrap' }}>
               {item.icon}{sidebarOpen && <span style={{ marginLeft:'10px' }}>{item.label}</span>}
             </button>
@@ -1790,7 +1794,7 @@ const handleSavePlagiarismResult = async (result) => {
       <div style={{ flex:1, display:'flex', flexDirection:'column', overflow:'hidden' }}>
         <div style={{ background:COLORS.white, borderBottom:'1px solid '+COLORS.borderColor, padding:'16px 24px', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
           <h1 style={{ margin:0, fontSize:'20px', fontWeight:'700', color:COLORS.darkText }}>AI Content Studio</h1>
-          <span style={{ fontSize:'12px', color:COLORS.lightText }}>{currentUser?.email} • {currentUser?.user_metadata?.role}</span>
+          <span style={{ fontSize:'12px', color:COLORS.lightText }}>{userName && <span style={{ fontSize:'13px', fontWeight:'600', color:COLORS.darkText, marginRight:'8px' }}>Hi, {userName}</span>}{currentUser?.email} • {currentUser?.user_metadata?.role} <button onClick={() => setShowNameModal(true)} style={{ marginLeft:'8px', background:'none', border:'1px solid '+COLORS.borderColor, borderRadius:'6px', padding:'3px 8px', cursor:'pointer', fontSize:'11px', color:COLORS.lightText, fontFamily:FONT_FAMILY }}><MI name="edit" size={12} /> Name</button></span>
         </div>
 
         <div style={{ flex:1, overflow:'auto', padding:'24px' }}>
@@ -2092,7 +2096,136 @@ const handleSavePlagiarismResult = async (result) => {
       )}
       {/* ===== END PLAGIARISM MODAL ===== */}
 
-      {authPage === 'dashboard' && renderPageSettingsPanel()}
+      {showNameModal && (
+  <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:9998, fontFamily:FONT_FAMILY }}>
+    <div style={{ background:COLORS.white, borderRadius:'16px', padding:'40px', width:'100%', maxWidth:'420px', boxShadow:'0 20px 60px rgba(0,0,0,0.2)', textAlign:'center' }}>
+      <div style={{ width:'64px', height:'64px', background:'linear-gradient(135deg,#6366f1,#8b5cf6)', borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 20px auto' }}><MI name="person" size={32} color="white" /></div>
+      <h2 style={{ margin:'0 0 8px 0', fontSize:'22px', fontWeight:'700', color:COLORS.darkText }}>Welcome!</h2>
+      <p style={{ margin:'0 0 24px 0', fontSize:'14px', color:COLORS.lightText, lineHeight:'1.6' }}>Enter your name so your contributions are tracked in history.</p>
+      <input type="text" placeholder="Your name (e.g. Ravi, Priya...)" autoFocus id="name-input-field" defaultValue={userName}
+        onKeyDown={e => { if (e.key === 'Enter') { const v = e.target.value.trim(); if (v) { setUserName(v); sessionStorage.setItem('acs_user_name', v); } setShowNameModal(false); } }}
+        style={{ width:'100%', padding:'12px 16px', border:'2px solid #e0e7ff', borderRadius:'8px', fontSize:'15px', fontFamily:FONT_FAMILY, outline:'none', textAlign:'center', marginBottom:'16px', boxSizing:'border-box' }}
+        onFocus={e => e.target.style.borderColor='#6366f1'} onBlur={e => e.target.style.borderColor='#e0e7ff'} />
+      <button onClick={() => { const inp = document.getElementById('name-input-field'); const v = inp ? inp.value.trim() : ''; if (v) { setUserName(v); sessionStorage.setItem('acs_user_name', v); } setShowNameModal(false); }}
+        style={{ width:'100%', padding:'12px', background:'linear-gradient(135deg,#6366f1,#8b5cf6)', color:'white', border:'none', borderRadius:'8px', fontSize:'15px', fontWeight:'700', cursor:'pointer', fontFamily:FONT_FAMILY }}>
+        Continue →
+      </button>
+      <button onClick={() => setShowNameModal(false)} style={{ marginTop:'10px', background:'none', border:'none', fontSize:'12px', color:COLORS.lightText, cursor:'pointer', fontFamily:FONT_FAMILY }}>Skip for now</button>
+    </div>
+  </div>
+)}
+
+{showAnalytics && (
+  <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.6)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:1000, padding:'20px', fontFamily:FONT_FAMILY }}>
+    <div style={{ background:'#f8fafc', width:'98%', maxWidth:'1100px', height:'90vh', borderRadius:'16px', overflow:'hidden', display:'flex', flexDirection:'column', boxShadow:'0 20px 60px rgba(0,0,0,0.3)' }}>
+      <div style={{ background:'linear-gradient(135deg,#1e1b4b,#312e81)', padding:'20px 28px', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+        <div>
+          <h2 style={{ margin:'0 0 4px 0', fontSize:'20px', fontWeight:'700', color:'white' }}>Analytics Dashboard</h2>
+          <p style={{ margin:0, fontSize:'12px', color:'#a5b4fc' }}>Token usage & cost tracking across all AI models</p>
+        </div>
+        <button onClick={() => setShowAnalytics(false)} style={{ background:'rgba(255,255,255,0.1)', border:'none', borderRadius:'8px', padding:'8px 12px', cursor:'pointer', color:'white', display:'flex', alignItems:'center' }}><MI name="close" size={20} color="white" /></button>
+      </div>
+      <div style={{ flex:1, overflowY:'auto', padding:'24px 28px' }}>
+        {(() => {
+          const generated = records.filter(r => r.status === 'generated');
+          const totalCost = generated.reduce((s, r) => s + (r.generation_cost || 0), 0);
+          const totalTokensIn = generated.reduce((s, r) => s + (r.tokens_input || 0), 0);
+          const totalTokensOut = generated.reduce((s, r) => s + (r.tokens_output || 0), 0);
+          const byModel = {};
+          generated.forEach(r => { const m = r.text_model || 'claude'; if (!byModel[m]) byModel[m] = { count:0, cost:0, tokensIn:0, tokensOut:0 }; byModel[m].count++; byModel[m].cost += r.generation_cost||0; byModel[m].tokensIn += r.tokens_input||0; byModel[m].tokensOut += r.tokens_output||0; });
+          const modelColors = { claude:'#f59e0b', openai:'#10b981', gemini:'#6366f1' };
+          const modelLabels = { claude:'Claude Sonnet', openai:'GPT-4o', gemini:'Gemini 1.5 Pro' };
+          const plagChecked = records.filter(r => r.plagiarism_result).length;
+          const plagHigh = records.filter(r => r.plagiarism_result && r.plagiarism_result.overall_score >= 50).length;
+          const cards = [
+            { label:'Total Records', value:records.length, sub:generated.length+' generated', icon:'article', color:'#6366f1', bg:'#eef2ff' },
+            { label:'Total AI Spend', value:'$'+totalCost.toFixed(4), sub:'USD across all models', icon:'payments', color:'#10b981', bg:'#ecfdf5' },
+            { label:'Total Tokens', value:((totalTokensIn+totalTokensOut)/1000).toFixed(1)+'K', sub:totalTokensIn.toLocaleString()+' in / '+totalTokensOut.toLocaleString()+' out', icon:'token', color:'#f59e0b', bg:'#fffbeb' },
+            { label:'Plagiarism Scans', value:plagChecked, sub:plagHigh+' high similarity found', icon:'policy', color:'#ef4444', bg:'#fef2f2' },
+          ];
+          return (
+            <>
+              <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:'16px', marginBottom:'28px' }}>
+                {cards.map((c,i) => (
+                  <div key={i} style={{ background:'white', borderRadius:'12px', padding:'20px', boxShadow:'0 1px 3px rgba(0,0,0,0.08)', border:'1px solid #e2e8f0' }}>
+                    <div style={{ width:'40px', height:'40px', borderRadius:'10px', background:c.bg, display:'flex', alignItems:'center', justifyContent:'center', marginBottom:'12px' }}><MI name={c.icon} size={20} color={c.color} /></div>
+                    <div style={{ fontSize:'26px', fontWeight:'800', color:'#0f172a', letterSpacing:'-1px' }}>{c.value}</div>
+                    <div style={{ fontSize:'13px', fontWeight:'600', color:'#64748b', marginTop:'2px' }}>{c.label}</div>
+                    <div style={{ fontSize:'11px', color:'#94a3b8', marginTop:'4px' }}>{c.sub}</div>
+                  </div>
+                ))}
+              </div>
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'20px', marginBottom:'28px' }}>
+                <div style={{ background:'white', borderRadius:'12px', padding:'20px', boxShadow:'0 1px 3px rgba(0,0,0,0.08)', border:'1px solid #e2e8f0' }}>
+                  <h3 style={{ margin:'0 0 16px 0', fontSize:'15px', fontWeight:'700', color:'#0f172a' }}>Cost by Model</h3>
+                  {Object.keys(byModel).length === 0 ? <div style={{ textAlign:'center', color:'#94a3b8', fontSize:'13px', padding:'20px 0' }}>No generated records yet</div> :
+                    Object.entries(byModel).sort((a,b) => b[1].cost-a[1].cost).map(([model,data]) => {
+                      const pct = totalCost > 0 ? Math.round((data.cost/totalCost)*100) : 0;
+                      return (
+                        <div key={model} style={{ marginBottom:'16px' }}>
+                          <div style={{ display:'flex', justifyContent:'space-between', marginBottom:'5px' }}>
+                            <div style={{ display:'flex', alignItems:'center', gap:'8px' }}><div style={{ width:'10px', height:'10px', borderRadius:'50%', background:modelColors[model]||'#94a3b8' }} /><span style={{ fontSize:'13px', fontWeight:'600', color:'#374151' }}>{modelLabels[model]||model}</span></div>
+                            <span style={{ fontSize:'13px', fontWeight:'700', color:'#0f172a' }}>${data.cost.toFixed(4)}</span>
+                          </div>
+                          <div style={{ height:'8px', background:'#f1f5f9', borderRadius:'4px', overflow:'hidden' }}><div style={{ height:'100%', width:pct+'%', background:modelColors[model]||'#94a3b8', borderRadius:'4px' }} /></div>
+                          <div style={{ fontSize:'11px', color:'#94a3b8', marginTop:'3px' }}>{data.count} records • {((data.tokensIn+data.tokensOut)/1000).toFixed(1)}K tokens • {pct}% of spend</div>
+                        </div>
+                      );
+                    })
+                  }
+                </div>
+                <div style={{ background:'white', borderRadius:'12px', padding:'20px', boxShadow:'0 1px 3px rgba(0,0,0,0.08)', border:'1px solid #e2e8f0' }}>
+                  <h3 style={{ margin:'0 0 16px 0', fontSize:'15px', fontWeight:'700', color:'#0f172a' }}>Token Usage</h3>
+                  {[
+                    { label:'Input Tokens', value:totalTokensIn, color:'#6366f1', bg:'#eef2ff', icon:'input' },
+                    { label:'Output Tokens', value:totalTokensOut, color:'#10b981', bg:'#ecfdf5', icon:'output' },
+                    { label:'Total Tokens', value:totalTokensIn+totalTokensOut, color:'#f59e0b', bg:'#fffbeb', icon:'token' },
+                    { label:'Avg per Record', value:generated.length>0?Math.round((totalTokensIn+totalTokensOut)/generated.length):0, color:'#8b5cf6', bg:'#f5f3ff', icon:'analytics' },
+                  ].map((item,i) => (
+                    <div key={i} style={{ display:'flex', alignItems:'center', gap:'12px', padding:'10px 12px', borderRadius:'8px', background:item.bg, marginBottom:'8px' }}>
+                      <MI name={item.icon} size={18} color={item.color} />
+                      <div style={{ flex:1, fontSize:'12px', color:'#64748b', fontWeight:'500' }}>{item.label}</div>
+                      <div style={{ fontSize:'16px', fontWeight:'800', color:item.color }}>{item.value.toLocaleString()}</div>
+                    </div>
+                  ))}
+                  <div style={{ marginTop:'12px', padding:'12px', background:'#f8fafc', borderRadius:'8px', border:'1px solid #e2e8f0' }}>
+                    <div style={{ fontSize:'11px', color:'#94a3b8', marginBottom:'6px', fontWeight:'600', textTransform:'uppercase', letterSpacing:'0.5px' }}>Pricing Reference (per 1M tokens)</div>
+                    {[['Claude Sonnet','$3 in / $15 out'],['GPT-4o','$5 in / $15 out'],['Gemini 1.5 Pro','$1.25 in / $5 out']].map(([m,p]) => (
+                      <div key={m} style={{ display:'flex', justifyContent:'space-between', fontSize:'11px', color:'#64748b', padding:'2px 0' }}><span>{m}</span><span style={{ fontWeight:'600' }}>{p}</span></div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              <div style={{ background:'white', borderRadius:'12px', padding:'20px', boxShadow:'0 1px 3px rgba(0,0,0,0.08)', border:'1px solid #e2e8f0' }}>
+                <h3 style={{ margin:'0 0 16px 0', fontSize:'15px', fontWeight:'700', color:'#0f172a' }}>Recent Generations</h3>
+                <table style={{ width:'100%', borderCollapse:'collapse', fontSize:'13px' }}>
+                  <thead><tr style={{ borderBottom:'2px solid #f1f5f9' }}>
+                    {['Record','Subject','Model','Tokens In','Tokens Out','Cost (USD)','Plagiarism'].map(h => <th key={h} style={{ padding:'8px 12px', textAlign:'left', fontSize:'11px', fontWeight:'700', color:'#64748b', textTransform:'uppercase', letterSpacing:'0.5px' }}>{h}</th>)}
+                  </tr></thead>
+                  <tbody>
+                    {generated.slice(0,20).map((r,i) => (
+                      <tr key={i} style={{ borderBottom:'1px solid #f8fafc' }}>
+                        <td style={{ padding:'10px 12px', color:'#374151', fontWeight:'500' }}>#{r.record_id} {(r.topic||'').substring(0,25)}{(r.topic||'').length>25?'...':''}</td>
+                        <td style={{ padding:'10px 12px', color:'#64748b' }}>{r.subject}</td>
+                        <td style={{ padding:'10px 12px' }}><span style={{ padding:'2px 8px', borderRadius:'20px', fontSize:'11px', fontWeight:'600', background:r.text_model==='openai'?'#ecfdf5':r.text_model==='gemini'?'#eef2ff':'#fffbeb', color:r.text_model==='openai'?'#059669':r.text_model==='gemini'?'#6366f1':'#d97706' }}>{modelLabels[r.text_model||'claude']||r.text_model||'Claude'}</span></td>
+                        <td style={{ padding:'10px 12px', color:'#374151', fontFamily:'monospace', fontSize:'12px' }}>{(r.tokens_input||0).toLocaleString()}</td>
+                        <td style={{ padding:'10px 12px', color:'#374151', fontFamily:'monospace', fontSize:'12px' }}>{(r.tokens_output||0).toLocaleString()}</td>
+                        <td style={{ padding:'10px 12px', fontWeight:'700', fontFamily:'monospace', fontSize:'12px', color:(r.generation_cost||0)>0.01?'#ef4444':(r.generation_cost||0)>0.005?'#f59e0b':'#10b981' }}>${(r.generation_cost||0).toFixed(5)}</td>
+                        <td style={{ padding:'10px 12px' }}>{r.plagiarism_result?<span style={{ padding:'2px 8px', borderRadius:'20px', fontSize:'11px', fontWeight:'700', background:r.plagiarism_result.overall_score>=50?'#fef2f2':r.plagiarism_result.overall_score>=20?'#fffbeb':'#f0fdf4', color:r.plagiarism_result.overall_score>=50?'#dc2626':r.plagiarism_result.overall_score>=20?'#d97706':'#16a34a' }}>{r.plagiarism_result.overall_score}%</span>:<span style={{ color:'#94a3b8', fontSize:'11px' }}>—</span>}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          );
+        })()}
+      </div>
+    </div>
+  </div>
+)}
+
+{authPage === 'dashboard' && renderPageSettingsPanel()}
     </div>
   );
 }

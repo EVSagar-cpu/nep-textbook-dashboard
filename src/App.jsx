@@ -612,7 +612,7 @@ const [showAnalytics, setShowAnalytics] = useState(false);
         await saveVisualPrompts(viewingRecord.record_id, updated);
         setViewingRecord({ ...viewingRecord, visual_prompts: updated });
         setVisualMessage('Image generated!'); fetchRecords();
-      } else throw new Error('No image URL returned');
+      } else throw new Error(data?.error || 'No image URL returned');
     } catch (err) { setVisualMessage('Generation failed: ' + err.message); }
     finally { setGeneratingImageId(null); }
   };

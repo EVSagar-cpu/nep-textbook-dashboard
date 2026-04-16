@@ -862,8 +862,10 @@ const [showAnalytics, setShowAnalytics] = useState(false);
     } catch (err) { alert('PDF export failed: ' + err.message); }
   };
 
-    const { Document, Packer, Paragraph, TextRun, HeadingLevel, ImageRun, AlignmentType, LevelFormat } = window.docx;
-    const lines = viewingRecord.ai_output.split('\n');
+const handleExportWord = async () => {
+  if (!viewingRecord || !viewingRecord.ai_output) return;
+  try {
+  const lines = viewingRecord.ai_output.split('\n');
     const children = [];
     let i = 0;
 

@@ -6,9 +6,7 @@ import {
   ChevronDown, ChevronUp, Loader2, ImagePlus, Layers, Trash2,
   Pencil, Save, XCircle, Link, Maximize2, ZoomIn, Clock
 } from 'lucide-react';
-import {
-  detectErrorType, showDetailedError, logError, checkAPIHealth
-} from './utils/errorHandling';
+  import { Document, Packer, Paragraph, TextRun, HeadingLevel, ImageRun, AlignmentType, LevelFormat } from 'docx';
 
 const supabase = createClient(
   'https://syacvhjmcgpgxvczassp.supabase.co',
@@ -864,18 +862,7 @@ const [showAnalytics, setShowAnalytics] = useState(false);
     } catch (err) { alert('PDF export failed: ' + err.message); }
   };
 
-  const handleExportWord = async () => {
-  if (!viewingRecord || !viewingRecord.ai_output) return;
-  try {
-    if (!window.docx) {
-  await new Promise((resolve, reject) => {
-    const script = document.createElement('script');
-    script.src = 'https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.js';
-    script.onload = resolve;
-    script.onerror = reject;
-    document.head.appendChild(script);
-  });
-}
+ 
 if (!window.docx) {
       await new Promise((resolve, reject) => {
         const script = document.createElement('script');

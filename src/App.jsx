@@ -975,7 +975,7 @@ if (!window.docx) {
     URL.revokeObjectURL(url);
   } catch(err) {
     console.error('Word export error:', err);
-    alert('Word export failed: ' + err.message);
+    alert('Word export failed: ' + (err.message || JSON.stringify(err)));
   }
 };
 

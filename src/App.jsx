@@ -864,15 +864,102 @@ const [showAnalytics, setShowAnalytics] = useState(false);
     } catch (err) { alert('PDF export failed: ' + err.message); }
   };
 
-  const handleExportWord = () => {
-    if (!viewingRecord?.ai_output) return;
-    try {
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(new Blob([viewingRecord.ai_output], { type: 'text/plain' }));
-      a.download = viewingRecord.topic + '.txt';
-      document.body.appendChild(a); a.click(); document.body.removeChild(a);
-    } catch (err) { alert('Export failed: ' + err.message); }
-  };
+  const handleExportWord = async () => {
+  if (!viewingRecord || !viewingRecord.ai_output) return;
+  try {
+    const { Document, Packer, Paragraph, TextRun, HeadingLevel, ImageRun, AlignmentType, LevelFormat } = window.docx;
+    const lines = viewingRecord.ai_output.split('\n');
+    const children = [];
+    let i = 0;
+
+    const parseLine = (text) => {
+      const runs = [];
+      const parts = text.split(/(\*\*.*?\*\*|\*.*?\*|`.*?`)/g);
+      parts.forEach(part => {
+        if (part.startsWith('**') && part.endsWith('**')) {
+          runs.push(new TextRun({ text: part.slice(2,-2), bold: true, font: 'Calibri', size: 24 }));
+        } else if (part.startsWith('*') && part.endsWith('*')) {
+          runs.push(new TextRun({ text: part.slice(1,-1), italics: true, font: 'Calibri', size: 24 }));
+        } else if (part.startsWith('`') && part.endsWith('`')) {
+          runs.push(new TextRun({ text: part.slice(1,-1), font: 'Courier New', size: 22 }));
+        } else if (part) {
+          runs.push(new TextRun({ text: part, font: 'Calibri', size: 24 }));
+        }
+      });
+      return runs;
+    };
+
+    while (i < lines.length) {
+      const line = lines[i];
+
+      // Image
+      const imgMatch = line.match(/!\[.*?\]\((.*?)\)/);
+      if (imgMatch) {
+        try {
+          const imgUrl = imgMatch[1];
+          const res = await fetch(imgUrl);
+          const blob = await res.blob();
+          const buf = await blob.arrayBuffer();
+          const ext = imgUrl.toLowerCase().includes('.png') ? 'png' : imgUrl.toLowerCase().includes('.gif') ? 'gif' : 'jpg';
+          children.push(new Paragraph({
+            children: [new ImageRun({ data: buf, transformation: { width: 400, height: 300 }, type: ext })],
+            alignment: AlignmentType.CENTER,
+            spacing: { before: 200, after: 200 },
+          }));
+        } catch(e) { /* skip failed images */ }
+        i++; continue;
+      }
+
+      // Headings
+      if (line.startsWith('### ')) {
+        children.push(new Paragraph({ heading: HeadingLevel.HEADING_3, children: [new TextRun({ text: line.slice(4), bold: true, font: 'Calibri', size: 26 })] }));
+      } else if (line.startsWith('## ')) {
+        children.push(new Paragraph({ heading: HeadingLevel.HEADING_2, children: [new TextRun({ text: line.slice(3), bold: true, font: 'Calibri', size: 30 })] }));
+      } else if (line.startsWith('# ')) {
+        children.push(new Paragraph({ heading: HeadingLevel.HEADING_1, children: [new TextRun({ text: line.slice(2), bold: true, font: 'Calibri', size: 36 })] }));
+      } else if (line.startsWith('- ') || line.startsWith('* ')) {
+        children.push(new Paragraph({ numbering: { reference: 'bullets', level: 0 }, children: parseLine(line.slice(2)) }));
+      } else if (/^\d+\.\s/.test(line)) {
+        children.push(new Paragraph({ numbering: { reference: 'numbers', level: 0 }, children: parseLine(line.replace(/^\d+\.\s/, '')) }));
+      } else if (line.startsWith('---') || line.startsWith('===')) {
+        children.push(new Paragraph({ border: { bottom: { style: 'single', size: 6, color: '999999', space: 1 } }, children: [] }));
+      } else if (line.trim() === '') {
+        children.push(new Paragraph({ children: [new TextRun('')], spacing: { before: 80, after: 80 } }));
+      } else {
+        children.push(new Paragraph({ children: parseLine(line), spacing: { before: 80, after: 80 } }));
+      }
+      i++;
+    }
+
+    const doc = new Document({
+      numbering: {
+        config: [
+          { reference: 'bullets', levels: [{ level: 0, format: LevelFormat.BULLET, text: '•', alignment: AlignmentType.LEFT, style: { paragraph: { indent: { left: 720, hanging: 360 } } } }] },
+          { reference: 'numbers', levels: [{ level: 0, format: LevelFormat.DECIMAL, text: '%1.', alignment: AlignmentType.LEFT, style: { paragraph: { indent: { left: 720, hanging: 360 } } } }] },
+        ]
+      },
+      sections: [{
+        properties: { page: { size: { width: 11906, height: 16838 }, margin: { top: 1440, right: 1440, bottom: 1440, left: 1440 } } },
+        children: [
+          new Paragraph({ heading: HeadingLevel.HEADING_1, children: [new TextRun({ text: (viewingRecord.subject || '') + ' — ' + (viewingRecord.topic || ''), bold: true, font: 'Calibri', size: 40 })], spacing: { after: 400 } }),
+          new Paragraph({ children: [new TextRun({ text: 'Class: ' + (viewingRecord.class || '') + '  |  Sub-topic: ' + (viewingRecord.sub_topic || '') + '  |  Type: ' + (viewingRecord.content_type || ''), font: 'Calibri', size: 20, color: '666666' })], spacing: { after: 600 } }),
+          ...children
+        ]
+      }]
+    });
+
+    const buffer = await Packer.toBlob(doc);
+    const url = URL.createObjectURL(buffer);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = (viewingRecord.subject || 'content') + '_' + (viewingRecord.topic || 'doc') + '.docx';
+    a.click();
+    URL.revokeObjectURL(url);
+  } catch(err) {
+    console.error('Word export error:', err);
+    alert('Word export failed: ' + err.message);
+  }
+};
 
   const handleCopyContent = async () => {
     if (!viewingRecord?.ai_output) return;

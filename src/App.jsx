@@ -867,6 +867,24 @@ const [showAnalytics, setShowAnalytics] = useState(false);
   const handleExportWord = async () => {
   if (!viewingRecord || !viewingRecord.ai_output) return;
   try {
+    if (!window.docx) {
+  await new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    script.src = 'https://unpkg.com/docx@8.5.0/build/index.js';
+    script.onload = resolve;
+    script.onerror = reject;
+    document.head.appendChild(script);
+  });
+}
+if (!window.docx) {
+      await new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = 'https://unpkg.com/docx@8.5.0/build/index.js';
+        script.onload = resolve;
+        script.onerror = reject;
+        document.head.appendChild(script);
+      });
+    }
     const { Document, Packer, Paragraph, TextRun, HeadingLevel, ImageRun, AlignmentType, LevelFormat } = window.docx;
     const lines = viewingRecord.ai_output.split('\n');
     const children = [];

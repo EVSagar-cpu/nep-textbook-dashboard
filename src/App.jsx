@@ -492,7 +492,7 @@ const [analyticsDateTo, setAnalyticsDateTo] = useState('');
       if (tableLines.length > 0 && (!line.includes('|') || line.trim().length < 2)) flushTable();
       if (line.startsWith('###')) { flushList(); result.push(<h3 key={i} style={{ fontSize:'15px', margin:'24px 0 10px 0', fontWeight:'700', color:'#1e3a5f', pageBreakAfter:'avoid', paddingLeft:'12px', borderLeft:'3px solid #93c5fd' }}>{renderInline(line.replace(/^#+\s*/, ''))}</h3>); i++; continue; }
       if (line.startsWith('##')) { flushList(); result.push(<h2 key={i} style={{ fontSize:'18px', margin:'32px 0 12px 0', fontWeight:'700', color:'#1e3a5f', pageBreakAfter:'avoid', paddingBottom:'6px', borderBottom:'2px solid #dbeafe' }}>{renderInline(line.replace(/^#+\s*/, ''))}</h2>); i++; continue; }
-      if (line.startsWith('#')) { flushList(); result.push(<h1 key={i} style={{ fontSize:'22px', margin:'36px 0 14px 0', fontWeight:'800', color:'#1e3a5f', pageBreakAfter:'avoid', paddingBottom:'8px', borderBottom:'3px solid #1e3a5f' }}>renderInline(line.replace(/^#+\s*/, ''))}</h1>); i++; continue; }
+      if (line.startsWith('#')) { flushList(); result.push(<h1 key={i} style={{ fontSize:'22px', margin:'36px 0 14px 0', fontWeight:'800', color:'#1e3a5f', pageBreakAfter:'avoid', paddingBottom:'8px', borderBottom:'3px solid #1e3a5f' }}>{renderInline(line.replace(/^#+\s*/, ''))}</h1>); i++; continue; }
       if (line.trim().startsWith('-') || line.trim().startsWith('*') || /^\d+\./.test(line.trim())) {
         const t = line.replace(/^[\s\-\*]+|\d+\.\s*/, '').trim();
         if (t) listItems.push(t); i++; continue;

@@ -6,8 +6,8 @@ import {
   ChevronDown, ChevronUp, Loader2, ImagePlus, Layers, Trash2,
   Pencil, Save, XCircle, Link, Maximize2, ZoomIn, Clock
 } from 'lucide-react';
-  import { Document, Packer, Paragraph, TextRun, HeadingLevel, ImageRun, AlignmentType, LevelFormat } from 'docx';
-
+import { detectErrorType, showDetailedError, logError, checkAPIHealth } from './utils/errorHandling';
+import { Document, Packer, Paragraph, TextRun, HeadingLevel, ImageRun, AlignmentType, LevelFormat } from 'docx';
 const supabase = createClient(
   'https://syacvhjmcgpgxvczassp.supabase.co',
   'sb_publishable_tmoQwBjJYHyMnOSGAzts2w_v-aG0iYl'

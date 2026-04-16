@@ -429,9 +429,14 @@ const [analyticsDateTo, setAnalyticsDateTo] = useState('');
 
     const flushList = () => {
       if (listItems.length > 0) {
-        result.push(<ul key={'list-' + result.length} style={{ marginLeft: '24px', marginBottom: '16px' }}>
-          {listItems.map((item, idx) => <li key={idx} style={{ marginBottom: '6px', lineHeight: '1.6' }}>{renderInline(item)}</li>)}
-        </ul>);
+        result.push(<ul key={'list-' + result.length} style={{ marginLeft:'0', marginBottom:'20px', paddingLeft:'0', listStyle:'none' }}>
+  {listItems.map((item, idx) => (
+    <li key={idx} style={{ marginBottom:'8px', lineHeight:'1.7', display:'flex', gap:'10px', alignItems:'flex-start' }}>
+      <span style={{ color:'#3b82f6', fontWeight:'700', fontSize:'16px', lineHeight:'1.5', flexShrink:0 }}>▸</span>
+      <span>{renderInline(item)}</span>
+    </li>
+  ))}
+</ul>);
         listItems = [];
       }
     };
@@ -485,14 +490,14 @@ const [analyticsDateTo, setAnalyticsDateTo] = useState('');
       if (inCodeBlock) { codeBlock.push(line); i++; continue; }
       if (line.includes('|') && line.trim().length > 2) { tableLines.push(line); i++; continue; }
       if (tableLines.length > 0 && (!line.includes('|') || line.trim().length < 2)) flushTable();
-      if (line.startsWith('###')) { flushList(); result.push(<h3 key={i} style={{ fontSize: '15px', margin: '12px 0 8px 0', fontWeight: '600', color: COLORS.darkText, pageBreakAfter: 'avoid' }}>{renderInline(line.replace(/^#+\s*/, ''))}</h3>); i++; continue; }
-      if (line.startsWith('##')) { flushList(); result.push(<h2 key={i} style={{ fontSize: '17px', margin: '14px 0 10px 0', fontWeight: '600', color: COLORS.darkText, pageBreakAfter: 'avoid' }}>{renderInline(line.replace(/^#+\s*/, ''))}</h2>); i++; continue; }
-      if (line.startsWith('#')) { flushList(); result.push(<h1 key={i} style={{ fontSize: '20px', margin: '16px 0 12px 0', fontWeight: '700', color: COLORS.darkText, pageBreakAfter: 'avoid' }}>{renderInline(line.replace(/^#+\s*/, ''))}</h1>); i++; continue; }
+      if (line.startsWith('###')) { flushList(); result.push(<h3 key={i} style={{ fontSize:'15px', margin:'24px 0 10px 0', fontWeight:'700', color:'#1e3a5f', pageBreakAfter:'avoid', paddingLeft:'12px', borderLeft:'3px solid #93c5fd' }}>{renderInline(line.replace(/^#+\s*/, ''))}</h3>); i++; continue; }
+      if (line.startsWith('##')) { flushList(); result.push(<h2 key={i} style={{ fontSize:'18px', margin:'32px 0 12px 0', fontWeight:'700', color:'#1e3a5f', pageBreakAfter:'avoid', paddingBottom:'6px', borderBottom:'2px solid #dbeafe' }}>{renderInline(line.replace(/^#+\s*/, ''))}</h2>); i++; continue; }
+      if (line.startsWith('#')) { flushList(); result.push(<h1 key={i} style={{ fontSize:'22px', margin:'36px 0 14px 0', fontWeight:'800', color:'#1e3a5f', pageBreakAfter:'avoid', paddingBottom:'8px', borderBottom:'3px solid #1e3a5f' }}>renderInline(line.replace(/^#+\s*/, ''))}</h1>); i++; continue; }
       if (line.trim().startsWith('-') || line.trim().startsWith('*') || /^\d+\./.test(line.trim())) {
         const t = line.replace(/^[\s\-\*]+|\d+\.\s*/, '').trim();
         if (t) listItems.push(t); i++; continue;
       }
-      if (line.startsWith('>')) { flushList(); result.push(<blockquote key={i} style={{ borderLeft: '4px solid #2563eb', padding: '10px 12px', margin: '12px 0', background: '#f0f9ff', fontSize: '13px', fontStyle: 'italic', color: '#475569', pageBreakInside: 'avoid' }}>{renderInline(line.replace(/^>\s*/, ''))}</blockquote>); i++; continue; }
+      if (line.startsWith('>')) { flushList(); result.push(<blockquote key={i} style={{ borderLeft:'4px solid #f59e0b', padding:'14px 18px', margin:'20px 0', background:'linear-gradient(135deg,#fffbeb,#fefce8)', fontSize:'13px', fontStyle:'italic', color:'#92400e', pageBreakInside:'avoid', borderRadius:'0 8px 8px 0', boxShadow:'0 1px 4px rgba(245,158,11,0.15)' }}>{renderInline(line.replace(/^>\s*/, ''))}</blockquote>); i++; continue; }
       if (line.trim().length === 0) { flushList(); result.push(<div key={i} style={{ height: '8px' }} />); i++; continue; }
       const imgMatch = line.match(/!\[([^\]]*)\]\(([^)]+)\)/);
       if (imgMatch) {
@@ -1729,10 +1734,31 @@ const handleSavePlagiarismResult = async (result) => {
                     style={{ width:'100%', height:'100%', minHeight:'500px', padding:'20px 24px', fontSize:editorFontSize+'px', lineHeight:'1.8', fontFamily:editorFont+',sans-serif', border:'none', borderRight:showAssetPicker?'1px solid '+COLORS.borderColor:'none', resize:'none', outline:'none', color:COLORS.darkText, background:COLORS.white }}
                     placeholder="Start typing..." />
                 ) : viewMode === 'markdown' ? (
-                  <div style={{ padding:'24px 32px', fontSize:'14px', lineHeight:'1.8', color:COLORS.darkText, fontFamily:'Montserrat,sans-serif', maxWidth:'850px' }}>
-                    {parseMarkdownToReact(viewingRecord.ai_output)}
-                  </div>
-                ) : (
+                  <div style={{ padding:'40px 60px', maxWidth:'860px', margin:'0 auto' }}>
+  {/* Textbook Cover Header */}
+  <div style={{ marginBottom:'32px', paddingBottom:'24px', borderBottom:'3px solid #1e3a5f', position:'relative' }}>
+    <div style={{ display:'flex', alignItems:'center', gap:'10px', marginBottom:'8px' }}>
+      <div style={{ width:'4px', height:'32px', background:'linear-gradient(180deg,#1e3a5f,#3b82f6)', borderRadius:'2px' }} />
+      <div>
+        <div style={{ fontSize:'11px', fontWeight:'700', color:'#3b82f6', textTransform:'uppercase', letterSpacing:'2px', marginBottom:'4px' }}>{viewingRecord.subject} • Class {viewingRecord.class}</div>
+        <h1 style={{ margin:0, fontSize:'26px', fontWeight:'800', color:'#1e3a5f', fontFamily:'Montserrat,sans-serif', lineHeight:'1.2' }}>{viewingRecord.topic}</h1>
+      </div>
+    </div>
+    {viewingRecord.sub_topic && <div style={{ marginLeft:'14px', fontSize:'13px', color:'#64748b', fontStyle:'italic', marginTop:'6px' }}>Subtopic: {viewingRecord.sub_topic}</div>}
+    <div style={{ position:'absolute', top:0, right:0, textAlign:'right' }}>
+      <div style={{ fontSize:'10px', color:'#94a3b8', fontWeight:'600', textTransform:'uppercase', letterSpacing:'1px' }}>{viewingRecord.content_type||'Textbook'}</div>
+      <div style={{ fontSize:'10px', color:'#cbd5e1', marginTop:'2px' }}>ID #{viewingRecord.record_id}</div>
+    </div>
+  </div>
+  <div style={{ fontSize:'14px', lineHeight:'1.9', color:'#1e293b', fontFamily:'Montserrat,sans-serif' }}>
+    {parseMarkdownToReact(viewingRecord.ai_output)}
+  </div>
+  {/* Textbook Footer */}
+  <div style={{ marginTop:'48px', paddingTop:'16px', borderTop:'1px solid #e2e8f0', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+    <span style={{ fontSize:'10px', color:'#94a3b8', fontWeight:'600', textTransform:'uppercase', letterSpacing:'1px' }}>AI Content Studio • NEP Aligned</span>
+    <span style={{ fontSize:'10px', color:'#94a3b8' }}>{viewingRecord.word_count||0} words</span>
+  </div>
+</div>                ) : (
                   <div style={{ padding:'24px 32px', maxWidth:'850px' }}>
                     {viewingRecord.ai_output.split('\n').map((line, idx) => {
                       const imgM = line.match(/!\[([^\]]*)\]\(([^)]+)\)/);

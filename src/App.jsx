@@ -336,6 +336,8 @@ export default function App() {
 const [userName, setUserName] = useState(() => sessionStorage.getItem('acs_user_name') || '');
 const [showNameModal, setShowNameModal] = useState(false);
 const [showAnalytics, setShowAnalytics] = useState(false);
+const [analyticsDateFrom, setAnalyticsDateFrom] = useState('');
+const [analyticsDateTo, setAnalyticsDateTo] = useState('');
   const [viewTab, setViewTab] = useState('content');
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState('');
@@ -2219,7 +2221,22 @@ const handleSavePlagiarismResult = async (result) => {
       </div>
       <div style={{ flex:1, overflowY:'auto', padding:'24px 28px' }}>
         {(() => {
-          const generated = records.filter(r => r.status === 'generated');
+          const generated = records.filter(r => {
+  if (r.status !== 'generated') return false;
+  if (analyticsDateFrom) {
+    const recDate = new Date(r.updated_at);
+    const from = new Date(analyticsDateFrom);
+    from.setHours(0,0,0,0);
+    if (recDate < from) return false;
+  }
+  if (analyticsDateTo) {
+    const recDate = new Date(r.updated_at);
+    const to = new Date(analyticsDateTo);
+    to.setHours(23,59,59,999);
+    if (recDate > to) return false;
+  }
+  return true;
+});
           const totalCost = generated.reduce((s, r) => s + (r.generation_cost || 0), 0);
           const totalTokensIn = generated.reduce((s, r) => s + (r.tokens_input || 0), 0);
           const totalTokensOut = generated.reduce((s, r) => s + (r.tokens_output || 0), 0);
@@ -2238,7 +2255,23 @@ const handleSavePlagiarismResult = async (result) => {
           ];
           return (
             <>
-              <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:'16px', marginBottom:'28px' }}>
+              <div style={{ display:'flex', gap:'12px', alignItems:'center', marginBottom:'20px', padding:'16px', background:'white', borderRadius:'12px', border:'1px solid #e2e8f0' }}>
+  <MI name="calendar_month" size={18} color="#6366f1" />
+  <span style={{ fontSize:'13px', fontWeight:'600', color:'#374151' }}>Date Range:</span>
+  <input type="date" value={analyticsDateFrom} onChange={e => setAnalyticsDateFrom(e.target.value)}
+    style={{ padding:'7px 10px', border:'1px solid #e2e8f0', borderRadius:'8px', fontSize:'13px', fontFamily:FONT_FAMILY }} />
+  <span style={{ fontSize:'13px', color:'#94a3b8' }}>to</span>
+  <input type="date" value={analyticsDateTo} onChange={e => setAnalyticsDateTo(e.target.value)}
+    style={{ padding:'7px 10px', border:'1px solid #e2e8f0', borderRadius:'8px', fontSize:'13px', fontFamily:FONT_FAMILY }} />
+  {(analyticsDateFrom || analyticsDateTo) && (
+    <button onClick={() => { setAnalyticsDateFrom(''); setAnalyticsDateTo(''); }}
+      style={{ padding:'6px 12px', background:'#f1f5f9', border:'none', borderRadius:'8px', fontSize:'12px', fontWeight:'600', cursor:'pointer', color:'#64748b', fontFamily:FONT_FAMILY }}>
+      Clear
+    </button>
+  )}
+  <span style={{ marginLeft:'auto', fontSize:'12px', color:'#94a3b8' }}>{generated.length} records in range</span>
+</div>
+<div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:'16px', marginBottom:'28px' }}>
                 {cards.map((c,i) => (
                   <div key={i} style={{ background:'white', borderRadius:'12px', padding:'20px', boxShadow:'0 1px 3px rgba(0,0,0,0.08)', border:'1px solid #e2e8f0' }}>
                     <div style={{ width:'40px', height:'40px', borderRadius:'10px', background:c.bg, display:'flex', alignItems:'center', justifyContent:'center', marginBottom:'12px' }}><MI name={c.icon} size={20} color={c.color} /></div>
@@ -2293,12 +2326,13 @@ const handleSavePlagiarismResult = async (result) => {
                 <h3 style={{ margin:'0 0 16px 0', fontSize:'15px', fontWeight:'700', color:'#0f172a' }}>Recent Generations</h3>
                 <table style={{ width:'100%', borderCollapse:'collapse', fontSize:'13px' }}>
                   <thead><tr style={{ borderBottom:'2px solid #f1f5f9' }}>
-                    {['Record','Subject','Model','Tokens In','Tokens Out','Text Cost','Images','Img Cost','Plagiarism'].map(h => <th key={h} style={{ padding:'8px 12px', textAlign:'left', fontSize:'11px', fontWeight:'700', color:'#64748b', textTransform:'uppercase', letterSpacing:'0.5px' }}>{h}</th>)}
+                    {['Date','Record','Subject','Model','Tokens In','Tokens Out','Text Cost','Images','Img Cost'].map(h => <th key={h} style={{ padding:'8px 12px', textAlign:'left', fontSize:'11px', fontWeight:'700', color:'#64748b', textTransform:'uppercase', letterSpacing:'0.5px' }}>{h}</th>)}
                   </tr></thead>
                   <tbody>
                     {generated.slice(0,20).map((r,i) => (
                       <tr key={i} style={{ borderBottom:'1px solid #f8fafc' }}>
-                        <td style={{ padding:'10px 12px', color:'#374151', fontWeight:'500' }}>#{r.record_id} {(r.topic||'').substring(0,25)}{(r.topic||'').length>25?'...':''}</td>
+                       <td style={{ padding:'10px 12px', color:'#94a3b8', fontSize:'11px', fontFamily:'monospace' }}>{r.updated_at ? new Date(r.updated_at).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'2-digit'}) : '—'}</td>
+<td style={{ padding:'10px 12px', color:'#374151', fontWeight:'500' }}>#{r.record_id} {(r.topic||'').substring(0,20)}{(r.topic||'').length>20?'...':''}</td>
                         <td style={{ padding:'10px 12px', color:'#64748b' }}>{r.subject}</td>
                         <td style={{ padding:'10px 12px' }}><span style={{ padding:'2px 8px', borderRadius:'20px', fontSize:'11px', fontWeight:'600', background:r.text_model==='openai'?'#ecfdf5':r.text_model==='gemini'?'#eef2ff':'#fffbeb', color:r.text_model==='openai'?'#059669':r.text_model==='gemini'?'#6366f1':'#d97706' }}>{modelLabels[r.text_model||'claude']||r.text_model||'Claude'}</span></td>
                         <td style={{ padding:'10px 12px', color:'#374151', fontFamily:'monospace', fontSize:'12px' }}>{(r.tokens_input||0).toLocaleString()}</td>
@@ -2306,8 +2340,7 @@ const handleSavePlagiarismResult = async (result) => {
                         <td style={{ padding:'10px 12px', fontWeight:'700', fontFamily:'monospace', fontSize:'12px', color:(r.generation_cost||0)>0.01?'#ef4444':(r.generation_cost||0)>0.005?'#f59e0b':'#10b981' }}>${(r.generation_cost||0).toFixed(5)}</td>
 <td style={{ padding:'10px 12px', color:'#374151', fontFamily:'monospace', fontSize:'12px' }}>{r.images_generated||0}</td>
 <td style={{ padding:'10px 12px', fontWeight:'700', fontFamily:'monospace', fontSize:'12px', color:'#8b5cf6' }}>${(r.image_generation_cost||0).toFixed(4)}</td>
-                        <td style={{ padding:'10px 12px' }}>{r.plagiarism_result?<span style={{ padding:'2px 8px', borderRadius:'20px', fontSize:'11px', fontWeight:'700', background:r.plagiarism_result.overall_score>=50?'#fef2f2':r.plagiarism_result.overall_score>=20?'#fffbeb':'#f0fdf4', color:r.plagiarism_result.overall_score>=50?'#dc2626':r.plagiarism_result.overall_score>=20?'#d97706':'#16a34a' }}>{r.plagiarism_result.overall_score}%</span>:<span style={{ color:'#94a3b8', fontSize:'11px' }}>—</span>}</td>
-                      </tr>
+                                             </tr>
                     ))}
                   </tbody>
                 </table>

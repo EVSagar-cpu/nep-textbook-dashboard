@@ -870,7 +870,7 @@ const [showAnalytics, setShowAnalytics] = useState(false);
     if (!window.docx) {
   await new Promise((resolve, reject) => {
     const script = document.createElement('script');
-    script.src = 'https://unpkg.com/docx@8.5.0/build/index.js';
+    script.src = 'https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.js';
     script.onload = resolve;
     script.onerror = reject;
     document.head.appendChild(script);

@@ -420,10 +420,9 @@ const [analyticsDateTo, setAnalyticsDateTo] = useState('');
     }
   };
 
-  // ===== MARKDOWN PARSER =====
-  // REPLACE the entire parseMarkdownToReact function in App.jsx
+  // REPLACE entire parseMarkdownToReact function in App.jsx
 // Search for: const parseMarkdownToReact = (markdown) => {
-// Replace everything from that line to the closing }; with this:
+// Replace everything from that line to its closing }; with this:
 
   const parseMarkdownToReact = (markdown) => {
     if (!markdown) return null;
@@ -431,6 +430,83 @@ const [analyticsDateTo, setAnalyticsDateTo] = useState('');
     const result = [];
     let i = 0, listItems = [], tableLines = [], codeBlock = [], inCodeBlock = false;
 
+    // ============================================================
+    // ICON MAP — subject-specific, age-appropriate
+    // ============================================================
+    const ICON_MAP = {
+      // Science - Life
+      sun: '☀️', water: '💧', plant: '🌿', animal: '🐾', earth: '🌍', moon: '🌙', star: '⭐',
+      flower: '🌸', tree: '🌳', leaf: '🍃', seed: '🌱', root: '🌾', fish: '🐟', bird: '🦅',
+      insect: '🐛', butterfly: '🦋', frog: '🐸', lion: '🦁', elephant: '🐘', cow: '🐄',
+      // Science - Physical
+      atom: '⚛️', magnet: '🧲', electricity: '⚡', force: '💪', wave: '〰️', microscope: '🔬',
+      lab: '🧪', telescope: '🔭', rocket: '🚀', gear: '⚙️', energy: '🔋', light: '💡',
+      heat: '🌡️', sound: '🔊', gravity: '🌐', crystal: '💎', chemical: '⚗️',
+      // Math
+      math: '🔢', add: '➕', subtract: '➖', multiply: '✖️', divide: '➗',
+      geometry: '📐', graph: '📊', calculator: '🧮', ruler: '📏', compass: '🧭',
+      fraction: '½', percent: '%', infinity: '♾️', angle: '📐', circle: '⭕',
+      // Geography / Social
+      india: '🇮🇳', map: '🗺️', history: '📜', culture: '🎭', flag: '🚩',
+      village: '🏘️', city: '🏙️', mountain: '⛰️', river: '🏞️', ocean: '🌊',
+      desert: '🏜️', forest: '🌲', farm: '🌾', bridge: '🌉', monument: '🏛️',
+      // Health / Body
+      heart: '❤️', body: '🫀', food: '🥗', exercise: '🏃', health: '🏥',
+      eye: '👁️', ear: '👂', brain: '🧠', hand: '✋', bone: '🦴',
+      // Arts / Sports
+      music: '🎵', art: '🎨', dance: '💃', sport: '🏅', cricket: '🏏',
+      football: '⚽', chess: '♟️', yoga: '🧘', paint: '🖌️', pencil: '✏️',
+      // Weather / Environment
+      rain: '🌧️', cloud: '☁️', wind: '💨', fire: '🔥', snow: '❄️',
+      rainbow: '🌈', thunder: '⛈️', recycle: '♻️', pollution: '🏭',
+      // Learning / General
+      book: '📚', pencil2: '✏️', idea: '💡', question: '❓', check: '✅',
+      warning: '⚠️', time: '⏰', measure: '📏', computer: '💻', robot: '🤖',
+      // Numbers / Grade helpers
+      one: '1️⃣', two: '2️⃣', three: '3️⃣', four: '4️⃣', five: '5️⃣',
+      key: '🔑', lock: '🔒', link: '🔗', target: '🎯', trophy: '🏆',
+    };
+
+    const renderIcon = (keyword) => {
+      const icon = ICON_MAP[keyword.toLowerCase()] || '•';
+      return (
+        <span style={{ fontSize: '15px', lineHeight: '1', verticalAlign: 'middle', margin: '0 2px', display: 'inline-block' }} title={keyword}>
+          {icon}
+        </span>
+      );
+    };
+
+    const renderInline = (text) => {
+      if (!text) return null;
+      // Process icon tags first
+      if (text.includes('[icon:')) {
+        const parts = text.split(/(\[icon:[^\]]+\])/g);
+        const elements = parts.map((part, pi) => {
+          const iconMatch = part.match(/\[icon:([^\]]+)\]/);
+          if (iconMatch) return renderIcon(iconMatch[1]);
+          if (!part) return null;
+          const formatted = part
+            .replace(/\*\*(.*?)\*\*/g, '<strong style="font-weight:700;color:#1e3a5f">$1</strong>')
+            .replace(/__(.*?)__/g, '<strong style="font-weight:700">$1</strong>')
+            .replace(/\*(.*?)\*/g, '<em style="font-style:italic;color:#475569">$1</em>')
+            .replace(/`(.*?)`/g, '<code style="background:#f1f5f9;padding:2px 7px;border-radius:4px;font-family:monospace;font-size:12px;color:#e11d48;border:1px solid #e2e8f0">$1</code>');
+          if (formatted !== part) return <span key={pi} dangerouslySetInnerHTML={{ __html: formatted }} />;
+          return <span key={pi}>{part}</span>;
+        });
+        return <>{elements}</>;
+      }
+      const formatted = text
+        .replace(/\*\*(.*?)\*\*/g, '<strong style="font-weight:700;color:#1e3a5f">$1</strong>')
+        .replace(/__(.*?)__/g, '<strong style="font-weight:700">$1</strong>')
+        .replace(/\*(.*?)\*/g, '<em style="font-style:italic;color:#475569">$1</em>')
+        .replace(/`(.*?)`/g, '<code style="background:#f1f5f9;padding:2px 7px;border-radius:4px;font-family:monospace;font-size:12px;color:#e11d48;border:1px solid #e2e8f0">$1</code>');
+      if (formatted !== text) return <span dangerouslySetInnerHTML={{ __html: formatted }} />;
+      return text;
+    };
+
+    // ============================================================
+    // FLUSH HELPERS
+    // ============================================================
     const flushList = () => {
       if (listItems.length > 0) {
         result.push(
@@ -495,49 +571,13 @@ const [analyticsDateTo, setAnalyticsDateTo] = useState('');
       }
     };
 
-    const renderInline = (text) => {
-      if (!text) return null;
-      const formatted = text
-        .replace(/\*\*(.*?)\*\*/g, '<strong style="font-weight:700;color:#1e3a5f">$1</strong>')
-        .replace(/__(.*?)__/g, '<strong style="font-weight:700">$1</strong>')
-        .replace(/\*(.*?)\*/g, '<em style="font-style:italic;color:#475569">$1</em>')
-        .replace(/`(.*?)`/g, '<code style="background:#f1f5f9;padding:2px 7px;border-radius:4px;font-family:monospace;font-size:12px;color:#e11d48;border:1px solid #e2e8f0">$1</code>');
-      if (formatted !== text) return <span dangerouslySetInnerHTML={{ __html: formatted }} />;
-      return text;
-    };
-
     // ============================================================
-    // RICH CONTENT BLOCK RENDERERS
+    // RICH BLOCK RENDERERS
     // ============================================================
-
     const CALLOUT_CONFIGS = {
-      didyouknow: {
-        bg: 'linear-gradient(135deg,#fffbeb,#fef9c3)',
-        border: '#f59e0b',
-        iconBg: '#f59e0b',
-        icon: '💡',
-        title: 'Did You Know?',
-        titleColor: '#92400e',
-        textColor: '#78350f',
-      },
-      remember: {
-        bg: 'linear-gradient(135deg,#eff6ff,#dbeafe)',
-        border: '#3b82f6',
-        iconBg: '#3b82f6',
-        icon: '🔵',
-        title: 'Remember!',
-        titleColor: '#1e40af',
-        textColor: '#1e3a5f',
-      },
-      important: {
-        bg: 'linear-gradient(135deg,#fff7ed,#fed7aa)',
-        border: '#f97316',
-        iconBg: '#f97316',
-        icon: '⚠️',
-        title: 'Important!',
-        titleColor: '#c2410c',
-        textColor: '#7c2d12',
-      },
+      didyouknow: { bg: 'linear-gradient(135deg,#fffbeb,#fef9c3)', border: '#f59e0b', icon: '💡', title: 'Did You Know?', titleColor: '#92400e', textColor: '#78350f' },
+      remember: { bg: 'linear-gradient(135deg,#eff6ff,#dbeafe)', border: '#3b82f6', icon: '🔵', title: 'Remember!', titleColor: '#1e40af', textColor: '#1e3a5f' },
+      important: { bg: 'linear-gradient(135deg,#fff7ed,#fed7aa)', border: '#f97316', icon: '⚠️', title: 'Important!', titleColor: '#c2410c', textColor: '#7c2d12' },
     };
 
     const renderCallout = (type, contentLines, key) => {
@@ -578,7 +618,7 @@ const [analyticsDateTo, setAnalyticsDateTo] = useState('');
     );
 
     const renderKeyTerm = (term, contentLines, key) => (
-      <div key={key} style={{ display: 'inline-flex', background: 'white', border: '2px solid #818cf8', borderRadius: '10px', padding: '12px 16px', margin: '8px 0', boxShadow: '0 2px 8px rgba(99,102,241,0.1)', pageBreakInside: 'avoid', width: '100%', boxSizing: 'border-box' }}>
+      <div key={key} style={{ display: 'flex', background: 'white', border: '2px solid #818cf8', borderRadius: '10px', padding: '12px 16px', margin: '12px 0', boxShadow: '0 2px 8px rgba(99,102,241,0.1)', pageBreakInside: 'avoid', width: '100%', boxSizing: 'border-box' }}>
         <div style={{ marginRight: '14px', flexShrink: 0 }}>
           <div style={{ background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', color: 'white', borderRadius: '6px', padding: '4px 10px', fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px', whiteSpace: 'nowrap' }}>Key Term</div>
         </div>
@@ -633,14 +673,88 @@ const [analyticsDateTo, setAnalyticsDateTo] = useState('');
     );
 
     // ============================================================
+    // DIAGRAM RENDERER
+    // ============================================================
+    const renderDiagram = (title, contentLines, key) => {
+      const elements = [];
+      contentLines.forEach((line, li) => {
+        const trimmed = line.trim();
+        if (!trimmed) return;
+
+        if (trimmed.startsWith('label:')) {
+          const text = trimmed.slice(6).trim();
+          elements.push(
+            <div key={li} style={{ textAlign: 'center', marginBottom: '6px' }}>
+              <span style={{ fontSize: '13px', fontWeight: '700', color: '#1e3a5f', textTransform: 'uppercase', letterSpacing: '1px', background: '#dbeafe', padding: '4px 16px', borderRadius: '20px', display: 'inline-block' }}>{text}</span>
+            </div>
+          );
+        } else if (trimmed.startsWith('box:')) {
+          const parts = trimmed.slice(4).split('|');
+          const boxTitle = parts[0] ? parts[0].trim() : '';
+          const boxDetail = parts[1] ? parts[1].trim() : '';
+          elements.push(
+            <div key={li} style={{ background: 'white', border: '2px solid #3b82f6', borderRadius: '8px', padding: '10px 16px', margin: '4px auto', maxWidth: '420px', boxShadow: '0 2px 6px rgba(59,130,246,0.1)' }}>
+              <div style={{ fontSize: '13px', fontWeight: '700', color: '#1e3a5f' }}>{renderInline(boxTitle)}</div>
+              {boxDetail && <div style={{ fontSize: '12px', color: '#64748b', marginTop: '3px', lineHeight: '1.5' }}>{renderInline(boxDetail)}</div>}
+            </div>
+          );
+        } else if (trimmed.startsWith('circle:')) {
+          const text = trimmed.slice(7).trim();
+          elements.push(
+            <div key={li} style={{ textAlign: 'center', margin: '4px 0' }}>
+              <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: 'linear-gradient(135deg,#3b82f6,#6366f1)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 12px rgba(99,102,241,0.2)' }}>
+                <span style={{ fontSize: '11px', fontWeight: '700', color: 'white', textAlign: 'center', padding: '4px', lineHeight: '1.3' }}>{text}</span>
+              </div>
+            </div>
+          );
+        } else if (trimmed.startsWith('arrow:')) {
+          const dir = trimmed.slice(6).trim().toLowerCase();
+          const arrowMap = { down: '↓', up: '↑', left: '←', right: '→', both: '↕', leftright: '↔' };
+          elements.push(
+            <div key={li} style={{ textAlign: 'center', fontSize: '20px', color: '#3b82f6', fontWeight: '700', lineHeight: '1', margin: '2px 0' }}>
+              {arrowMap[dir] || '↓'}
+            </div>
+          );
+        } else if (trimmed === 'divider') {
+          elements.push(
+            <div key={li} style={{ borderTop: '2px dashed #cbd5e1', margin: '10px auto', maxWidth: '420px' }} />
+          );
+        } else if (trimmed.startsWith('note:')) {
+          const text = trimmed.slice(5).trim();
+          elements.push(
+            <div key={li} style={{ textAlign: 'center', marginTop: '10px' }}>
+              <span style={{ fontSize: '11px', color: '#94a3b8', fontStyle: 'italic', background: '#f8fafc', padding: '4px 12px', borderRadius: '4px', border: '1px solid #e2e8f0' }}>{text}</span>
+            </div>
+          );
+        } else if (trimmed) {
+          // fallback — plain text line
+          elements.push(
+            <div key={li} style={{ fontSize: '12px', color: '#64748b', textAlign: 'center', margin: '4px 0' }}>{renderInline(trimmed)}</div>
+          );
+        }
+      });
+
+      return (
+        <div key={key} style={{ background: 'linear-gradient(135deg,#f8fafc,#f1f5f9)', border: '1px solid #cbd5e1', borderRadius: '12px', padding: '20px 24px', margin: '28px 0', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', pageBreakInside: 'avoid' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px', paddingBottom: '12px', borderBottom: '2px solid #e2e8f0' }}>
+            <span style={{ fontSize: '16px' }}>📊</span>
+            <span style={{ fontSize: '13px', fontWeight: '800', color: '#1e3a5f', textTransform: 'uppercase', letterSpacing: '1px' }}>{title || 'Diagram'}</span>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch', gap: '2px' }}>
+            {elements}
+          </div>
+        </div>
+      );
+    };
+
+    // ============================================================
     // MAIN PARSING LOOP
     // ============================================================
-
     while (i < lines.length) {
       const line = lines[i];
 
-      // Check for special block start :::SOMETHING
-      const blockMatch = line.match(/^:::(CALLOUT|ACTIVITY|KEYTERM|EXAMPLE|SUMMARY|THINK)(.*)?$/i);
+      // Special blocks :::TYPE
+      const blockMatch = line.match(/^:::(CALLOUT|ACTIVITY|KEYTERM|EXAMPLE|SUMMARY|THINK|DIAGRAM)(.*)?$/i);
       if (blockMatch) {
         flushList(); flushTable();
         const blockType = blockMatch[1].toUpperCase();
@@ -652,27 +766,26 @@ const [analyticsDateTo, setAnalyticsDateTo] = useState('');
           i++;
         }
         i++; // skip closing :::
-
         const blockKey = 'block-' + result.length;
 
         if (blockType === 'CALLOUT') {
           const typeMatch = blockParams.match(/type=(\w+)/i);
-          const calloutType = typeMatch ? typeMatch[1].toLowerCase() : 'remember';
-          result.push(renderCallout(calloutType, blockLines, blockKey));
+          result.push(renderCallout(typeMatch ? typeMatch[1].toLowerCase() : 'remember', blockLines, blockKey));
         } else if (blockType === 'ACTIVITY') {
           result.push(renderActivity(blockLines, blockKey));
         } else if (blockType === 'KEYTERM') {
           const termMatch = blockParams.match(/term=(.+)/i);
-          const term = termMatch ? termMatch[1].trim() : 'Term';
-          result.push(renderKeyTerm(term, blockLines, blockKey));
+          result.push(renderKeyTerm(termMatch ? termMatch[1].trim() : 'Term', blockLines, blockKey));
         } else if (blockType === 'EXAMPLE') {
           const titleMatch = blockParams.match(/title=(.+)/i);
-          const title = titleMatch ? titleMatch[1].trim() : 'Example';
-          result.push(renderExample(title, blockLines, blockKey));
+          result.push(renderExample(titleMatch ? titleMatch[1].trim() : 'Example', blockLines, blockKey));
         } else if (blockType === 'SUMMARY') {
           result.push(renderSummary(blockLines, blockKey));
         } else if (blockType === 'THINK') {
           result.push(renderThink(blockLines, blockKey));
+        } else if (blockType === 'DIAGRAM') {
+          const titleMatch = blockParams.match(/title=(.+)/i);
+          result.push(renderDiagram(titleMatch ? titleMatch[1].trim() : 'Diagram', blockLines, blockKey));
         }
         continue;
       }
@@ -691,29 +804,17 @@ const [analyticsDateTo, setAnalyticsDateTo] = useState('');
       // Headings
       if (line.startsWith('###')) {
         flushList();
-        result.push(
-          <h3 key={i} style={{ fontSize: '15px', margin: '28px 0 10px 0', fontWeight: '700', color: '#1e3a5f', pageBreakAfter: 'avoid', paddingLeft: '12px', borderLeft: '4px solid #93c5fd' }}>
-            {renderInline(line.replace(/^#+\s*/, ''))}
-          </h3>
-        );
+        result.push(<h3 key={i} style={{ fontSize: '15px', margin: '28px 0 10px 0', fontWeight: '700', color: '#1e3a5f', pageBreakAfter: 'avoid', paddingLeft: '12px', borderLeft: '4px solid #93c5fd' }}>{renderInline(line.replace(/^#+\s*/, ''))}</h3>);
         i++; continue;
       }
       if (line.startsWith('##')) {
         flushList();
-        result.push(
-          <h2 key={i} style={{ fontSize: '18px', margin: '36px 0 12px 0', fontWeight: '800', color: '#1e3a5f', pageBreakAfter: 'avoid', paddingBottom: '8px', borderBottom: '2px solid #dbeafe' }}>
-            {renderInline(line.replace(/^#+\s*/, ''))}
-          </h2>
-        );
+        result.push(<h2 key={i} style={{ fontSize: '18px', margin: '36px 0 12px 0', fontWeight: '800', color: '#1e3a5f', pageBreakAfter: 'avoid', paddingBottom: '8px', borderBottom: '2px solid #dbeafe' }}>{renderInline(line.replace(/^#+\s*/, ''))}</h2>);
         i++; continue;
       }
       if (line.startsWith('#')) {
         flushList();
-        result.push(
-          <h1 key={i} style={{ fontSize: '22px', margin: '40px 0 14px 0', fontWeight: '800', color: '#1e3a5f', pageBreakAfter: 'avoid', paddingBottom: '10px', borderBottom: '3px solid #1e3a5f' }}>
-            {renderInline(line.replace(/^#+\s*/, ''))}
-          </h1>
-        );
+        result.push(<h1 key={i} style={{ fontSize: '22px', margin: '40px 0 14px 0', fontWeight: '800', color: '#1e3a5f', pageBreakAfter: 'avoid', paddingBottom: '10px', borderBottom: '3px solid #1e3a5f' }}>{renderInline(line.replace(/^#+\s*/, ''))}</h1>);
         i++; continue;
       }
 
@@ -727,20 +828,12 @@ const [analyticsDateTo, setAnalyticsDateTo] = useState('');
       // Blockquote
       if (line.startsWith('>')) {
         flushList();
-        result.push(
-          <blockquote key={i} style={{ borderLeft: '4px solid #f59e0b', padding: '14px 18px', margin: '20px 0', background: 'linear-gradient(135deg,#fffbeb,#fefce8)', fontSize: '13px', fontStyle: 'italic', color: '#92400e', pageBreakInside: 'avoid', borderRadius: '0 8px 8px 0', boxShadow: '0 1px 4px rgba(245,158,11,0.15)' }}>
-            {renderInline(line.replace(/^>\s*/, ''))}
-          </blockquote>
-        );
+        result.push(<blockquote key={i} style={{ borderLeft: '4px solid #f59e0b', padding: '14px 18px', margin: '20px 0', background: 'linear-gradient(135deg,#fffbeb,#fefce8)', fontSize: '13px', fontStyle: 'italic', color: '#92400e', pageBreakInside: 'avoid', borderRadius: '0 8px 8px 0', boxShadow: '0 1px 4px rgba(245,158,11,0.15)' }}>{renderInline(line.replace(/^>\s*/, ''))}</blockquote>);
         i++; continue;
       }
 
       // Empty line
-      if (line.trim().length === 0) {
-        flushList();
-        result.push(<div key={i} style={{ height: '8px' }} />);
-        i++; continue;
-      }
+      if (line.trim().length === 0) { flushList(); result.push(<div key={i} style={{ height: '8px' }} />); i++; continue; }
 
       // Image
       const imgMatch = line.match(/!\[([^\]]*)\]\(([^)]+)\)/);
@@ -752,9 +845,7 @@ const [analyticsDateTo, setAnalyticsDateTo] = useState('');
         result.push(
           <div key={i} style={{ margin: '24px 0', textAlign: 'center', pageBreakInside: 'avoid', breakInside: 'avoid' }}>
             <div style={{ position: 'relative', display: 'inline-block', maxWidth: currentWidth + '%', width: currentWidth + '%' }}>
-              <img src={imgUrl} alt={imgAlt}
-                style={{ width: '100%', maxHeight: '500px', objectFit: 'contain', borderRadius: '10px', border: '1px solid #e2e8f0', boxShadow: '0 4px 16px rgba(0,0,0,0.1)', cursor: 'pointer', display: 'block' }}
-                onClick={() => setLightboxImage(imgUrl)} />
+              <img src={imgUrl} alt={imgAlt} style={{ width: '100%', maxHeight: '500px', objectFit: 'contain', borderRadius: '10px', border: '1px solid #e2e8f0', boxShadow: '0 4px 16px rgba(0,0,0,0.1)', cursor: 'pointer', display: 'block' }} onClick={() => setLightboxImage(imgUrl)} />
               <div style={{ display: 'flex', gap: '4px', justifyContent: 'center', marginTop: '8px', flexWrap: 'wrap' }}>
                 {[25, 50, 75, 100].map(pct => (
                   <button key={pct} onClick={(e) => { e.stopPropagation(); setImgWidthMap(prev => ({ ...prev, [imgUrl]: pct })); }}
@@ -780,11 +871,7 @@ const [analyticsDateTo, setAnalyticsDateTo] = useState('');
       // Normal paragraph
       if (line.trim()) {
         flushList();
-        result.push(
-          <p key={i} style={{ margin: '8px 0', lineHeight: '1.8', color: '#1e293b', pageBreakInside: 'avoid', fontSize: '14px' }}>
-            {renderInline(line)}
-          </p>
-        );
+        result.push(<p key={i} style={{ margin: '8px 0', lineHeight: '1.8', color: '#1e293b', pageBreakInside: 'avoid', fontSize: '14px' }}>{renderInline(line)}</p>);
       }
       i++;
     }
@@ -792,7 +879,6 @@ const [analyticsDateTo, setAnalyticsDateTo] = useState('');
     flushList(); flushTable(); flushCode();
     return result;
   };
-
   const getPaperDimensions = () => {
     let width, height;
     if (pageSettings.paperSize === 'Custom') { width = pageSettings.customWidth; height = pageSettings.customHeight; }

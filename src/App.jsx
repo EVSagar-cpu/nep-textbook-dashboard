@@ -421,6 +421,10 @@ const [analyticsDateTo, setAnalyticsDateTo] = useState('');
   };
 
   // ===== MARKDOWN PARSER =====
+  // REPLACE the entire parseMarkdownToReact function in App.jsx
+// Search for: const parseMarkdownToReact = (markdown) => {
+// Replace everything from that line to the closing }; with this:
+
   const parseMarkdownToReact = (markdown) => {
     if (!markdown) return null;
     const lines = markdown.split('\n');
@@ -429,17 +433,20 @@ const [analyticsDateTo, setAnalyticsDateTo] = useState('');
 
     const flushList = () => {
       if (listItems.length > 0) {
-        result.push(<ul key={'list-' + result.length} style={{ marginLeft:'0', marginBottom:'20px', paddingLeft:'0', listStyle:'none' }}>
-  {listItems.map((item, idx) => (
-    <li key={idx} style={{ marginBottom:'8px', lineHeight:'1.7', display:'flex', gap:'10px', alignItems:'flex-start' }}>
-      <span style={{ color:'#3b82f6', fontWeight:'700', fontSize:'16px', lineHeight:'1.5', flexShrink:0 }}>▸</span>
-      <span>{renderInline(item)}</span>
-    </li>
-  ))}
-</ul>);
+        result.push(
+          <ul key={'list-' + result.length} style={{ marginLeft: '0', marginBottom: '20px', paddingLeft: '0', listStyle: 'none' }}>
+            {listItems.map((item, idx) => (
+              <li key={idx} style={{ marginBottom: '8px', lineHeight: '1.7', display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+                <span style={{ color: '#3b82f6', fontWeight: '700', fontSize: '16px', lineHeight: '1.5', flexShrink: 0 }}>▸</span>
+                <span>{renderInline(item)}</span>
+              </li>
+            ))}
+          </ul>
+        );
         listItems = [];
       }
     };
+
     const flushTable = () => {
       if (tableLines.length > 0) {
         const filtered = tableLines.filter(l => !/^[\s|:-]+$/.test(l));
@@ -447,16 +454,28 @@ const [analyticsDateTo, setAnalyticsDateTo] = useState('');
         if (rows.length > 1) {
           const colCount = rows[0].length;
           result.push(
-            <div key={'tw-' + result.length} style={{ overflowX: 'auto', margin: '16px 0', pageBreakInside: 'avoid', breakInside: 'avoid' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', border: '1px solid ' + COLORS.borderColor }}>
-                <thead><tr style={{ background: '#1e293b', color: 'white' }}>
-                  {rows[0].map((cell, idx) => <th key={idx} style={{ padding: '10px 14px', textAlign: 'left', fontWeight: '600', fontSize: '11px', textTransform: 'uppercase', borderBottom: '2px solid #475569', borderRight: idx < colCount - 1 ? '1px solid #334155' : 'none', minWidth: '80px' }}>{renderInline(cell)}</th>)}
-                </tr></thead>
-                <tbody>{rows.slice(1).map((row, ri) => (
-                  <tr key={ri} style={{ background: ri % 2 === 0 ? '#fff' : '#f8fafc', borderBottom: '1px solid ' + COLORS.borderColor }}>
-                    {Array.from({ length: colCount }, (_, ci) => <td key={ci} style={{ padding: '10px 14px', borderRight: ci < colCount - 1 ? '1px solid ' + COLORS.borderColor : 'none', wordBreak: 'break-word', verticalAlign: 'top', lineHeight: '1.5', fontSize: '12px' }}>{renderInline(row[ci] || '')}</td>)}
+            <div key={'tw-' + result.length} style={{ overflowX: 'auto', margin: '24px 0', pageBreakInside: 'avoid', borderRadius: '10px', boxShadow: '0 2px 12px rgba(0,0,0,0.08)', border: '1px solid #e2e8f0' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+                <thead>
+                  <tr style={{ background: 'linear-gradient(135deg,#1e3a5f,#2563eb)', color: 'white' }}>
+                    {rows[0].map((cell, idx) => (
+                      <th key={idx} style={{ padding: '12px 16px', textAlign: 'left', fontWeight: '700', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.5px', borderRight: idx < colCount - 1 ? '1px solid rgba(255,255,255,0.15)' : 'none' }}>
+                        {renderInline(cell)}
+                      </th>
+                    ))}
                   </tr>
-                ))}</tbody>
+                </thead>
+                <tbody>
+                  {rows.slice(1).map((row, ri) => (
+                    <tr key={ri} style={{ background: ri % 2 === 0 ? '#ffffff' : '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+                      {Array.from({ length: colCount }, (_, ci) => (
+                        <td key={ci} style={{ padding: '11px 16px', borderRight: ci < colCount - 1 ? '1px solid #e2e8f0' : 'none', wordBreak: 'break-word', verticalAlign: 'top', lineHeight: '1.6', fontSize: '13px' }}>
+                          {renderInline(row[ci] || '')}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
               </table>
             </div>
           );
@@ -464,41 +483,266 @@ const [analyticsDateTo, setAnalyticsDateTo] = useState('');
         tableLines = [];
       }
     };
+
     const flushCode = () => {
       if (codeBlock.length > 0) {
-        result.push(<pre key={'code-' + result.length} style={{ background: '#1f2937', color: '#e5e7eb', padding: '14px', borderRadius: '6px', overflowX: 'auto', margin: '12px 0', fontSize: '12px', lineHeight: '1.5', fontFamily: 'monospace', pageBreakInside: 'avoid', breakInside: 'avoid' }}><code>{codeBlock.join('\n')}</code></pre>);
+        result.push(
+          <pre key={'code-' + result.length} style={{ background: '#1e293b', color: '#e2e8f0', padding: '16px 20px', borderRadius: '10px', overflowX: 'auto', margin: '16px 0', fontSize: '12px', lineHeight: '1.7', fontFamily: 'monospace', pageBreakInside: 'avoid', boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }}>
+            <code>{codeBlock.join('\n')}</code>
+          </pre>
+        );
         codeBlock = [];
       }
     };
+
     const renderInline = (text) => {
       if (!text) return null;
       const formatted = text
-        .replace(/\*\*(.*?)\*\*/g, '<strong style="font-weight:600">$1</strong>')
-        .replace(/__(.*?)__/g, '<strong style="font-weight:600">$1</strong>')
-        .replace(/\*(.*?)\*/g, '<em style="font-style:italic">$1</em>')
-        .replace(/`(.*?)`/g, '<code style="background:#f3f4f6;padding:2px 6px;border-radius:3px;font-family:monospace">$1</code>');
+        .replace(/\*\*(.*?)\*\*/g, '<strong style="font-weight:700;color:#1e3a5f">$1</strong>')
+        .replace(/__(.*?)__/g, '<strong style="font-weight:700">$1</strong>')
+        .replace(/\*(.*?)\*/g, '<em style="font-style:italic;color:#475569">$1</em>')
+        .replace(/`(.*?)`/g, '<code style="background:#f1f5f9;padding:2px 7px;border-radius:4px;font-family:monospace;font-size:12px;color:#e11d48;border:1px solid #e2e8f0">$1</code>');
       if (formatted !== text) return <span dangerouslySetInnerHTML={{ __html: formatted }} />;
       return text;
     };
 
+    // ============================================================
+    // RICH CONTENT BLOCK RENDERERS
+    // ============================================================
+
+    const CALLOUT_CONFIGS = {
+      didyouknow: {
+        bg: 'linear-gradient(135deg,#fffbeb,#fef9c3)',
+        border: '#f59e0b',
+        iconBg: '#f59e0b',
+        icon: '💡',
+        title: 'Did You Know?',
+        titleColor: '#92400e',
+        textColor: '#78350f',
+      },
+      remember: {
+        bg: 'linear-gradient(135deg,#eff6ff,#dbeafe)',
+        border: '#3b82f6',
+        iconBg: '#3b82f6',
+        icon: '🔵',
+        title: 'Remember!',
+        titleColor: '#1e40af',
+        textColor: '#1e3a5f',
+      },
+      important: {
+        bg: 'linear-gradient(135deg,#fff7ed,#fed7aa)',
+        border: '#f97316',
+        iconBg: '#f97316',
+        icon: '⚠️',
+        title: 'Important!',
+        titleColor: '#c2410c',
+        textColor: '#7c2d12',
+      },
+    };
+
+    const renderCallout = (type, contentLines, key) => {
+      const cfg = CALLOUT_CONFIGS[type] || CALLOUT_CONFIGS.remember;
+      return (
+        <div key={key} style={{ background: cfg.bg, borderLeft: '5px solid ' + cfg.border, borderRadius: '0 12px 12px 0', padding: '16px 20px', margin: '24px 0', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', pageBreakInside: 'avoid' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+            <span style={{ fontSize: '18px' }}>{cfg.icon}</span>
+            <span style={{ fontSize: '13px', fontWeight: '800', color: cfg.titleColor, textTransform: 'uppercase', letterSpacing: '1px' }}>{cfg.title}</span>
+          </div>
+          <div style={{ fontSize: '14px', lineHeight: '1.7', color: cfg.textColor }}>
+            {contentLines.map((line, li) => line.trim() ? <p key={li} style={{ margin: '4px 0' }}>{renderInline(line)}</p> : null)}
+          </div>
+        </div>
+      );
+    };
+
+    const renderActivity = (contentLines, key) => (
+      <div key={key} style={{ background: 'linear-gradient(135deg,#f0fdf4,#dcfce7)', border: '1px solid #86efac', borderRadius: '12px', padding: '20px 24px', margin: '24px 0', boxShadow: '0 2px 12px rgba(34,197,94,0.1)', pageBreakInside: 'avoid' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
+          <div style={{ width: '32px', height: '32px', background: '#22c55e', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px' }}>🎯</div>
+          <span style={{ fontSize: '14px', fontWeight: '800', color: '#15803d', textTransform: 'uppercase', letterSpacing: '1px' }}>Activity</span>
+        </div>
+        <div style={{ fontSize: '14px', lineHeight: '1.8', color: '#166534' }}>
+          {contentLines.map((line, li) => {
+            if (/^\d+\./.test(line.trim())) {
+              return (
+                <div key={li} style={{ display: 'flex', gap: '10px', marginBottom: '8px', alignItems: 'flex-start' }}>
+                  <span style={{ background: '#22c55e', color: 'white', borderRadius: '50%', width: '22px', height: '22px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: '700', flexShrink: 0 }}>{line.trim().match(/^\d+/)[0]}</span>
+                  <span>{renderInline(line.trim().replace(/^\d+\.\s*/, ''))}</span>
+                </div>
+              );
+            }
+            return line.trim() ? <p key={li} style={{ margin: '4px 0' }}>{renderInline(line)}</p> : null;
+          })}
+        </div>
+      </div>
+    );
+
+    const renderKeyTerm = (term, contentLines, key) => (
+      <div key={key} style={{ display: 'inline-flex', background: 'white', border: '2px solid #818cf8', borderRadius: '10px', padding: '12px 16px', margin: '8px 0', boxShadow: '0 2px 8px rgba(99,102,241,0.1)', pageBreakInside: 'avoid', width: '100%', boxSizing: 'border-box' }}>
+        <div style={{ marginRight: '14px', flexShrink: 0 }}>
+          <div style={{ background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', color: 'white', borderRadius: '6px', padding: '4px 10px', fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px', whiteSpace: 'nowrap' }}>Key Term</div>
+        </div>
+        <div>
+          <div style={{ fontSize: '15px', fontWeight: '800', color: '#4338ca', marginBottom: '4px' }}>{term}</div>
+          <div style={{ fontSize: '13px', lineHeight: '1.6', color: '#475569' }}>
+            {contentLines.map((line, li) => line.trim() ? <span key={li}>{renderInline(line)} </span> : null)}
+          </div>
+        </div>
+      </div>
+    );
+
+    const renderExample = (title, contentLines, key) => (
+      <div key={key} style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '12px', overflow: 'hidden', margin: '24px 0', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', pageBreakInside: 'avoid' }}>
+        <div style={{ background: 'linear-gradient(135deg,#1e3a5f,#1e40af)', padding: '10px 18px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span style={{ fontSize: '14px' }}>📝</span>
+          <span style={{ fontSize: '13px', fontWeight: '700', color: 'white' }}>{title || 'Example'}</span>
+        </div>
+        <div style={{ padding: '16px 20px', fontSize: '14px', lineHeight: '1.8', color: '#1e293b', background: '#f8fafc' }}>
+          {contentLines.map((line, li) => line.trim() ? <p key={li} style={{ margin: '4px 0' }}>{renderInline(line)}</p> : null)}
+        </div>
+      </div>
+    );
+
+    const renderSummary = (contentLines, key) => (
+      <div key={key} style={{ background: 'linear-gradient(135deg,#1e3a5f,#1e40af)', borderRadius: '12px', padding: '20px 24px', margin: '32px 0', boxShadow: '0 4px 16px rgba(30,58,95,0.2)', pageBreakInside: 'avoid' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
+          <span style={{ fontSize: '20px' }}>📋</span>
+          <span style={{ fontSize: '14px', fontWeight: '800', color: 'white', textTransform: 'uppercase', letterSpacing: '1.5px' }}>Summary</span>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          {contentLines.filter(l => l.trim()).map((line, li) => (
+            <div key={li} style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+              <span style={{ color: '#93c5fd', fontWeight: '700', fontSize: '16px', lineHeight: '1.5', flexShrink: 0 }}>✓</span>
+              <span style={{ fontSize: '13px', lineHeight: '1.6', color: '#e0f2fe' }}>{renderInline(line.replace(/^[-*•]\s*/, ''))}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+
+    const renderThink = (contentLines, key) => (
+      <div key={key} style={{ background: 'linear-gradient(135deg,#fdf4ff,#fae8ff)', border: '1px solid #d8b4fe', borderRadius: '12px', padding: '18px 22px', margin: '24px 0', boxShadow: '0 2px 8px rgba(168,85,247,0.1)', pageBreakInside: 'avoid' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
+          <span style={{ fontSize: '20px' }}>🤔</span>
+          <span style={{ fontSize: '13px', fontWeight: '800', color: '#7e22ce', textTransform: 'uppercase', letterSpacing: '1px' }}>Think About It</span>
+        </div>
+        <div style={{ fontSize: '14px', lineHeight: '1.7', color: '#581c87', fontStyle: 'italic' }}>
+          {contentLines.map((line, li) => line.trim() ? <p key={li} style={{ margin: '4px 0' }}>{renderInline(line)}</p> : null)}
+        </div>
+      </div>
+    );
+
+    // ============================================================
+    // MAIN PARSING LOOP
+    // ============================================================
+
     while (i < lines.length) {
       const line = lines[i];
+
+      // Check for special block start :::SOMETHING
+      const blockMatch = line.match(/^:::(CALLOUT|ACTIVITY|KEYTERM|EXAMPLE|SUMMARY|THINK)(.*)?$/i);
+      if (blockMatch) {
+        flushList(); flushTable();
+        const blockType = blockMatch[1].toUpperCase();
+        const blockParams = (blockMatch[2] || '').trim();
+        const blockLines = [];
+        i++;
+        while (i < lines.length && lines[i].trim() !== ':::') {
+          blockLines.push(lines[i]);
+          i++;
+        }
+        i++; // skip closing :::
+
+        const blockKey = 'block-' + result.length;
+
+        if (blockType === 'CALLOUT') {
+          const typeMatch = blockParams.match(/type=(\w+)/i);
+          const calloutType = typeMatch ? typeMatch[1].toLowerCase() : 'remember';
+          result.push(renderCallout(calloutType, blockLines, blockKey));
+        } else if (blockType === 'ACTIVITY') {
+          result.push(renderActivity(blockLines, blockKey));
+        } else if (blockType === 'KEYTERM') {
+          const termMatch = blockParams.match(/term=(.+)/i);
+          const term = termMatch ? termMatch[1].trim() : 'Term';
+          result.push(renderKeyTerm(term, blockLines, blockKey));
+        } else if (blockType === 'EXAMPLE') {
+          const titleMatch = blockParams.match(/title=(.+)/i);
+          const title = titleMatch ? titleMatch[1].trim() : 'Example';
+          result.push(renderExample(title, blockLines, blockKey));
+        } else if (blockType === 'SUMMARY') {
+          result.push(renderSummary(blockLines, blockKey));
+        } else if (blockType === 'THINK') {
+          result.push(renderThink(blockLines, blockKey));
+        }
+        continue;
+      }
+
+      // Code blocks
       if (line.trim().startsWith('```')) {
         if (inCodeBlock) { flushCode(); inCodeBlock = false; } else { inCodeBlock = true; }
         i++; continue;
       }
       if (inCodeBlock) { codeBlock.push(line); i++; continue; }
+
+      // Tables
       if (line.includes('|') && line.trim().length > 2) { tableLines.push(line); i++; continue; }
       if (tableLines.length > 0 && (!line.includes('|') || line.trim().length < 2)) flushTable();
-      if (line.startsWith('###')) { flushList(); result.push(<h3 key={i} style={{ fontSize:'15px', margin:'24px 0 10px 0', fontWeight:'700', color:'#1e3a5f', pageBreakAfter:'avoid', paddingLeft:'12px', borderLeft:'3px solid #93c5fd' }}>{renderInline(line.replace(/^#+\s*/, ''))}</h3>); i++; continue; }
-      if (line.startsWith('##')) { flushList(); result.push(<h2 key={i} style={{ fontSize:'18px', margin:'32px 0 12px 0', fontWeight:'700', color:'#1e3a5f', pageBreakAfter:'avoid', paddingBottom:'6px', borderBottom:'2px solid #dbeafe' }}>{renderInline(line.replace(/^#+\s*/, ''))}</h2>); i++; continue; }
-      if (line.startsWith('#')) { flushList(); result.push(<h1 key={i} style={{ fontSize:'22px', margin:'36px 0 14px 0', fontWeight:'800', color:'#1e3a5f', pageBreakAfter:'avoid', paddingBottom:'8px', borderBottom:'3px solid #1e3a5f' }}>{renderInline(line.replace(/^#+\s*/, ''))}</h1>); i++; continue; }
+
+      // Headings
+      if (line.startsWith('###')) {
+        flushList();
+        result.push(
+          <h3 key={i} style={{ fontSize: '15px', margin: '28px 0 10px 0', fontWeight: '700', color: '#1e3a5f', pageBreakAfter: 'avoid', paddingLeft: '12px', borderLeft: '4px solid #93c5fd' }}>
+            {renderInline(line.replace(/^#+\s*/, ''))}
+          </h3>
+        );
+        i++; continue;
+      }
+      if (line.startsWith('##')) {
+        flushList();
+        result.push(
+          <h2 key={i} style={{ fontSize: '18px', margin: '36px 0 12px 0', fontWeight: '800', color: '#1e3a5f', pageBreakAfter: 'avoid', paddingBottom: '8px', borderBottom: '2px solid #dbeafe' }}>
+            {renderInline(line.replace(/^#+\s*/, ''))}
+          </h2>
+        );
+        i++; continue;
+      }
+      if (line.startsWith('#')) {
+        flushList();
+        result.push(
+          <h1 key={i} style={{ fontSize: '22px', margin: '40px 0 14px 0', fontWeight: '800', color: '#1e3a5f', pageBreakAfter: 'avoid', paddingBottom: '10px', borderBottom: '3px solid #1e3a5f' }}>
+            {renderInline(line.replace(/^#+\s*/, ''))}
+          </h1>
+        );
+        i++; continue;
+      }
+
+      // Lists
       if (line.trim().startsWith('-') || line.trim().startsWith('*') || /^\d+\./.test(line.trim())) {
         const t = line.replace(/^[\s\-\*]+|\d+\.\s*/, '').trim();
-        if (t) listItems.push(t); i++; continue;
+        if (t) listItems.push(t);
+        i++; continue;
       }
-      if (line.startsWith('>')) { flushList(); result.push(<blockquote key={i} style={{ borderLeft:'4px solid #f59e0b', padding:'14px 18px', margin:'20px 0', background:'linear-gradient(135deg,#fffbeb,#fefce8)', fontSize:'13px', fontStyle:'italic', color:'#92400e', pageBreakInside:'avoid', borderRadius:'0 8px 8px 0', boxShadow:'0 1px 4px rgba(245,158,11,0.15)' }}>{renderInline(line.replace(/^>\s*/, ''))}</blockquote>); i++; continue; }
-      if (line.trim().length === 0) { flushList(); result.push(<div key={i} style={{ height: '8px' }} />); i++; continue; }
+
+      // Blockquote
+      if (line.startsWith('>')) {
+        flushList();
+        result.push(
+          <blockquote key={i} style={{ borderLeft: '4px solid #f59e0b', padding: '14px 18px', margin: '20px 0', background: 'linear-gradient(135deg,#fffbeb,#fefce8)', fontSize: '13px', fontStyle: 'italic', color: '#92400e', pageBreakInside: 'avoid', borderRadius: '0 8px 8px 0', boxShadow: '0 1px 4px rgba(245,158,11,0.15)' }}>
+            {renderInline(line.replace(/^>\s*/, ''))}
+          </blockquote>
+        );
+        i++; continue;
+      }
+
+      // Empty line
+      if (line.trim().length === 0) {
+        flushList();
+        result.push(<div key={i} style={{ height: '8px' }} />);
+        i++; continue;
+      }
+
+      // Image
       const imgMatch = line.match(/!\[([^\]]*)\]\(([^)]+)\)/);
       if (imgMatch) {
         flushList();
@@ -506,26 +750,45 @@ const [analyticsDateTo, setAnalyticsDateTo] = useState('');
         const imgAlt = imgMatch[1];
         const currentWidth = imgWidthMap[imgUrl] || 100;
         result.push(
-          <div key={i} style={{ margin: '16px 0', textAlign: 'center', pageBreakInside: 'avoid', breakInside: 'avoid' }}>
+          <div key={i} style={{ margin: '24px 0', textAlign: 'center', pageBreakInside: 'avoid', breakInside: 'avoid' }}>
             <div style={{ position: 'relative', display: 'inline-block', maxWidth: currentWidth + '%', width: currentWidth + '%' }}>
-              <img src={imgUrl} alt={imgAlt} style={{ width: '100%', maxHeight: '500px', objectFit: 'contain', borderRadius: '8px', border: '1px solid ' + COLORS.borderColor, boxShadow: '0 2px 8px rgba(0,0,0,0.08)', cursor: 'pointer', display: 'block' }} onClick={() => setLightboxImage(imgUrl)} />
-              <div style={{ display: 'flex', gap: '4px', justifyContent: 'center', marginTop: '6px', flexWrap: 'wrap' }}>
+              <img src={imgUrl} alt={imgAlt}
+                style={{ width: '100%', maxHeight: '500px', objectFit: 'contain', borderRadius: '10px', border: '1px solid #e2e8f0', boxShadow: '0 4px 16px rgba(0,0,0,0.1)', cursor: 'pointer', display: 'block' }}
+                onClick={() => setLightboxImage(imgUrl)} />
+              <div style={{ display: 'flex', gap: '4px', justifyContent: 'center', marginTop: '8px', flexWrap: 'wrap' }}>
                 {[25, 50, 75, 100].map(pct => (
                   <button key={pct} onClick={(e) => { e.stopPropagation(); setImgWidthMap(prev => ({ ...prev, [imgUrl]: pct })); }}
-                    style={{ padding: '2px 8px', fontSize: '10px', fontWeight: currentWidth === pct ? '700' : '400', background: currentWidth === pct ? COLORS.navActive : COLORS.filterBg, color: currentWidth === pct ? 'white' : COLORS.lightText, border: 'none', borderRadius: '4px', cursor: 'pointer', fontFamily: FONT_FAMILY }}>
+                    style={{ padding: '2px 8px', fontSize: '10px', fontWeight: currentWidth === pct ? '700' : '400', background: currentWidth === pct ? '#1e3a5f' : '#f1f5f9', color: currentWidth === pct ? 'white' : '#64748b', border: 'none', borderRadius: '4px', cursor: 'pointer', fontFamily: FONT_FAMILY }}>
                     {pct}%
                   </button>
                 ))}
               </div>
             </div>
-            {imgAlt && <p style={{ fontSize: '11px', color: COLORS.lightText, marginTop: '6px', fontStyle: 'italic' }}>{imgAlt}</p>}
+            {imgAlt && <p style={{ fontSize: '12px', color: '#94a3b8', marginTop: '8px', fontStyle: 'italic' }}>{imgAlt}</p>}
           </div>
         );
         i++; continue;
       }
-      if (line.trim()) { flushList(); result.push(<p key={i} style={{ margin: '8px 0', lineHeight: '1.6', color: COLORS.darkText, pageBreakInside: 'avoid' }}>{renderInline(line)}</p>); }
+
+      // Horizontal rule
+      if (/^---+$/.test(line.trim())) {
+        flushList();
+        result.push(<hr key={i} style={{ border: 'none', borderTop: '2px solid #e2e8f0', margin: '24px 0' }} />);
+        i++; continue;
+      }
+
+      // Normal paragraph
+      if (line.trim()) {
+        flushList();
+        result.push(
+          <p key={i} style={{ margin: '8px 0', lineHeight: '1.8', color: '#1e293b', pageBreakInside: 'avoid', fontSize: '14px' }}>
+            {renderInline(line)}
+          </p>
+        );
+      }
       i++;
     }
+
     flushList(); flushTable(); flushCode();
     return result;
   };

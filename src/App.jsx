@@ -416,7 +416,7 @@ const [analyticsDateTo, setAnalyticsDateTo] = useState('');
     if (user) {
       const { data: roleData } = await supabase.from('user_roles').select('role').eq('user_id', user.id).single();
       setCurrentUser({ ...user, user_metadata: { ...user.user_metadata, role: roleData?.role || 'content_developer' } });
-      setAuthPage('dashboard'); fetchRecords(); if (!sessionStorage.getItem('acs_user_name')) setShowNameModal(true);
+      setAuthPage('dashboard'); fetchRecords(); setShowNameModal(true);
     }
   };
 
@@ -1355,7 +1355,7 @@ const handleExportWord = async () => {
       if (!user) throw new Error('Failed to get user session');
       const { data: roleData } = await supabase.from('user_roles').select('role').eq('user_id', user.id).single();
       setCurrentUser({ ...user, user_metadata: { ...user.user_metadata, role: roleData?.role || 'content_developer' } });
-      setAuthPage('dashboard'); fetchRecords(); if (!sessionStorage.getItem('acs_user_name')) setShowNameModal(true);
+      setAuthPage('dashboard'); fetchRecords(); setShowNameModal(true);
     } catch (err) { setSetupError(err.message || 'Setup failed.'); }
     finally { setSetupLoading(false); }
   };
@@ -1367,14 +1367,17 @@ const handleExportWord = async () => {
       if (error) throw error;
       const { data: roleData } = await supabase.from('user_roles').select('role').eq('user_id', data.user.id).single();
       setCurrentUser({ ...data.user, user_metadata: { ...data.user.user_metadata, role: roleData?.role || 'content_developer' } });
-      setAuthPage('dashboard'); fetchRecords(); if (!sessionStorage.getItem('acs_user_name')) setShowNameModal(true);
+      setAuthPage('dashboard'); fetchRecords(); setShowNameModal(true);
     } catch (err) { setLoginError(err.message || 'Login failed'); }
     finally { setLoginLoading(false); }
   };
 
   // ===== DATA =====
   const fetchRecords = async () => {
-    const { data, error } = await supabase.from('textbook_content').select('*').order('updated_at', { ascending: false });
+    const isCentralAdmin = currentUser?.user_metadata?.role === 'central_admin';
+    let query = supabase.from('textbook_content').select('*').order('updated_at', { ascending: false });
+    if (!isCentralAdmin && userName) { query = query.eq('created_by', userName); }
+    const { data, error } = await query;
     if (!error && data) {
       setRecords(data);
       const params = new URLSearchParams(window.location.search);
@@ -1442,7 +1445,7 @@ const handleExportWord = async () => {
         result = await supabase.from('textbook_content').update({ class: formClass, subject: formSubject, topic: formTopic, sub_topic: formSubTopic, content_type: formContentType, prompt: formPrompt, text_model: formTextModel, status: 'generating', updated_at: new Date() }).eq('record_id', editingId);
       } else {
         // NEW: include text_model in insert
-        result = await supabase.from('textbook_content').insert([{ class: formClass, subject: formSubject, topic: formTopic, sub_topic: formSubTopic, content_type: formContentType, prompt: formPrompt, text_model: formTextModel, status: 'generating' }]);
+        result = await supabase.from('textbook_content').insert([{ class: formClass, subject: formSubject, topic: formTopic, sub_topic: formSubTopic, content_type: formContentType, prompt: formPrompt, text_model: formTextModel, status: 'generating', created_by: userName || 'unknown' }]);
       }
       if (result.error) { logError('handleSaveRecord', result.error, {}); showDetailedError(result.error); setFormLoading(false); return; }
       setFormClass('1'); setFormSubject('English'); setFormTopic(''); setFormSubTopic(''); setFormContentType(''); setFormPrompt(''); setFormTextModel('claude'); setShowAddForm(false); setEditingId(null);
@@ -2245,7 +2248,7 @@ const handleSavePlagiarismResult = async (result) => {
           {[
             { icon:<BookOpen size={18} />, label:'Projects', action:'textbooks', disabled:false, rolesAllowed:['central_admin','admin','content_developer'] },
             { icon:<Users size={18} />, label:'Manage Users', action:'manage-users', disabled:true, rolesAllowed:['central_admin','admin'] },
-            { icon:<Mail size={18} />, label:'Invites', action:'invites', disabled:false, rolesAllowed:['central_admin','admin'] },
+            { icon:<Mail size={18} />, label:'Invites', action:'invites', disabled:false, rolesAllowed:['central_admin'] },
             { icon:<MI name="bar_chart" size={18} />, label:'Analytics', action:'analytics', disabled:false, rolesAllowed:['central_admin'] }
           ].filter(item => item.rolesAllowed.includes(currentUser?.user_metadata?.role||'content_developer')).map((item, i) => (
             <button key={i} onClick={() => { if (item.action==='invites') { setShowInvitePanel(!showInvitePanel); if (!showInvitePanel) fetchPendingInvites(); } if (item.action==='analytics') setShowAnalytics(true); if (item.action==='analytics') setShowAnalytics(true); if (item.action==='analytics') setShowAnalytics(true); if (item.action==='analytics') setShowAnalytics(true);if (item.action==='analytics') setShowAnalytics(true); }} disabled={item.disabled}
@@ -2263,7 +2266,7 @@ const handleSavePlagiarismResult = async (result) => {
       <div style={{ flex:1, display:'flex', flexDirection:'column', overflow:'hidden' }}>
         <div style={{ background:COLORS.white, borderBottom:'1px solid '+COLORS.borderColor, padding:'16px 24px', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
           <h1 style={{ margin:0, fontSize:'20px', fontWeight:'700', color:COLORS.darkText }}>AI Content Studio</h1>
-          <span style={{ fontSize:'12px', color:COLORS.lightText }}>{userName && <span style={{ fontSize:'13px', fontWeight:'600', color:COLORS.darkText, marginRight:'8px' }}>Hi, {userName}</span>}{currentUser?.email} • {currentUser?.user_metadata?.role} <button onClick={() => setShowNameModal(true)} style={{ marginLeft:'8px', background:'none', border:'1px solid '+COLORS.borderColor, borderRadius:'6px', padding:'3px 8px', cursor:'pointer', fontSize:'11px', color:COLORS.lightText, fontFamily:FONT_FAMILY }}><MI name="edit" size={12} /> Name</button></span>
+          <span style={{ fontSize:'12px', color:COLORS.lightText }}>{userName && <span style={{ fontSize:'13px', fontWeight:'600', color:COLORS.darkText, marginRight:'8px' }}>Code: {userName}</span>}{currentUser?.email} • {currentUser?.user_metadata?.role} <button onClick={() => setShowNameModal(true)} style={{ marginLeft:'8px', background:'none', border:'1px solid '+COLORS.borderColor, borderRadius:'6px', padding:'3px 8px', cursor:'pointer', fontSize:'11px', color:COLORS.lightText, fontFamily:FONT_FAMILY }}><MI name="edit" size={12} /> Name</button></span>
         </div>
 
         <div style={{ flex:1, overflow:'auto', padding:'24px' }}>
@@ -2569,17 +2572,16 @@ const handleSavePlagiarismResult = async (result) => {
   <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:9998, fontFamily:FONT_FAMILY }}>
     <div style={{ background:COLORS.white, borderRadius:'16px', padding:'40px', width:'100%', maxWidth:'420px', boxShadow:'0 20px 60px rgba(0,0,0,0.2)', textAlign:'center' }}>
       <div style={{ width:'64px', height:'64px', background:'linear-gradient(135deg,#6366f1,#8b5cf6)', borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 20px auto' }}><MI name="person" size={32} color="white" /></div>
-      <h2 style={{ margin:'0 0 8px 0', fontSize:'22px', fontWeight:'700', color:COLORS.darkText }}>Welcome!</h2>
-      <p style={{ margin:'0 0 24px 0', fontSize:'14px', color:COLORS.lightText, lineHeight:'1.6' }}>Enter your name so your contributions are tracked in history.</p>
-      <input type="text" placeholder="Your name (e.g. Ravi, Priya...)" autoFocus id="name-input-field" defaultValue={userName}
-        onKeyDown={e => { if (e.key === 'Enter') { const v = e.target.value.trim(); if (v) { setUserName(v); sessionStorage.setItem('acs_user_name', v); } setShowNameModal(false); } }}
+      <h2 style={{ margin:'0 0 8px 0', fontSize:'22px', fontWeight:'700', color:COLORS.darkText }}>Enter Access Code!</h2>
+      <p style={{ margin:'0 0 24px 0', fontSize:'14px', color:COLORS.lightText, lineHeight:'1.6' }}>Enter your unique Access Code to continue. Your records are linked to this code.</p>
+      <input type="text" placeholder="Enter your Access Code..." autoFocus id="name-input-field" defaultValue={userName}
+        onKeyDown={e => { if (e.key === 'Enter') { const v = e.target.value.trim(); if (!v) { alert('Access Code is required.'); return; } setUserName(v); sessionStorage.setItem('acs_user_name', v); setShowNameModal(false); fetchRecords(); } }}
         style={{ width:'100%', padding:'12px 16px', border:'2px solid #e0e7ff', borderRadius:'8px', fontSize:'15px', fontFamily:FONT_FAMILY, outline:'none', textAlign:'center', marginBottom:'16px', boxSizing:'border-box' }}
         onFocus={e => e.target.style.borderColor='#6366f1'} onBlur={e => e.target.style.borderColor='#e0e7ff'} />
-      <button onClick={() => { const inp = document.getElementById('name-input-field'); const v = inp ? inp.value.trim() : ''; if (v) { setUserName(v); sessionStorage.setItem('acs_user_name', v); } setShowNameModal(false); }}
+      <button onClick={() => { const inp = document.getElementById('name-input-field'); const v = inp ? inp.value.trim() : ''; if (!v) { alert('Access Code is required.'); return; } setUserName(v); sessionStorage.setItem('acs_user_name', v); setShowNameModal(false); fetchRecords(); }}
         style={{ width:'100%', padding:'12px', background:'linear-gradient(135deg,#6366f1,#8b5cf6)', color:'white', border:'none', borderRadius:'8px', fontSize:'15px', fontWeight:'700', cursor:'pointer', fontFamily:FONT_FAMILY }}>
         Continue →
       </button>
-      <button onClick={() => setShowNameModal(false)} style={{ marginTop:'10px', background:'none', border:'none', fontSize:'12px', color:COLORS.lightText, cursor:'pointer', fontFamily:FONT_FAMILY }}>Skip for now</button>
     </div>
   </div>
 )}

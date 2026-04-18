@@ -1031,7 +1031,9 @@ const VersionsTab = () => {
         const span = document.createElement('mark');
         span.setAttribute('data-comment-id', rangeId);
         span.style.cssText = 'background:#fef08a;border-radius:2px;cursor:pointer;';
-        range.surroundContents(span);
+        const fragment = range.extractContents();
+span.appendChild(fragment);
+range.insertNode(span);
       } catch (e) { rangeId = null; }
     }
     const newComment = {

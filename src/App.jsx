@@ -1929,8 +1929,7 @@ const handleExportWord = async () => {
   };
 
   // ===== DATA =====
-  const fetchRecords = async () => {
-    const fetchRecords = async (overrideRole, overrideName) => {
+  const fetchRecords = async (overrideRole, overrideName) => {
     const role = overrideRole || currentUser?.user_metadata?.role;
     const name = overrideName || userName;
     const isCentralAdmin = role === 'central_admin';
@@ -2930,7 +2929,7 @@ const handleSavePlagiarismResult = async (result) => {
             <table style={{ width:'100%', borderCollapse:'collapse' }}>
               <thead>
                 <tr style={{ background:'#64748b', color:COLORS.white }}>
-                  {['S.NO','ID','CLASS','SUBJECT','TOPIC','TYPE','STATUS','QA STATUS','IMAGES','NOTES','ACTION'].map(h => <th key={h} style={{ padding:'12px', textAlign:'left', fontSize:'11px', fontWeight:'600', textTransform:'uppercase', letterSpacing:'0.5px' }}>{h}</th>)}
+                  {['S.NO','ID','CLASS','SUBJECT','TOPIC','TYPE','STATUS','WORDS','QA STATUS','IMAGES','NOTES','ACTION'].map(h => <th key={h} style={{ padding:'12px', textAlign:'left', fontSize:'11px', fontWeight:'600', textTransform:'uppercase', letterSpacing:'0.5px' }}>{h}</th>)}
                 </tr>
               </thead>
               <tbody>
@@ -3034,23 +3033,24 @@ const handleSavePlagiarismResult = async (result) => {
             </div>
 
             {/* Tab Bar */}
-            <div style={{ padding:'0 24px', borderBottom:'1px solid '+COLORS.borderColor, display:'flex', background:COLORS.lightBg }}>
-              <button onClick={() => setViewTab('content')} style={{ padding:'12px 20px', background:'none', border:'none', borderBottom:viewTab==='content'?'2px solid '+COLORS.navActive:'2px solid transparent', color:viewTab==='content'?COLORS.navActive:COLORS.lightText, fontWeight:viewTab==='content'?'600':'500', fontSize:'13px', cursor:'pointer', fontFamily:FONT_FAMILY, display:'flex', alignItems:'center', gap:'5px' }}><MI name="article" size={16} /> Content</button>
-              <button onClick={() => setViewTab('visuals')} style={{ padding:'12px 20px', background:'none', border:'none', borderBottom:viewTab==='visuals'?'2px solid #8b5cf6':'2px solid transparent', color:viewTab==='visuals'?'#8b5cf6':COLORS.lightText, fontWeight:viewTab==='visuals'?'600':'500', fontSize:'13px', cursor:'pointer', fontFamily:FONT_FAMILY, display:'flex', alignItems:'center', gap:'5px' }}>
-                <MI name="image" size={16} /> Visual Assets
-                {getVisualPrompts(viewingRecord).length>0 && <span style={{ background:'#8b5cf6', color:'white', fontSize:'10px', padding:'1px 6px', borderRadius:'10px', fontWeight:'600' }}>{getVisualPrompts(viewingRecord).length}</span>}
-              </button>
-              <button onClick={() => setViewTab('history')} style={{ padding:'12px 20px', background:'none', border:'none', borderBottom:viewTab==='history'?'2px solid #f59e0b':'2px solid transparent', color:viewTab==='history'?'#f59e0b':COLORS.lightText, fontWeight:viewTab==='history'?'600':'500', fontSize:'13px', cursor:'pointer', fontFamily:FONT_FAMILY, display:'flex', alignItems:'center', gap:'5px' }}><MI name="history" size={16} /> History</button>
-              <button onClick={() => setViewTab('layout')} style={{ padding:'12px 20px', background:'none', border:'none', borderBottom:viewTab==='layout'?'2px solid #059669':'2px solid transparent', color:viewTab==='layout'?'#059669':COLORS.lightText, fontWeight:viewTab==='layout'?'600':'500', fontSize:'13px', cursor:'pointer', fontFamily:FONT_FAMILY, display:'flex', alignItems:'center', gap:'5px' }}><MI name="dashboard_customize" size={16} /> Layout</button>
-            </div> <button onClick={() => setViewTab('versions')} style={{ padding:'12px 20px', background:'none', border:'none', borderBottom:viewTab==='versions'?'2px solid #f59e0b':'2px solid transparent', color:viewTab==='versions'?'#f59e0b':COLORS.lightText, fontWeight:viewTab==='versions'?'600':'500', fontSize:'13px', cursor:'pointer', fontFamily:FONT_FAMILY, display:'flex', alignItems:'center', gap:'5px' }}>
-  <MI name="rate_review" size={16} /> QA Versions
-  {getVersions(viewingRecord).length > 0 && <span style={{ background:'#f59e0b', color:'white', fontSize:'10px', padding:'1px 6px', borderRadius:'10px', fontWeight:'600' }}>{getVersions(viewingRecord).length}</span>}
-</button>
+<div style={{ padding:'0 24px', borderBottom:'1px solid '+COLORS.borderColor, display:'flex', background:COLORS.lightBg }}>
+  <button onClick={() => setViewTab('content')} style={{ padding:'12px 20px', background:'none', border:'none', borderBottom:viewTab==='content'?'2px solid '+COLORS.navActive:'2px solid transparent', color:viewTab==='content'?COLORS.navActive:COLORS.lightText, fontWeight:viewTab==='content'?'600':'500', fontSize:'13px', cursor:'pointer', fontFamily:FONT_FAMILY, display:'flex', alignItems:'center', gap:'5px' }}><MI name="article" size={16} /> Content</button>
+  <button onClick={() => setViewTab('visuals')} style={{ padding:'12px 20px', background:'none', border:'none', borderBottom:viewTab==='visuals'?'2px solid #8b5cf6':'2px solid transparent', color:viewTab==='visuals'?'#8b5cf6':COLORS.lightText, fontWeight:viewTab==='visuals'?'600':'500', fontSize:'13px', cursor:'pointer', fontFamily:FONT_FAMILY, display:'flex', alignItems:'center', gap:'5px' }}>
+    <MI name="image" size={16} /> Visual Assets
+    {getVisualPrompts(viewingRecord).length>0 && <span style={{ background:'#8b5cf6', color:'white', fontSize:'10px', padding:'1px 6px', borderRadius:'10px', fontWeight:'600' }}>{getVisualPrompts(viewingRecord).length}</span>}
+  </button>
+  <button onClick={() => setViewTab('history')} style={{ padding:'12px 20px', background:'none', border:'none', borderBottom:viewTab==='history'?'2px solid #f59e0b':'2px solid transparent', color:viewTab==='history'?'#f59e0b':COLORS.lightText, fontWeight:viewTab==='history'?'600':'500', fontSize:'13px', cursor:'pointer', fontFamily:FONT_FAMILY, display:'flex', alignItems:'center', gap:'5px' }}><MI name="history" size={16} /> History</button>
+  <button onClick={() => setViewTab('layout')} style={{ padding:'12px 20px', background:'none', border:'none', borderBottom:viewTab==='layout'?'2px solid #059669':'2px solid transparent', color:viewTab==='layout'?'#059669':COLORS.lightText, fontWeight:viewTab==='layout'?'600':'500', fontSize:'13px', cursor:'pointer', fontFamily:FONT_FAMILY, display:'flex', alignItems:'center', gap:'5px' }}><MI name="dashboard_customize" size={16} /> Layout</button>
+  <button onClick={() => setViewTab('versions')} style={{ padding:'12px 20px', background:'none', border:'none', borderBottom:viewTab==='versions'?'2px solid #f59e0b':'2px solid transparent', color:viewTab==='versions'?'#f59e0b':COLORS.lightText, fontWeight:viewTab==='versions'?'600':'500', fontSize:'13px', cursor:'pointer', fontFamily:FONT_FAMILY, display:'flex', alignItems:'center', gap:'5px' }}>
+    <MI name="rate_review" size={16} /> QA Versions
+    {getVersions(viewingRecord).length > 0 && <span style={{ background:'#f59e0b', color:'white', fontSize:'10px', padding:'1px 6px', borderRadius:'10px', fontWeight:'600' }}>{getVersions(viewingRecord).length}</span>}
+  </button>
+</div>
 
             {/* Content + Comments */}
             <div style={{ flex:1, display:'flex', overflow:'hidden' }}>
               <div style={{ flex:1, overflowY:'auto', background:COLORS.white }}>
-                viewTab==='content' ? renderContentTab() : viewTab==='visuals' ? renderVisualAssetsTab() : viewTab==='history' ? renderHistoryTab() : viewTab==='versions' ? renderVersionsTab() : renderLayoutTab()
+                {viewTab==='content' ? renderContentTab() : viewTab==='visuals' ? renderVisualAssetsTab() : viewTab==='history' ? renderHistoryTab() : viewTab==='versions' ? renderVersionsTab() : renderLayoutTab()}
               </div>
               {showComments && (
                 <div style={{ width:'300px', borderLeft:'1px solid '+COLORS.borderColor, display:'flex', flexDirection:'column', background:'#fafbfc', flexShrink:0 }}>

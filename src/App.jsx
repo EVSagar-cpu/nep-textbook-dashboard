@@ -377,7 +377,7 @@ const [analyticsDateTo, setAnalyticsDateTo] = useState('');
   const [editingBlockId, setEditingBlockId] = useState(null);
   const [layoutSaved, setLayoutSaved] = useState(false);
   const [expandedHistoryIdx, setExpandedHistoryIdx] = useState(null);
-
+const [showStatusMenu, setShowStatusMenu] = React.useState(false);
   useEffect(() => {
     if (viewingRecord) {
       const saved = localStorage.getItem('layout_' + viewingRecord.record_id);
@@ -879,6 +879,562 @@ const [analyticsDateTo, setAnalyticsDateTo] = useState('');
     flushList(); flushTable(); flushCode();
     return result;
   };
+  // ============================================================
+// QA VERSIONING SYSTEM
+// Insert this entire block just before the line:
+// const getPaperDimensions = () => {
+// ============================================================
+
+// VERSION STRUCTURE:
+// { id, version_number, title, content(HTML), status, created_by, created_at,
+//   updated_at, submitted_at, reviewed_by, reviewed_at, review_note, comments[] }
+// COMMENT STRUCTURE:
+// { id, text, user, timestamp, selection_text, range_id, resolved }
+
+const VERSION_STATUSES = {
+  draft:              { label: 'Draft',              color: '#64748b', bg: '#f1f5f9', border: '#cbd5e1', icon: 'edit_note' },
+  in_review:          { label: 'In Review',          color: '#d97706', bg: '#fffbeb', border: '#fde68a', icon: 'rate_review' },
+  approved:           { label: 'Approved',           color: '#059669', bg: '#ecfdf5', border: '#a7f3d0', icon: 'verified' },
+  revision_requested: { label: 'Revision Requested', color: '#dc2626', bg: '#fef2f2', border: '#fecaca', icon: 'redo' },
+  rejected:           { label: 'Rejected',           color: '#991b1b', bg: '#fef2f2', border: '#fecaca', icon: 'cancel' },
+};
+
+const getVersions = (record) => {
+  if (!record?.versions) return [];
+  try { return Array.isArray(record.versions) ? record.versions : JSON.parse(record.versions); }
+  catch { return []; }
+};
+
+const saveVersions = async (recordId, versions) => {
+  const { error } = await supabase.from('textbook_content')
+    .update({ versions, updated_at: new Date() })
+    .eq('record_id', recordId);
+  if (error) throw error;
+};
+
+const renderVersionsTab = () => {
+  if (!viewingRecord) return null;
+
+  const versions = getVersions(viewingRecord);
+  const [activeVersionId, setActiveVersionId] = React.useState(versions[0]?.id || null);
+  const [showNewVersionForm, setShowNewVersionForm] = React.useState(false);
+  const [savingVersion, setSavingVersion] = React.useState(false);
+  const [versionMsg, setVersionMsg] = React.useState('');
+  const [commentInput, setCommentInput] = React.useState('');
+  const [selectedText, setSelectedText] = React.useState('');
+  const [showCommentBox, setShowCommentBox] = React.useState(false);
+  const [commentBoxPos, setCommentBoxPos] = React.useState({ x: 0, y: 0 });
+  const [activeCommentId, setActiveCommentId] = React.useState(null);
+  const [showStatusMenu, setShowStatusMenu] = React.useState(false);
+  const editorRef = React.useRef(null);
+  const commentBoxRef = React.useRef(null);
+
+  const activeVersion = versions.find(v => v.id === activeVersionId) || versions[0] || null;
+  const isCentralAdmin = currentUser?.user_metadata?.role === 'central_admin';
+  const isAdmin = currentUser?.user_metadata?.role === 'central_admin' || currentUser?.user_metadata?.role === 'admin';
+
+  // ── Create new version ──────────────────────────
+  const handleCreateVersion = async () => {
+    if (versions.length >= 5) { setVersionMsg('Maximum 5 versions allowed.'); return; }
+    setSavingVersion(true);
+    try {
+      const newVersion = {
+        id: 'v' + Date.now().toString(36),
+        version_number: versions.length + 1,
+        title: 'Version ' + (versions.length + 1),
+        content: '',
+        status: 'draft',
+        created_by: userName || 'unknown',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        submitted_at: null,
+        reviewed_by: null,
+        reviewed_at: null,
+        review_note: '',
+        comments: [],
+      };
+      const updated = [...versions, newVersion];
+      await saveVersions(viewingRecord.record_id, updated);
+      setViewingRecord({ ...viewingRecord, versions: updated });
+      setActiveVersionId(newVersion.id);
+      setShowNewVersionForm(false);
+      setVersionMsg('Version ' + newVersion.version_number + ' created!');
+      setTimeout(() => setVersionMsg(''), 3000);
+    } catch (err) { setVersionMsg('Failed: ' + err.message); }
+    setSavingVersion(false);
+  };
+
+  // ── Save content ────────────────────────────────
+  const handleSaveVersionContent = async () => {
+    if (!activeVersion || !editorRef.current) return;
+    setSavingVersion(true);
+    try {
+      const html = editorRef.current.innerHTML;
+      const updated = versions.map(v => v.id === activeVersion.id
+        ? { ...v, content: html, updated_at: new Date().toISOString() } : v);
+      await saveVersions(viewingRecord.record_id, updated);
+      setViewingRecord({ ...viewingRecord, versions: updated });
+      setVersionMsg('Saved!');
+      setTimeout(() => setVersionMsg(''), 2000);
+    } catch (err) { setVersionMsg('Failed: ' + err.message); }
+    setSavingVersion(false);
+  };
+
+  // ── Change version status ───────────────────────
+  const handleChangeStatus = async (newStatus) => {
+    if (!activeVersion) return;
+    setSavingVersion(true);
+    try {
+      const now = new Date().toISOString();
+      const updates = { status: newStatus, updated_at: now };
+      if (newStatus === 'in_review') updates.submitted_at = now;
+      if (['approved','revision_requested','rejected'].includes(newStatus)) {
+        updates.reviewed_by = userName || 'unknown';
+        updates.reviewed_at = now;
+      }
+      const updated = versions.map(v => v.id === activeVersion.id ? { ...v, ...updates } : v);
+      await saveVersions(viewingRecord.record_id, updated);
+      setViewingRecord({ ...viewingRecord, versions: updated });
+      setShowStatusMenu(false);
+      setVersionMsg('Status updated to: ' + VERSION_STATUSES[newStatus].label);
+      setTimeout(() => setVersionMsg(''), 3000);
+      fetchRecords();
+    } catch (err) { setVersionMsg('Failed: ' + err.message); }
+    setSavingVersion(false);
+  };
+
+  // ── Inline comment ──────────────────────────────
+  const handleEditorMouseUp = () => {
+    const sel = window.getSelection();
+    if (!sel || sel.isCollapsed || !sel.toString().trim()) {
+      setShowCommentBox(false); return;
+    }
+    const text = sel.toString().trim();
+    if (text.length < 2) { setShowCommentBox(false); return; }
+    setSelectedText(text);
+    const range = sel.getRangeAt(0);
+    const rect = range.getBoundingClientRect();
+    const editorRect = editorRef.current?.getBoundingClientRect() || { left: 0, top: 0 };
+    setCommentBoxPos({ x: rect.left - editorRect.left, y: rect.bottom - editorRect.top + 8 });
+    setShowCommentBox(true);
+    setCommentInput('');
+  };
+
+  const handleAddComment = async () => {
+    if (!commentInput.trim() || !activeVersion || !selectedText) return;
+    const sel = window.getSelection();
+    let rangeId = 'range_' + Date.now();
+    // Wrap selection in highlight span
+    if (sel && !sel.isCollapsed && editorRef.current?.contains(sel.anchorNode)) {
+      try {
+        const range = sel.getRangeAt(0);
+        const span = document.createElement('mark');
+        span.setAttribute('data-comment-id', rangeId);
+        span.style.cssText = 'background:#fef08a;border-radius:2px;cursor:pointer;';
+        range.surroundContents(span);
+      } catch (e) { rangeId = null; }
+    }
+    const newComment = {
+      id: generateId(),
+      text: commentInput.trim(),
+      user: userName || currentUser?.email || 'unknown',
+      timestamp: new Date().toISOString(),
+      selection_text: selectedText.substring(0, 200),
+      range_id: rangeId,
+      resolved: false,
+    };
+    try {
+      // Save content with highlight + new comment
+      const html = editorRef.current ? editorRef.current.innerHTML : activeVersion.content;
+      const updated = versions.map(v => v.id === activeVersion.id
+        ? { ...v, content: html, comments: [...(v.comments || []), newComment], updated_at: new Date().toISOString() }
+        : v);
+      await saveVersions(viewingRecord.record_id, updated);
+      setViewingRecord({ ...viewingRecord, versions: updated });
+      setShowCommentBox(false);
+      setCommentInput('');
+      setSelectedText('');
+      sel?.removeAllRanges();
+    } catch (err) { setVersionMsg('Comment failed: ' + err.message); }
+  };
+
+  const handleResolveComment = async (commentId) => {
+    if (!activeVersion) return;
+    const updated = versions.map(v => v.id === activeVersion.id
+      ? { ...v, comments: v.comments.map(c => c.id === commentId ? { ...c, resolved: true } : c) }
+      : v);
+    try {
+      // Also remove highlight from editor
+      if (editorRef.current) {
+        const comment = activeVersion.comments.find(c => c.id === commentId);
+        if (comment?.range_id) {
+          const mark = editorRef.current.querySelector('[data-comment-id="' + comment.range_id + '"]');
+          if (mark) { mark.replaceWith(...mark.childNodes); }
+        }
+      }
+      await saveVersions(viewingRecord.record_id, updated);
+      setViewingRecord({ ...viewingRecord, versions: updated });
+    } catch (err) { setVersionMsg('Failed: ' + err.message); }
+  };
+
+  const handleCommentClick = (rangeId) => {
+    if (!rangeId || !editorRef.current) return;
+    const mark = editorRef.current.querySelector('[data-comment-id="' + rangeId + '"]');
+    if (mark) { mark.scrollIntoView({ behavior: 'smooth', block: 'center' }); setActiveCommentId(rangeId); setTimeout(() => setActiveCommentId(null), 2000); }
+  };
+
+  // Load content into editor when version changes
+  React.useEffect(() => {
+    if (editorRef.current && activeVersion) {
+      editorRef.current.innerHTML = activeVersion.content || '';
+    }
+  }, [activeVersionId]);
+
+  const activeComments = (activeVersion?.comments || []).filter(c => !c.resolved);
+  const resolvedComments = (activeVersion?.comments || []).filter(c => c.resolved);
+  const latestApproved = versions.filter(v => v.status === 'approved').pop();
+
+  const fmtDate = (d) => { try { return new Date(d).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'2-digit',hour:'2-digit',minute:'2-digit'}); } catch { return '—'; } };
+
+  return (
+    <div style={{ display:'flex', height:'100%', fontFamily:FONT_FAMILY }}>
+      {/* LEFT PANEL — Version List */}
+      <div style={{ width:'220px', borderRight:'1px solid '+COLORS.borderColor, background:'#f8fafc', display:'flex', flexDirection:'column', flexShrink:0 }}>
+        <div style={{ padding:'14px 16px', borderBottom:'1px solid '+COLORS.borderColor, background:COLORS.white }}>
+          <div style={{ fontSize:'13px', fontWeight:'700', color:COLORS.darkText, marginBottom:'4px' }}>Versions</div>
+          <div style={{ fontSize:'11px', color:COLORS.lightText }}>{versions.length}/5 versions</div>
+        </div>
+
+        {/* AI Output option */}
+        <div onClick={() => setActiveVersionId('ai_output')}
+          style={{ padding:'12px 16px', cursor:'pointer', borderBottom:'1px solid '+COLORS.borderColor,
+            background: activeVersionId === 'ai_output' ? '#eff6ff' : COLORS.white,
+            borderLeft: activeVersionId === 'ai_output' ? '3px solid #2563eb' : '3px solid transparent' }}>
+          <div style={{ display:'flex', alignItems:'center', gap:'8px' }}>
+            <MI name="smart_toy" size={15} color="#2563eb" />
+            <span style={{ fontSize:'12px', fontWeight:'600', color:'#1e40af' }}>AI Output</span>
+          </div>
+          <div style={{ fontSize:'10px', color:COLORS.lightText, marginTop:'2px' }}>Original generated content</div>
+        </div>
+
+        {/* Version list */}
+        {versions.map((v) => {
+          const st = VERSION_STATUSES[v.status] || VERSION_STATUSES.draft;
+          const isActive = activeVersionId === v.id;
+          const openComments = (v.comments||[]).filter(c=>!c.resolved).length;
+          return (
+            <div key={v.id} onClick={() => setActiveVersionId(v.id)}
+              style={{ padding:'12px 16px', cursor:'pointer', borderBottom:'1px solid '+COLORS.borderColor,
+                background: isActive ? '#eff6ff' : COLORS.white,
+                borderLeft: isActive ? '3px solid #2563eb' : '3px solid transparent' }}>
+              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                <span style={{ fontSize:'12px', fontWeight:'600', color:COLORS.darkText }}>{v.title}</span>
+                {openComments > 0 && <span style={{ background:'#f59e0b', color:'white', fontSize:'9px', fontWeight:'700', padding:'1px 5px', borderRadius:'8px' }}>{openComments}</span>}
+              </div>
+              <div style={{ display:'flex', alignItems:'center', gap:'4px', marginTop:'4px' }}>
+                <span style={{ padding:'1px 7px', borderRadius:'10px', fontSize:'10px', fontWeight:'600', background:st.bg, color:st.color, border:'1px solid '+st.border }}>{st.label}</span>
+              </div>
+              <div style={{ fontSize:'10px', color:COLORS.lightText, marginTop:'3px' }}>By {v.created_by} • {fmtDate(v.created_at)}</div>
+            </div>
+          );
+        })}
+
+        {/* Add version button */}
+        {versions.length < 5 && (
+          <button onClick={handleCreateVersion} disabled={savingVersion}
+            style={{ margin:'12px', padding:'8px', background:'linear-gradient(135deg,#2563eb,#7c3aed)', color:'white', border:'none', borderRadius:'8px', cursor:'pointer', fontSize:'11px', fontWeight:'600', fontFamily:FONT_FAMILY, display:'flex', alignItems:'center', justifyContent:'center', gap:'5px' }}>
+            <MI name="add" size={14} color="white" /> New Version
+          </button>
+        )}
+      </div>
+
+      {/* MIDDLE — Content Editor */}
+      <div style={{ flex:1, display:'flex', flexDirection:'column', overflow:'hidden', minWidth:0 }}>
+        {/* Toolbar */}
+        <div style={{ padding:'8px 16px', borderBottom:'1px solid '+COLORS.borderColor, background:'#fafafa', display:'flex', gap:'6px', alignItems:'center', flexWrap:'wrap' }}>
+          {activeVersionId !== 'ai_output' && activeVersion && (<>
+            {/* Formatting buttons */}
+            {[
+              { cmd:'bold', icon:'format_bold', title:'Bold' },
+              { cmd:'italic', icon:'format_italic', title:'Italic' },
+              { cmd:'underline', icon:'format_underlined', title:'Underline' },
+              { cmd:'strikeThrough', icon:'format_strikethrough', title:'Strikethrough' },
+            ].map(b => (
+              <button key={b.cmd} onMouseDown={e => { e.preventDefault(); document.execCommand(b.cmd); }}
+                style={{ padding:'4px 6px', background:'transparent', border:'none', borderRadius:'4px', cursor:'pointer', display:'flex', alignItems:'center' }} title={b.title}>
+                <MI name={b.icon} size={17} />
+              </button>
+            ))}
+            <div style={{ width:'1px', height:'20px', background:COLORS.borderColor, margin:'0 2px' }} />
+            {['1','2','3','4','5','6'].map(n => (
+              <button key={n} onMouseDown={e => { e.preventDefault(); document.execCommand('formatBlock', false, 'h'+n); }}
+                style={{ padding:'3px 5px', background:'transparent', border:'none', borderRadius:'4px', cursor:'pointer', fontSize:n==='1'?'13px':n==='2'?'12px':'11px', fontWeight:'700', color:COLORS.darkText, fontFamily:FONT_FAMILY }} title={'Heading '+n}>H{n}</button>
+            ))}
+            <button onMouseDown={e => { e.preventDefault(); document.execCommand('formatBlock', false, 'p'); }}
+              style={{ padding:'3px 5px', background:'transparent', border:'none', borderRadius:'4px', cursor:'pointer', fontSize:'11px', color:COLORS.lightText, fontFamily:FONT_FAMILY }}>P</button>
+            <div style={{ width:'1px', height:'20px', background:COLORS.borderColor, margin:'0 2px' }} />
+            <button onMouseDown={e => { e.preventDefault(); document.execCommand('insertUnorderedList'); }}
+              style={{ padding:'4px 6px', background:'transparent', border:'none', borderRadius:'4px', cursor:'pointer' }} title="Bullet List"><MI name="format_list_bulleted" size={17} /></button>
+            <button onMouseDown={e => { e.preventDefault(); document.execCommand('insertOrderedList'); }}
+              style={{ padding:'4px 6px', background:'transparent', border:'none', borderRadius:'4px', cursor:'pointer' }} title="Numbered List"><MI name="format_list_numbered" size={17} /></button>
+            <button onMouseDown={e => { e.preventDefault(); document.execCommand('justifyLeft'); }}
+              style={{ padding:'4px 6px', background:'transparent', border:'none', borderRadius:'4px', cursor:'pointer' }} title="Align Left"><MI name="format_align_left" size={17} /></button>
+            <button onMouseDown={e => { e.preventDefault(); document.execCommand('justifyCenter'); }}
+              style={{ padding:'4px 6px', background:'transparent', border:'none', borderRadius:'4px', cursor:'pointer' }} title="Center"><MI name="format_align_center" size={17} /></button>
+            <button onMouseDown={e => { e.preventDefault(); document.execCommand('justifyRight'); }}
+              style={{ padding:'4px 6px', background:'transparent', border:'none', borderRadius:'4px', cursor:'pointer' }} title="Align Right"><MI name="format_align_right" size={17} /></button>
+            <div style={{ width:'1px', height:'20px', background:COLORS.borderColor, margin:'0 2px' }} />
+            <button onMouseDown={e => { e.preventDefault(); document.execCommand('indent'); }}
+              style={{ padding:'4px 6px', background:'transparent', border:'none', borderRadius:'4px', cursor:'pointer' }} title="Indent"><MI name="format_indent_increase" size={17} /></button>
+            <button onMouseDown={e => { e.preventDefault(); document.execCommand('outdent'); }}
+              style={{ padding:'4px 6px', background:'transparent', border:'none', borderRadius:'4px', cursor:'pointer' }} title="Outdent"><MI name="format_indent_decrease" size={17} /></button>
+            <button onMouseDown={e => { e.preventDefault(); const url=prompt('Enter URL:'); if(url) document.execCommand('createLink',false,url); }}
+              style={{ padding:'4px 6px', background:'transparent', border:'none', borderRadius:'4px', cursor:'pointer' }} title="Link"><MI name="link" size={17} /></button>
+            <button onMouseDown={e => { e.preventDefault(); document.execCommand('insertHorizontalRule'); }}
+              style={{ padding:'4px 6px', background:'transparent', border:'none', borderRadius:'4px', cursor:'pointer' }} title="Horizontal Rule"><MI name="horizontal_rule" size={17} /></button>
+            <button onMouseDown={e => { e.preventDefault(); document.execCommand('removeFormat'); }}
+              style={{ padding:'4px 6px', background:'transparent', border:'none', borderRadius:'4px', cursor:'pointer' }} title="Clear Format"><MI name="format_clear" size={17} /></button>
+            <div style={{ width:'1px', height:'20px', background:COLORS.borderColor, margin:'0 2px' }} />
+            {/* Font size */}
+            <select onChange={e => { document.execCommand('fontSize', false, e.target.value); e.target.value=''; }}
+              style={{ padding:'3px 4px', fontSize:'11px', border:'1px solid '+COLORS.borderColor, borderRadius:'4px', fontFamily:FONT_FAMILY, height:'26px' }} title="Font Size">
+              <option value="">Size</option>
+              {['1','2','3','4','5','6','7'].map(s => <option key={s} value={s}>{['8','10','12','14','18','24','36'][+s-1]}px</option>)}
+            </select>
+            {/* Text color */}
+            <input type="color" onChange={e => document.execCommand('foreColor', false, e.target.value)}
+              style={{ width:'26px', height:'26px', padding:'1px', border:'1px solid '+COLORS.borderColor, borderRadius:'4px', cursor:'pointer' }} title="Text Color" />
+            {/* Highlight color */}
+            <input type="color" defaultValue="#fef08a" onChange={e => document.execCommand('hiliteColor', false, e.target.value)}
+              style={{ width:'26px', height:'26px', padding:'1px', border:'1px solid '+COLORS.borderColor, borderRadius:'4px', cursor:'pointer', background:'#fef08a' }} title="Highlight Color" />
+            <div style={{ width:'1px', height:'20px', background:COLORS.borderColor, margin:'0 2px' }} />
+            <button onClick={handleSaveVersionContent} disabled={savingVersion}
+              style={{ padding:'5px 12px', background:'#2563eb', color:'white', border:'none', borderRadius:'6px', cursor:'pointer', fontSize:'11px', fontWeight:'600', fontFamily:FONT_FAMILY, display:'flex', alignItems:'center', gap:'4px' }}>
+              <MI name="save" size={13} color="white" /> {savingVersion ? 'Saving...' : 'Save'}
+            </button>
+          </>)}
+          {activeVersionId === 'ai_output' && (
+            <span style={{ fontSize:'12px', color:COLORS.lightText, fontStyle:'italic' }}>Read-only — AI generated content</span>
+          )}
+        </div>
+
+        {/* Version status bar */}
+        {activeVersionId !== 'ai_output' && activeVersion && (
+          <div style={{ padding:'8px 16px', background:'white', borderBottom:'1px solid '+COLORS.borderColor, display:'flex', alignItems:'center', gap:'12px' }}>
+            <span style={{ fontSize:'12px', fontWeight:'700', color:COLORS.darkText }}>{activeVersion.title}</span>
+            {/* Status badge + change dropdown */}
+            <div style={{ position:'relative' }}>
+              <button onClick={() => setShowStatusMenu(!showStatusMenu)}
+                style={{ display:'flex', alignItems:'center', gap:'6px', padding:'4px 12px', borderRadius:'20px', border:'1px solid '+(VERSION_STATUSES[activeVersion.status]||VERSION_STATUSES.draft).border, background:(VERSION_STATUSES[activeVersion.status]||VERSION_STATUSES.draft).bg, cursor:'pointer', fontFamily:FONT_FAMILY }}>
+                <MI name={(VERSION_STATUSES[activeVersion.status]||VERSION_STATUSES.draft).icon} size={13} color={(VERSION_STATUSES[activeVersion.status]||VERSION_STATUSES.draft).color} />
+                <span style={{ fontSize:'11px', fontWeight:'700', color:(VERSION_STATUSES[activeVersion.status]||VERSION_STATUSES.draft).color }}>{(VERSION_STATUSES[activeVersion.status]||VERSION_STATUSES.draft).label}</span>
+                <MI name="arrow_drop_down" size={14} color={(VERSION_STATUSES[activeVersion.status]||VERSION_STATUSES.draft).color} />
+              </button>
+              {showStatusMenu && (
+                <div style={{ position:'absolute', top:'110%', left:0, background:'white', border:'1px solid '+COLORS.borderColor, borderRadius:'10px', boxShadow:'0 8px 24px rgba(0,0,0,0.12)', zIndex:100, minWidth:'200px', overflow:'hidden' }}>
+                  {/* SME actions */}
+                  <div style={{ padding:'8px 12px 4px', fontSize:'10px', fontWeight:'700', color:COLORS.lightText, textTransform:'uppercase', letterSpacing:'0.5px' }}>SME Actions</div>
+                  {['draft','in_review'].map(s => {
+                    const st = VERSION_STATUSES[s];
+                    return (
+                      <div key={s} onClick={() => handleChangeStatus(s)}
+                        style={{ padding:'10px 14px', cursor:'pointer', display:'flex', alignItems:'center', gap:'10px', background:activeVersion.status===s?st.bg:'white' }}
+                        onMouseEnter={e => e.currentTarget.style.background=st.bg}
+                        onMouseLeave={e => e.currentTarget.style.background=activeVersion.status===s?st.bg:'white'}>
+                        <MI name={st.icon} size={15} color={st.color} />
+                        <div>
+                          <div style={{ fontSize:'12px', fontWeight:'600', color:st.color }}>{st.label}</div>
+                          <div style={{ fontSize:'10px', color:COLORS.lightText }}>{s==='draft'?'Still working on it':'Submit for QA review'}</div>
+                        </div>
+                        {activeVersion.status===s && <MI name="check" size={14} color={st.color} style={{ marginLeft:'auto' }} />}
+                      </div>
+                    );
+                  })}
+                  {/* QA/Admin actions */}
+                  {isAdmin && <>
+                    <div style={{ padding:'8px 12px 4px', fontSize:'10px', fontWeight:'700', color:COLORS.lightText, textTransform:'uppercase', letterSpacing:'0.5px', borderTop:'1px solid '+COLORS.borderColor, marginTop:'4px' }}>QA / Admin Actions</div>
+                    {['approved','revision_requested','rejected'].map(s => {
+                      const st = VERSION_STATUSES[s];
+                      return (
+                        <div key={s} onClick={() => handleChangeStatus(s)}
+                          style={{ padding:'10px 14px', cursor:'pointer', display:'flex', alignItems:'center', gap:'10px', background:activeVersion.status===s?st.bg:'white' }}
+                          onMouseEnter={e => e.currentTarget.style.background=st.bg}
+                          onMouseLeave={e => e.currentTarget.style.background=activeVersion.status===s?st.bg:'white'}>
+                          <MI name={st.icon} size={15} color={st.color} />
+                          <div>
+                            <div style={{ fontSize:'12px', fontWeight:'600', color:st.color }}>{st.label}</div>
+                            <div style={{ fontSize:'10px', color:COLORS.lightText }}>
+                              {s==='approved'?'Content meets quality standards':s==='revision_requested'?'Send back for rework':'Does not meet standards'}
+                            </div>
+                          </div>
+                          {activeVersion.status===s && <MI name="check" size={14} color={st.color} style={{ marginLeft:'auto' }} />}
+                        </div>
+                      );
+                    })}
+                  </>}
+                </div>
+              )}
+            </div>
+            {activeVersion.submitted_at && <span style={{ fontSize:'11px', color:COLORS.lightText }}>Submitted: {fmtDate(activeVersion.submitted_at)}</span>}
+            {activeVersion.reviewed_by && <span style={{ fontSize:'11px', color:COLORS.lightText }}>Reviewed by: {activeVersion.reviewed_by}</span>}
+            {activeComments.length > 0 && <span style={{ fontSize:'11px', fontWeight:'600', color:'#d97706', marginLeft:'auto' }}>{activeComments.length} open comment{activeComments.length!==1?'s':''}</span>}
+          </div>
+        )}
+
+        {/* Editor area */}
+        <div style={{ flex:1, overflowY:'auto', position:'relative' }}>
+          {activeVersionId === 'ai_output' ? (
+            <div style={{ padding:'40px 60px', maxWidth:'860px', margin:'0 auto' }}>
+              <div style={{ marginBottom:'24px', paddingBottom:'16px', borderBottom:'3px solid #1e3a5f' }}>
+                <div style={{ fontSize:'11px', fontWeight:'700', color:'#3b82f6', textTransform:'uppercase', letterSpacing:'2px', marginBottom:'4px' }}>{viewingRecord.subject} • Class {viewingRecord.class}</div>
+                <h1 style={{ margin:0, fontSize:'24px', fontWeight:'800', color:'#1e3a5f', fontFamily:'Montserrat,sans-serif' }}>{viewingRecord.topic}</h1>
+              </div>
+              <div style={{ fontSize:'14px', lineHeight:'1.9', color:'#1e293b', fontFamily:'Montserrat,sans-serif' }}>
+                {parseMarkdownToReact(viewingRecord.ai_output)}
+              </div>
+            </div>
+          ) : activeVersion ? (
+            <div style={{ position:'relative' }}>
+              {/* Inline comment popup */}
+              {showCommentBox && (
+                <div ref={commentBoxRef}
+                  style={{ position:'absolute', left:Math.min(commentBoxPos.x, 500)+'px', top:commentBoxPos.y+'px', background:'white', border:'1px solid #e2e8f0', borderRadius:'10px', boxShadow:'0 8px 24px rgba(0,0,0,0.12)', padding:'12px', zIndex:50, width:'280px' }}>
+                  <div style={{ fontSize:'11px', fontWeight:'700', color:COLORS.darkText, marginBottom:'6px' }}>
+                    Comment on: <span style={{ color:'#6366f1', fontStyle:'italic' }}>"{selectedText.substring(0,50)}{selectedText.length>50?'...':''}"</span>
+                  </div>
+                  <textarea value={commentInput} onChange={e => setCommentInput(e.target.value)} placeholder="Add your comment, suggestion or rework note..."
+                    autoFocus rows={3}
+                    style={{ width:'100%', padding:'8px', fontSize:'12px', border:'1px solid #e2e8f0', borderRadius:'6px', fontFamily:FONT_FAMILY, resize:'none', outline:'none', boxSizing:'border-box', lineHeight:'1.5' }} />
+                  <div style={{ display:'flex', gap:'6px', marginTop:'8px' }}>
+                    <button onClick={handleAddComment} disabled={!commentInput.trim()}
+                      style={{ flex:1, padding:'6px', background:commentInput.trim()?'#6366f1':'#e2e8f0', color:commentInput.trim()?'white':'#94a3b8', border:'none', borderRadius:'6px', cursor:commentInput.trim()?'pointer':'not-allowed', fontSize:'11px', fontWeight:'600', fontFamily:FONT_FAMILY }}>
+                      Add Comment
+                    </button>
+                    <button onClick={() => { setShowCommentBox(false); window.getSelection()?.removeAllRanges(); }}
+                      style={{ padding:'6px 10px', background:'#f1f5f9', color:COLORS.darkText, border:'none', borderRadius:'6px', cursor:'pointer', fontSize:'11px', fontFamily:FONT_FAMILY }}>
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+              {/* Content editable area */}
+              <div
+                ref={editorRef}
+                contentEditable={true}
+                suppressContentEditableWarning={true}
+                onMouseUp={handleEditorMouseUp}
+                onKeyUp={() => setShowCommentBox(false)}
+                style={{
+                  minHeight:'calc(100vh - 250px)',
+                  padding:'40px 60px',
+                  maxWidth:'860px',
+                  margin:'0 auto',
+                  fontSize:'14px',
+                  lineHeight:'1.9',
+                  color:'#1e293b',
+                  fontFamily:'Montserrat,sans-serif',
+                  outline:'none',
+                  wordBreak:'break-word',
+                }}
+              />
+              {activeVersion.content === '' && (
+                <div style={{ position:'absolute', top:'40px', left:'60px', pointerEvents:'none', color:'#94a3b8', fontSize:'14px', fontFamily:'Montserrat,sans-serif' }}>
+                  Paste your content here (Ctrl+V)... All formatting, tables, images and formulas will be preserved exactly.
+                </div>
+              )}
+            </div>
+          ) : (
+            <div style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', height:'100%', gap:'16px', padding:'48px' }}>
+              <MI name="layers" size={48} color={COLORS.borderColor} />
+              <h3 style={{ margin:0, fontSize:'16px', fontWeight:'600', color:COLORS.darkText }}>No versions yet</h3>
+              <p style={{ margin:0, fontSize:'13px', color:COLORS.lightText, textAlign:'center', maxWidth:'300px', lineHeight:'1.6' }}>Create a version to start the QA process. SMEs paste their content here for review.</p>
+              <button onClick={handleCreateVersion}
+                style={{ padding:'10px 24px', background:'linear-gradient(135deg,#2563eb,#7c3aed)', color:'white', border:'none', borderRadius:'8px', cursor:'pointer', fontSize:'13px', fontWeight:'600', fontFamily:FONT_FAMILY }}>
+                Create Version 1
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* RIGHT PANEL — Comments */}
+      <div style={{ width:'280px', borderLeft:'1px solid '+COLORS.borderColor, background:'#fafafa', display:'flex', flexDirection:'column', flexShrink:0 }}>
+        <div style={{ padding:'14px 16px', borderBottom:'1px solid '+COLORS.borderColor, background:COLORS.white }}>
+          <div style={{ fontSize:'13px', fontWeight:'700', color:COLORS.darkText }}>
+            Comments {activeComments.length > 0 && <span style={{ background:'#f59e0b', color:'white', fontSize:'10px', padding:'1px 6px', borderRadius:'8px', marginLeft:'4px' }}>{activeComments.length}</span>}
+          </div>
+          {activeVersionId !== 'ai_output' && <div style={{ fontSize:'10px', color:COLORS.lightText, marginTop:'2px' }}>Select text in editor to add a comment</div>}
+        </div>
+
+        <div style={{ flex:1, overflowY:'auto', padding:'8px' }}>
+          {versionMsg && (
+            <div style={{ padding:'8px 10px', borderRadius:'6px', marginBottom:'8px', fontSize:'11px', fontWeight:'600',
+              background: versionMsg.includes('Failed') ? COLORS.errorBg : COLORS.successBg,
+              color: versionMsg.includes('Failed') ? COLORS.errorText : COLORS.successText,
+              border: '1px solid ' + (versionMsg.includes('Failed') ? COLORS.errorBorder : COLORS.successBorder) }}>
+              {versionMsg}
+            </div>
+          )}
+
+          {activeVersionId === 'ai_output' && (
+            <div style={{ padding:'20px 12px', textAlign:'center', color:COLORS.lightText, fontSize:'12px', lineHeight:'1.6' }}>
+              Select a version to view and add inline comments.
+            </div>
+          )}
+
+          {activeVersionId !== 'ai_output' && activeComments.length === 0 && resolvedComments.length === 0 && (
+            <div style={{ padding:'20px 12px', textAlign:'center', color:COLORS.lightText, fontSize:'12px', lineHeight:'1.6' }}>
+              No comments yet.<br/>Select text in the editor to add inline comments.
+            </div>
+          )}
+
+          {activeComments.map((c, idx) => (
+            <div key={c.id}
+              style={{ background:'white', border:'1px solid #fde68a', borderLeft:'3px solid #f59e0b', borderRadius:'8px', padding:'10px 12px', marginBottom:'8px', cursor:'pointer' }}
+              onClick={() => handleCommentClick(c.range_id)}>
+              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:'6px' }}>
+                <div style={{ display:'flex', alignItems:'center', gap:'6px' }}>
+                  <div style={{ width:'20px', height:'20px', borderRadius:'50%', background:'linear-gradient(135deg,#f59e0b,#d97706)', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                    <span style={{ fontSize:'9px', color:'white', fontWeight:'700' }}>{(c.user||'?')[0].toUpperCase()}</span>
+                  </div>
+                  <span style={{ fontSize:'11px', fontWeight:'600', color:COLORS.darkText }}>{c.user || 'Unknown'}</span>
+                </div>
+                <button onClick={e => { e.stopPropagation(); handleResolveComment(c.id); }}
+                  style={{ background:'none', border:'1px solid #a7f3d0', borderRadius:'4px', padding:'1px 6px', cursor:'pointer', fontSize:'9px', fontWeight:'600', color:'#059669', fontFamily:FONT_FAMILY }}>
+                  Resolve
+                </button>
+              </div>
+              {c.selection_text && (
+                <div style={{ fontSize:'10px', color:COLORS.lightText, fontStyle:'italic', background:'#fffbeb', padding:'4px 6px', borderRadius:'4px', marginBottom:'6px', borderLeft:'2px solid #fde68a' }}>
+                  "{c.selection_text.substring(0,80)}{c.selection_text.length>80?'...':''}"
+                </div>
+              )}
+              <div style={{ fontSize:'12px', color:COLORS.darkText, lineHeight:'1.5' }}>{c.text}</div>
+              <div style={{ fontSize:'10px', color:COLORS.lightText, marginTop:'4px' }}>{fmtDate(c.timestamp)}</div>
+            </div>
+          ))}
+
+          {resolvedComments.length > 0 && (
+            <div style={{ marginTop:'12px' }}>
+              <div style={{ fontSize:'10px', fontWeight:'700', color:COLORS.lightText, textTransform:'uppercase', letterSpacing:'0.5px', padding:'4px 4px 8px', display:'flex', alignItems:'center', gap:'4px' }}>
+                <MI name="check_circle" size={12} color="#059669" /> Resolved ({resolvedComments.length})
+              </div>
+              {resolvedComments.map(c => (
+                <div key={c.id} style={{ background:'#f0fdf4', border:'1px solid #a7f3d0', borderRadius:'8px', padding:'8px 10px', marginBottom:'6px', opacity:0.7 }}>
+                  <div style={{ fontSize:'11px', fontWeight:'600', color:'#059669', marginBottom:'2px' }}>{c.user} ✓</div>
+                  <div style={{ fontSize:'11px', color:COLORS.lightText }}>{c.text}</div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+// ============================================================
+// END QA VERSIONING SYSTEM
+// ============================================================
   const getPaperDimensions = () => {
     let width, height;
     if (pageSettings.paperSize === 'Custom') { width = pageSettings.customWidth; height = pageSettings.customHeight; }
@@ -2374,7 +2930,7 @@ const handleSavePlagiarismResult = async (result) => {
             <table style={{ width:'100%', borderCollapse:'collapse' }}>
               <thead>
                 <tr style={{ background:'#64748b', color:COLORS.white }}>
-                  {['S.NO','ID','CLASS','SUBJECT','TOPIC','TYPE','STATUS','WORDS','PLAGIARISM','IMAGES','NOTES','ACTION'].map(h => <th key={h} style={{ padding:'12px', textAlign:'left', fontSize:'11px', fontWeight:'600', textTransform:'uppercase', letterSpacing:'0.5px' }}>{h}</th>)}
+                  {['S.NO','ID','CLASS','SUBJECT','TOPIC','TYPE','STATUS','QA STATUS','IMAGES','NOTES','ACTION'].map(h => <th key={h} style={{ padding:'12px', textAlign:'left', fontSize:'11px', fontWeight:'600', textTransform:'uppercase', letterSpacing:'0.5px' }}>{h}</th>)}
                 </tr>
               </thead>
               <tbody>
@@ -2396,20 +2952,15 @@ const handleSavePlagiarismResult = async (result) => {
                         {r.text_model && r.text_model !== 'claude' && <span style={{ marginLeft:'4px', fontSize:'9px', fontWeight:'700', padding:'1px 5px', borderRadius:'8px', background:r.text_model==='openai'?'#ecfdf5':'#fef9c3', color:r.text_model==='openai'?'#059669':'#ca8a04', border:'1px solid '+(r.text_model==='openai'?'#a7f3d0':'#fde68a') }}>{r.text_model==='openai'?'GPT-4o':'Gemini'}</span>}
                       </td>
                       <td style={{ padding:'12px', fontSize:'13px' }}>{r.word_count||0}</td>
-                      {/* PLAGIARISM SCORE */}
+                     {/* QA STATUS */}
 <td style={{ padding:'12px', fontSize:'13px' }}>
-  {r.plagiarism_result ? (
-    <button onClick={(e) => { e.stopPropagation(); setPlagiarismRecord(r); }}
-      style={{ display:'inline-flex', alignItems:'center', gap:'4px', padding:'4px 9px', borderRadius:'6px', border:'none', cursor:'pointer', fontFamily:FONT_FAMILY, fontSize:'11px', fontWeight:'700',
-        background: r.plagiarism_result.overall_score >= 70 ? '#fef2f2' : r.plagiarism_result.overall_score >= 40 ? '#fffbeb' : r.plagiarism_result.overall_score >= 20 ? '#eff6ff' : '#f0fdf4',
-        color: r.plagiarism_result.overall_score >= 70 ? '#dc2626' : r.plagiarism_result.overall_score >= 40 ? '#d97706' : r.plagiarism_result.overall_score >= 20 ? '#2563eb' : '#16a34a'
-      }}
-      title="Click to view plagiarism report">
-      <MI name="policy" size={13} /> {r.plagiarism_result.overall_score}%
-    </button>
-  ) : (
-    <span style={{ color:COLORS.lightText, fontSize:'11px' }}>—</span>
-  )}
+  {(() => {
+    const vs = getVersions(r);
+    if (!vs.length) return <span style={{ color:COLORS.lightText, fontSize:'11px' }}>—</span>;
+    const latest = vs[vs.length-1];
+    const st = VERSION_STATUSES[latest.status] || VERSION_STATUSES.draft;
+    return <span style={{ padding:'3px 8px', borderRadius:'10px', fontSize:'10px', fontWeight:'700', background:st.bg, color:st.color, border:'1px solid '+st.border, whiteSpace:'nowrap' }}>{st.label} v{latest.version_number}</span>;
+  })()}
 </td>
 {/* IMAGES */}
 <td style={{ padding:'12px', fontSize:'13px' }}>{imgCount>0?<span style={{ display:'inline-flex', alignItems:'center', gap:'3px', padding:'4px 8px', borderRadius:'3px', fontSize:'11px', fontWeight:'500', background:'#dbeafe', color:'#1e40af' }}>{imgCount}/{promptCount}</span>:promptCount>0?<span style={{ fontSize:'11px', color:COLORS.lightText }}>{promptCount} prompts</span>:<span style={{ color:COLORS.lightText, fontSize:'11px' }}>—</span>}</td>
@@ -2491,12 +3042,15 @@ const handleSavePlagiarismResult = async (result) => {
               </button>
               <button onClick={() => setViewTab('history')} style={{ padding:'12px 20px', background:'none', border:'none', borderBottom:viewTab==='history'?'2px solid #f59e0b':'2px solid transparent', color:viewTab==='history'?'#f59e0b':COLORS.lightText, fontWeight:viewTab==='history'?'600':'500', fontSize:'13px', cursor:'pointer', fontFamily:FONT_FAMILY, display:'flex', alignItems:'center', gap:'5px' }}><MI name="history" size={16} /> History</button>
               <button onClick={() => setViewTab('layout')} style={{ padding:'12px 20px', background:'none', border:'none', borderBottom:viewTab==='layout'?'2px solid #059669':'2px solid transparent', color:viewTab==='layout'?'#059669':COLORS.lightText, fontWeight:viewTab==='layout'?'600':'500', fontSize:'13px', cursor:'pointer', fontFamily:FONT_FAMILY, display:'flex', alignItems:'center', gap:'5px' }}><MI name="dashboard_customize" size={16} /> Layout</button>
-            </div>
+            </div> <button onClick={() => setViewTab('versions')} style={{ padding:'12px 20px', background:'none', border:'none', borderBottom:viewTab==='versions'?'2px solid #f59e0b':'2px solid transparent', color:viewTab==='versions'?'#f59e0b':COLORS.lightText, fontWeight:viewTab==='versions'?'600':'500', fontSize:'13px', cursor:'pointer', fontFamily:FONT_FAMILY, display:'flex', alignItems:'center', gap:'5px' }}>
+  <MI name="rate_review" size={16} /> QA Versions
+  {getVersions(viewingRecord).length > 0 && <span style={{ background:'#f59e0b', color:'white', fontSize:'10px', padding:'1px 6px', borderRadius:'10px', fontWeight:'600' }}>{getVersions(viewingRecord).length}</span>}
+</button>
 
             {/* Content + Comments */}
             <div style={{ flex:1, display:'flex', overflow:'hidden' }}>
               <div style={{ flex:1, overflowY:'auto', background:COLORS.white }}>
-                {viewTab==='content' ? renderContentTab() : viewTab==='visuals' ? renderVisualAssetsTab() : viewTab==='history' ? renderHistoryTab() : renderLayoutTab()}
+                viewTab==='content' ? renderContentTab() : viewTab==='visuals' ? renderVisualAssetsTab() : viewTab==='history' ? renderHistoryTab() : viewTab==='versions' ? renderVersionsTab() : renderLayoutTab()
               </div>
               {showComments && (
                 <div style={{ width:'300px', borderLeft:'1px solid '+COLORS.borderColor, display:'flex', flexDirection:'column', background:'#fafbfc', flexShrink:0 }}>

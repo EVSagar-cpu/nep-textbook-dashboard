@@ -912,7 +912,7 @@ const saveVersions = async (recordId, versions) => {
   if (error) throw error;
 };
 
-const renderVersionsTab = () => {
+const VersionsTab = () => {
   if (!viewingRecord) return null;
 
   const versions = getVersions(viewingRecord);
@@ -3050,7 +3050,7 @@ const handleSavePlagiarismResult = async (result) => {
             {/* Content + Comments */}
             <div style={{ flex:1, display:'flex', overflow:'hidden' }}>
               <div style={{ flex:1, overflowY:'auto', background:COLORS.white }}>
-                {viewTab==='content' ? renderContentTab() : viewTab==='visuals' ? renderVisualAssetsTab() : viewTab==='history' ? renderHistoryTab() : viewTab==='versions' ? renderVersionsTab() : renderLayoutTab()}
+                {viewTab==='content' ? renderContentTab() : viewTab==='visuals' ? renderVisualAssetsTab() : viewTab==='history' ? renderHistoryTab() : viewTab==='versions' ? <VersionsTab /> : renderLayoutTab()}
               </div>
               {showComments && (
                 <div style={{ width:'300px', borderLeft:'1px solid '+COLORS.borderColor, display:'flex', flexDirection:'column', background:'#fafbfc', flexShrink:0 }}>

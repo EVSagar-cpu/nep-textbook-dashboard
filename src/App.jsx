@@ -416,7 +416,7 @@ const [analyticsDateTo, setAnalyticsDateTo] = useState('');
     if (user) {
       const { data: roleData } = await supabase.from('user_roles').select('role').eq('user_id', user.id).single();
       setCurrentUser({ ...user, user_metadata: { ...user.user_metadata, role: roleData?.role || 'content_developer' } });
-      setAuthPage('dashboard'); fetchRecords(); setShowNameModal(true);
+      setAuthPage('dashboard'); setShowNameModal(true);
     }
   };
 
@@ -1355,7 +1355,7 @@ const handleExportWord = async () => {
       if (!user) throw new Error('Failed to get user session');
       const { data: roleData } = await supabase.from('user_roles').select('role').eq('user_id', user.id).single();
       setCurrentUser({ ...user, user_metadata: { ...user.user_metadata, role: roleData?.role || 'content_developer' } });
-      setAuthPage('dashboard'); fetchRecords(); setShowNameModal(true);
+      setAuthPage('dashboard'); setShowNameModal(true);
     } catch (err) { setSetupError(err.message || 'Setup failed.'); }
     finally { setSetupLoading(false); }
   };
@@ -1367,16 +1367,20 @@ const handleExportWord = async () => {
       if (error) throw error;
       const { data: roleData } = await supabase.from('user_roles').select('role').eq('user_id', data.user.id).single();
       setCurrentUser({ ...data.user, user_metadata: { ...data.user.user_metadata, role: roleData?.role || 'content_developer' } });
-      setAuthPage('dashboard'); fetchRecords(); setShowNameModal(true);
+      setAuthPage('dashboard'); setShowNameModal(true);
     } catch (err) { setLoginError(err.message || 'Login failed'); }
     finally { setLoginLoading(false); }
   };
 
   // ===== DATA =====
   const fetchRecords = async () => {
-    const isCentralAdmin = currentUser?.user_metadata?.role === 'central_admin';
+    const fetchRecords = async (overrideRole, overrideName) => {
+    const role = overrideRole || currentUser?.user_metadata?.role;
+    const name = overrideName || userName;
+    const isCentralAdmin = role === 'central_admin';
     let query = supabase.from('textbook_content').select('*').order('updated_at', { ascending: false });
-    if (!isCentralAdmin && userName) { query = query.eq('created_by', userName); }
+    if (!isCentralAdmin && name) { query = query.eq('created_by', name); }
+    else if (!isCentralAdmin && !name) { return; }
     const { data, error } = await query;
     if (!error && data) {
       setRecords(data);
